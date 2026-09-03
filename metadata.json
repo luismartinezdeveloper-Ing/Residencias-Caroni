@@ -1,0 +1,6 @@
+{
+  "name": "Residencias Caroní · Altamira, Caracas",
+  "description": "Exclusivo proyecto residencial de 8 residencias de autor en Altamira, Caracas por Añil Arquitectura. Desarrollado por Ing. Luis Martinez. Visor 3D interactivo, planos de planta, especificaciones y portal privado de preventa.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

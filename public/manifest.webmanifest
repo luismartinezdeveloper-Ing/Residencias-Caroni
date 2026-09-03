@@ -1,0 +1,28 @@
+{
+  "name": "Residencias Caroní · Añil Arquitectura",
+  "short_name": "Residencias Caroní",
+  "description": "Exclusivo proyecto de 8 residencias de ultra-lujo en Altamira, Caracas. Diseñado por Añil Arquitectura. Consulta de planos, arquitectura, especificaciones y preventa sin conexión.",
+  "start_url": "/",
+  "id": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#EFEBE0",
+  "theme_color": "#1B1813",
+  "lang": "es",
+  "categories": ["business", "lifestyle", "productivity"],
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

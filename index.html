@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <script>
+      (function() {
+        try {
+          var originalFetch = window.fetch;
+          var _currentFetch = originalFetch;
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return _currentFetch;
+            },
+            set: function(val) {
+              _currentFetch = val;
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          // ignore if already configured or restricted
+        }
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- PWA & Mobile Configuration -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <meta name="theme-color" content="#1B1813" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Residencias Caroní" />
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>Residencias Caroní · Apartamentos de Lujo en Altamira, Caracas | Añil Arquitectura</title>
+    <meta name="title" content="Residencias Caroní · Apartamentos de Lujo en Altamira, Caracas | Añil Arquitectura" />
+    <meta name="description" content="Exclusivo proyecto residencial de 8 residencias de lujo en Altamira, Caracas. Diseñado por Añil Arquitectura y desarrollado por Ing. Luis Martinez. Terrazas panorámicas al Ávila, jardines privados, visor 3D interactivo y respaldo 100%." />
+    <meta name="keywords" content="Residencias Caroní, apartamentos de lujo Caracas, apartamentos en Altamira Caracas, inmuebles de lujo Venezuela, Añil Arquitectura, Juan Carlos Láncara, Ing Luis Martinez, preventa inmobiliaria Altamira Chacao, penthouses Caracas, residencias exclusivas El Ávila" />
+    <meta name="author" content="Añil Arquitectura — Arq. Juan Carlos Láncara | Desarrollo por Ing. Luis Martinez" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://residenciascaroni.com/" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://residenciascaroni.com/" />
+    <meta property="og:title" content="Residencias Caroní · 8 Residencias de Lujo en Altamira, Caracas" />
+    <meta property="og:description" content="Descubra Residencias Caroní: arquitectura residencial de autor al pie del Ávila. Espacios desde 415 m² hasta 1.030 m² con acabados nobles, jardines privados y terrazas panorámicas." />
+    <meta property="og:image" content="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=2574&auto=format&fit=crop" />
+    <meta property="og:site_name" content="Residencias Caroní" />
+    <meta property="og:locale" content="es_VE" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://residenciascaroni.com/" />
+    <meta property="twitter:title" content="Residencias Caroní · Apartamentos Exclusivos en Altamira, Caracas" />
+    <meta property="twitter:description" content="8 residencias de autor diseñadas por Añil Arquitectura en Altamira, Caracas. Visor 3D, planos y disponibilidad en preventa." />
+    <meta property="twitter:image" content="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=2574&auto=format&fit=crop" />
+
+    <!-- Geo Localization Tags for Caracas, Venezuela -->
+    <meta name="geo.region" content="VE-M" />
+    <meta name="geo.placename" content="Altamira, Chacao, Caracas, Venezuela" />
+    <meta name="geo.position" content="10.499389;-66.855528" />
+    <meta name="ICBM" content="10.499389, -66.855528" />
+
+    <!-- Schema.org JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "ApartmentComplex",
+      "name": "Residencias Caroní",
+      "description": "Proyecto residencial de ultra-lujo compuesto por 8 exclusivas residencias en Altamira, Municipio Chacao, Caracas. Diseñado por Añil Arquitectura.",
+      "url": "https://residenciascaroni.com/",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Transversal 8, entre 2da y 3ra Avenida, Altamira",
+        "addressLocality": "Chacao, Caracas",
+        "addressRegion": "Miranda",
+        "postalCode": "1060",
+        "addressCountry": "VE"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 10.499389,
+        "longitude": -66.855528
+      },
+      "numberOfAccommodationUnits": 8,
+      "developer": {
+        "@type": "Organization",
+        "name": "Añil Arquitectura",
+        "founder": "Arq. Juan Carlos Láncara"
+      },
+      "amenityFeature": [
+        {
+          "@type": "LocationFeatureSpecification",
+          "name": "Vistas panorámicas directas al Parque Nacional El Ávila",
+          "value": true
+        },
+        {
+          "@type": "LocationFeatureSpecification",
+          "name": "Ascensores privados directos a cada residencia",
+          "value": true
+        },
+        {
+          "@type": "LocationFeatureSpecification",
+          "name": "Planta eléctrica de respaldo 100% y pozo de agua",
+          "value": true
+        },
+        {
+          "@type": "LocationFeatureSpecification",
+          "name": "Seguridad perimetral y garita de control 24/7",
+          "value": true
+        },
+        {
+          "@type": "LocationFeatureSpecification",
+          "name": "Estacionamiento privado subterráneo con 36 puestos",
+          "value": true
+        }
+      ]
+    }
+    </script>
+
+    <!-- Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-[#EFEBE0] text-[#1B1813] antialiased selection:bg-[#8C7452]/20 selection:text-[#1B1813]">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

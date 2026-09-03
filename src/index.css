@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-crema: #EFEBE0;
+    --color-papel: #FFFFFF;
+    --color-tinta: #1B1813;
+    --color-bronce: #8C7452;
+    --color-olivo: #8C8678;
+    --color-hairline: #C9C4B5;
+  }
+
+  body {
+    background-color: var(--color-crema);
+    color: var(--color-tinta);
+    font-family: Cambria, Garamond, Georgia, "Times New Roman", serif;
+  }
+
+  /* Display headings */
+  h1, h2, h3, .font-display {
+    font-family: "EB Garamond", Garamond, Georgia, serif;
+  }
+
+  /* Metadata and tracking caps */
+  .font-meta {
+    font-family: "Calibri", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+}
+
+/* Custom editorial helpers */
+.accent-dot::before {
+  content: "·";
+  color: #8C7452;
+  margin-right: 0.35rem;
+  font-weight: normal;
+}
+
+.caroni-corner-tl {
+  border-top: 1.2px solid #8C7452;
+  border-left: 1.2px solid #8C7452;
+  width: 20px;
+  height: 20px;
+}
+
+.caroni-corner-br {
+  border-bottom: 1.2px solid #8C7452;
+  border-right: 1.2px solid #8C7452;
+  width: 20px;
+  height: 20px;
+}
+
+/* Print optimizations */
+@media print {
+  body {
+    background-color: #FFFFFF !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Hide scrollbar for clean horizontal swipe containers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Canonical Architectural Scrollbar (Caroní Palette) */
+html, body {
+  scrollbar-width: thin;
+  scrollbar-color: #8C7452 #EFEBE0;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #EFEBE0;
+  border-left: 1px solid #C9C4B5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #8C7452;
+  border: 1px solid #EFEBE0;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1B1813;
+}
+
+::-webkit-scrollbar-corner {
+  background: #EFEBE0;
+}
+
+/* Horizontal & Sub-container scrollbar styling */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #8C7452 transparent;
+  overscroll-behavior: contain;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #C9C4B5;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #8C7452;
+}
+
+/* Dark Luxury Scrollbar */
+.scrollbar-dark {
+  scrollbar-width: thin;
+  scrollbar-color: #8C7452 transparent;
+}
+.scrollbar-dark::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+.scrollbar-dark::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-dark::-webkit-scrollbar-thumb {
+  background: rgba(140, 116, 82, 0.4);
+  border-radius: 4px;
+}
+.scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: rgba(140, 116, 82, 0.8);
+}
