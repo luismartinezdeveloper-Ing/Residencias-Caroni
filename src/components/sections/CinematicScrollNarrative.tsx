@@ -111,10 +111,16 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
     }, IDLE_DELAY_MS);
   }, []);
 
-  // Sincronización del scroll manual
+  // Sincronización del scroll manual: solo conmuta a 'scroll' cuando hay desplazamiento real
   useEffect(() => {
+    let lastProgress = scrollYProgress.get();
+
     const unsub = scrollYProgress.on('change', (v) => {
-      handleUserInteraction();
+      // Ignorar variaciones imperceptibles de micro-scroll o estabilización inicial
+      if (Math.abs(v - lastProgress) > 0.002) {
+        lastProgress = v;
+        handleUserInteraction();
+      }
 
       if (v < 0.34) {
         setActiveShot(0);
@@ -128,19 +134,16 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
     return () => unsub();
   }, [scrollYProgress, handleUserInteraction]);
 
-  // Detección de eventos de interacción física
+  // Detección de eventos de interacción física explícita (rueda o toque)
   useEffect(() => {
-    const events = ['wheel', 'touchstart', 'touchmove', 'keydown'];
-    const listener = () => handleUserInteraction();
+    const handlePhysicalInteraction = () => handleUserInteraction();
 
-    events.forEach((ev) => window.addEventListener(ev, listener, { passive: true }));
-
-    idleTimerRef.current = setTimeout(() => {
-      setFlowMode('auto');
-    }, IDLE_DELAY_MS);
+    window.addEventListener('wheel', handlePhysicalInteraction, { passive: true });
+    window.addEventListener('touchmove', handlePhysicalInteraction, { passive: true });
 
     return () => {
-      events.forEach((ev) => window.removeEventListener(ev, listener));
+      window.removeEventListener('wheel', handlePhysicalInteraction);
+      window.removeEventListener('touchmove', handlePhysicalInteraction);
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
       if (progressAnimationRef.current) cancelAnimationFrame(progressAnimationRef.current);
     };
