@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { motion } from 'motion/react';
 import { ExperienceHeader, NavSection } from './components/layout/ExperienceHeader';
-import { HeroCinematic } from './components/sections/HeroCinematic';
 import { CinematicScrollNarrative } from './components/sections/CinematicScrollNarrative';
 import { InteractiveElevationViewer } from './components/sections/InteractiveElevationViewer';
 import { InvestmentTermSheet } from './components/sections/InvestmentTermSheet';
 import { InstitutionalLedger } from './components/sections/InstitutionalLedger';
 import { PrivateAdvisoryCTA } from './components/sections/PrivateAdvisoryCTA';
-import { Architectural3DModal } from './components/modals/Architectural3DModal';
 import { ConfidentialityModal } from './components/modals/ConfidentialityModal';
 import { LeadGateModal } from './components/modals/LeadGateModal';
 import { ConfidentialityProvider, useConfidentiality } from './context/ConfidentialityContext';
@@ -15,10 +13,16 @@ import { UnitData } from './types/brand';
 import { UNITS_DATA, BRAND_INFO } from './data/brandData';
 import { CaroniIsotype } from './components/ui/ArchitecturalDrawings';
 import { OfflineNotification } from './components/ui/OfflineNotification';
-
 import { CinematicIntroLoader } from './components/ui/CinematicIntroLoader';
-import { AIChatbot } from './components/modals/AIChatbot';
 import { Sparkles, PhoneCall, Bot } from 'lucide-react';
+
+// Automated Heavy Code Splitting (Lazy-loaded Three.js 3D Model & Gemini Live Voice Assistant)
+const Architectural3DModal = lazy(() =>
+  import('./components/modals/Architectural3DModal').then((m) => ({ default: m.Architectural3DModal }))
+);
+const AIChatbot = lazy(() =>
+  import('./components/modals/AIChatbot').then((m) => ({ default: m.AIChatbot }))
+);
 
 function MainAppContent() {
   const { isAdvisorMode, openAuthModal, isAccredited } = useConfidentiality();
@@ -142,15 +146,19 @@ function MainAppContent() {
         onOpen3DModal={handleOpen3DOrGate}
       />
 
-      {/* 3D Maqueta Modal strictly following architectural standards */}
-      <Architectural3DModal
-        isOpen={is3DModalOpen}
-        onClose={() => setIs3DModalOpen(false)}
-        selectedUnit={selectedUnit}
-        onSelectUnit={setSelectedUnit}
-        onEmitLoi={handleQuickLoi}
-        initialViewMode={modalInitialViewMode}
-      />
+      {/* 3D Maqueta Modal strictly following architectural standards (Lazy loaded) */}
+      {is3DModalOpen && (
+        <Suspense fallback={null}>
+          <Architectural3DModal
+            isOpen={is3DModalOpen}
+            onClose={() => setIs3DModalOpen(false)}
+            selectedUnit={selectedUnit}
+            onSelectUnit={setSelectedUnit}
+            onEmitLoi={handleQuickLoi}
+            initialViewMode={modalInitialViewMode}
+          />
+        </Suspense>
+      )}
 
       {/* Main Continuous Scroll Narrative with Apple-Style Section Transitions */}
       <main className="flex-1">
@@ -247,12 +255,16 @@ function MainAppContent() {
         </button>
       </div>
 
-      {/* AIChatbot Modal (Voz en Tiempo Real & Asesoría Inmobiliaria) */}
-      <AIChatbot
-        isOpen={isVoiceAdvisorOpen}
-        onClose={() => setIsVoiceAdvisorOpen(false)}
-        selectedUnit={selectedUnit}
-      />
+      {/* AIChatbot Modal (Voz en Tiempo Real & Asesoría Inmobiliaria - Lazy loaded) */}
+      {isVoiceAdvisorOpen && (
+        <Suspense fallback={null}>
+          <AIChatbot
+            isOpen={isVoiceAdvisorOpen}
+            onClose={() => setIsVoiceAdvisorOpen(false)}
+            selectedUnit={selectedUnit}
+          />
+        </Suspense>
+      )}
 
       {/* Slim Minimalist Footer */}
       <footer className="w-full bg-[#14120E] text-[#8C8678] border-t border-[#FAF9F6]/10 py-6 pb-28 md:pb-8">

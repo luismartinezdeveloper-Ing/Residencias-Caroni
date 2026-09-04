@@ -16,12 +16,13 @@ export default defineConfig(() => {
         output: {
           manualChunks: {
             'react-vendor': ['react', 'react-dom'],
+            'three-vendor': ['three'],
             'motion-vendor': ['motion', 'motion/react'],
             'icons-vendor': ['lucide-react']
           }
         }
       },
-      chunkSizeWarningLimit: 600,
+      chunkSizeWarningLimit: 750,
     },
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
