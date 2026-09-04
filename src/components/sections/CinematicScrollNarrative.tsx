@@ -21,6 +21,7 @@ const CINEMATIC_VIDEOS = [
     id: 1,
     src: '/videos/Camera_rotating_around_building.mp4',
     name: 'Órbita Volumétrica',
+    durationSec: 10,
     cotaTag: 'COTA BASE: +920.00 M.S.N.M. · VISTA NORTE EL ÁVILA',
     aspectTag: 'IMPLANTACIÓN MONOLÍTICA · 8VA TRANSVERSAL',
   },
@@ -28,6 +29,7 @@ const CINEMATIC_VIDEOS = [
     id: 2,
     src: '/videos/Building_transforms_into_luxury.mp4',
     name: 'Materia & Construcción',
+    durationSec: 10,
     cotaTag: 'SISTEMA ESTRUCTURAL: CONCRETO LIMPIO & MÁRMOL',
     aspectTag: 'ESTRATOS EN 4 NIVELES · PROPORCIÓN ÁUREA',
   },
@@ -35,13 +37,13 @@ const CINEMATIC_VIDEOS = [
     id: 3,
     src: '/videos/vFirst_person_wide_angle_archi.mp4',
     name: 'Recorrido Interior',
+    durationSec: 20,
     cotaTag: 'ALTURA LIBRE: 3.20 M · PENTHOUSES HASTA 450 M²',
     aspectTag: 'LUZ NATURAL CENITAL · PRIVACIDAD ABSOLUTA',
   },
 ];
 
-const IDLE_DELAY_MS = 4000; // 4 seconds of scroll inactivity before autoplay starts
-const AUTOPLAY_SHOT_DURATION_MS = 6500; // 6.5s per shot in autoplay loop
+const IDLE_DELAY_MS = 4000; // 4 segundos de inactividad de scroll para reactivar reel continuo
 
 interface CinematicScrollNarrativeProps {
   onOpen3DModal?: () => void;
@@ -76,49 +78,47 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
 
   // Inactivity tracking refs
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const autoplayIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const progressAnimationRef = useRef<number | null>(null);
 
-  // 360vh total scroll space for manual exploration
+  // 480vh de recorrido vertical para visualización fluida y extendida sin prisas
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ['start start', 'end end'],
   });
 
-  // Manual Scroll Opacities: Clean Dip-to-Black Transitions (Never overlap two semi-transparent videos)
-  // Shot 1: [0 -> 0.28 fully visible, 0.28 -> 0.32 fades cleanly to black]
-  const manualShot1Opacity = useTransform(scrollYProgress, [0, 0.27, 0.31, 0.35], [1, 1, 0, 0]);
-  // Shot 2: [0.31 -> 0.35 fades in from black, 0.35 -> 0.61 fully visible, 0.61 -> 0.65 fades to black]
-  const manualShot2Opacity = useTransform(scrollYProgress, [0.30, 0.34, 0.61, 0.65], [0, 1, 1, 0]);
-  // Shot 3: [0.64 -> 0.68 fades in from black, 0.68 -> 1 fully visible]
-  const manualShot3Opacity = useTransform(scrollYProgress, [0.64, 0.68, 1], [0, 1, 1]);
-  const outroFadeOpacity = useTransform(scrollYProgress, [0.93, 1], [0, 1]);
+  // Transiciones cinematográficas limpias con "dip to black"
+  // Toma 1: [0 -> 0.28 nítido, 0.28 -> 0.33 funde a negro]
+  const manualShot1Opacity = useTransform(scrollYProgress, [0, 0.28, 0.33, 0.37], [1, 1, 0, 0]);
+  // Toma 2: [0.33 -> 0.37 emerge de negro, 0.37 -> 0.62 nítido, 0.62 -> 0.67 funde a negro]
+  const manualShot2Opacity = useTransform(scrollYProgress, [0.33, 0.37, 0.62, 0.67], [0, 1, 1, 0]);
+  // Toma 3: [0.66 -> 0.70 emerge de negro, 0.70 -> 1 nítido hasta el final]
+  const manualShot3Opacity = useTransform(scrollYProgress, [0.66, 0.70, 1], [0, 1, 1]);
+  const outroFadeOpacity = useTransform(scrollYProgress, [0.94, 1], [0, 1]);
 
-  // Subtle initial hint that disappears on scroll
-  const scrollHintOpacity = useTransform(scrollYProgress, [0, 0.06], [1, 0]);
+  // Sutil indicación inicial que desaparece al iniciar el recorrido
+  const scrollHintOpacity = useTransform(scrollYProgress, [0, 0.05], [1, 0]);
 
-  // Handle User Activity (Instantly returns control to Scroll Mode)
+  // Interacción del usuario: reactiva de inmediato el control por scroll
   const handleUserInteraction = useCallback(() => {
     setFlowMode('scroll');
 
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    if (autoplayIntervalRef.current) clearInterval(autoplayIntervalRef.current);
     if (progressAnimationRef.current) cancelAnimationFrame(progressAnimationRef.current);
 
-    // Set 4s inactivity timer to re-engage auto flow
+    // Retoma el modo reel automático tras 4s de inactividad
     idleTimerRef.current = setTimeout(() => {
       setFlowMode('auto');
     }, IDLE_DELAY_MS);
   }, []);
 
-  // Sync scroll position when user manually scrolls
+  // Sincronización del scroll manual
   useEffect(() => {
     const unsub = scrollYProgress.on('change', (v) => {
       handleUserInteraction();
 
-      if (v < 0.32) {
+      if (v < 0.34) {
         setActiveShot(0);
-      } else if (v < 0.66) {
+      } else if (v < 0.67) {
         setActiveShot(1);
       } else {
         setActiveShot(2);
@@ -128,14 +128,13 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
     return () => unsub();
   }, [scrollYProgress, handleUserInteraction]);
 
-  // Listen to wheel, touch and key events
+  // Detección de eventos de interacción física
   useEffect(() => {
     const events = ['wheel', 'touchstart', 'touchmove', 'keydown'];
     const listener = () => handleUserInteraction();
 
     events.forEach((ev) => window.addEventListener(ev, listener, { passive: true }));
 
-    // Start initial idle timer
     idleTimerRef.current = setTimeout(() => {
       setFlowMode('auto');
     }, IDLE_DELAY_MS);
@@ -143,55 +142,49 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
     return () => {
       events.forEach((ev) => window.removeEventListener(ev, listener));
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-      if (autoplayIntervalRef.current) clearInterval(autoplayIntervalRef.current);
       if (progressAnimationRef.current) cancelAnimationFrame(progressAnimationRef.current);
     };
   }, [handleUserInteraction]);
 
-  // Autoplay Reel Engine when flowMode === 'auto'
-  useEffect(() => {
-    if (flowMode !== 'auto') {
-      setAutoplayProgress(0);
-      return;
-    }
-
-    let startTime = performance.now();
-
-    const updateProgressBar = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(100, (elapsed / AUTOPLAY_SHOT_DURATION_MS) * 100);
-      setAutoplayProgress(progress);
-
-      if (elapsed < AUTOPLAY_SHOT_DURATION_MS) {
-        progressAnimationRef.current = requestAnimationFrame(updateProgressBar);
-      }
-    };
-
-    progressAnimationRef.current = requestAnimationFrame(updateProgressBar);
-
-    autoplayIntervalRef.current = setInterval(() => {
+  // Manejo de avance al finalizar un video de forma natural
+  const handleVideoEnded = useCallback((endedIndex: number) => {
+    if (flowMode === 'auto') {
       setActiveShot((prev) => (prev + 1) % 3);
-      startTime = performance.now();
-      if (progressAnimationRef.current) cancelAnimationFrame(progressAnimationRef.current);
-      progressAnimationRef.current = requestAnimationFrame(updateProgressBar);
-    }, AUTOPLAY_SHOT_DURATION_MS);
-
-    return () => {
-      if (autoplayIntervalRef.current) clearInterval(autoplayIntervalRef.current);
-      if (progressAnimationRef.current) cancelAnimationFrame(progressAnimationRef.current);
-    };
+    }
   }, [flowMode]);
 
-  // Sincronizar reproducción: cuando una toma se activa, rebobinar a 0 para que empiece desde el inicio de su secuencia
+  // Loop de progreso de alta precisión sincronizado al tiempo real del video
+  useEffect(() => {
+    let animFrame: number;
+
+    const syncProgress = () => {
+      const activeVideo = videoRefs[activeShot]?.current;
+      if (activeVideo && activeVideo.duration > 0) {
+        const pct = (activeVideo.currentTime / activeVideo.duration) * 100;
+        setAutoplayProgress(Math.min(100, Math.max(0, pct)));
+      }
+      animFrame = requestAnimationFrame(syncProgress);
+    };
+
+    animFrame = requestAnimationFrame(syncProgress);
+
+    return () => {
+      cancelAnimationFrame(animFrame);
+    };
+  }, [activeShot]);
+
+  // Sincronizar reproducción al activar cada toma: rebobinar a 0 para que empiece desde el inicio
   useEffect(() => {
     videoRefs.forEach((ref, idx) => {
       const vid = ref.current;
       if (!vid) return;
 
       if (idx === activeShot) {
-        // Al entrar la toma activa, reiniciar desde el segundo 0 para ver la secuencia completa desde el inicio
         vid.currentTime = 0;
         vid.play().catch(() => {});
+      } else {
+        // Pausar tomas que no están en pantalla para ahorrar CPU/GPU
+        vid.pause();
       }
     });
   }, [activeShot]);
@@ -289,7 +282,7 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
     <section
       ref={containerRef}
       id="obra"
-      className="relative h-[360vh] bg-[#070706] text-[#FAF8F5] select-none"
+      className="relative h-[480vh] bg-[#070706] text-[#FAF8F5] select-none"
     >
       {/* STICKY FULLSCREEN CINEMA */}
       <div className="sticky top-0 h-screen w-full overflow-hidden bg-[#070706] flex flex-col justify-between">
@@ -331,9 +324,9 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
                 src={video.src}
                 autoPlay
                 muted
-                loop
                 playsInline
                 preload="auto"
+                onEnded={() => handleVideoEnded(idx)}
                 className="absolute inset-0 w-full h-full object-cover object-center will-change-opacity"
               />
             );
