@@ -182,11 +182,16 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
     };
   }, [flowMode]);
 
-  // Ensure all videos play
+  // Sincronizar reproducción: cuando una toma se activa, rebobinar a 0 para que empiece desde el inicio de su secuencia
   useEffect(() => {
-    videoRefs.forEach((ref) => {
-      if (ref.current) {
-        ref.current.play().catch(() => {});
+    videoRefs.forEach((ref, idx) => {
+      const vid = ref.current;
+      if (!vid) return;
+
+      if (idx === activeShot) {
+        // Al entrar la toma activa, reiniciar desde el segundo 0 para ver la secuencia completa desde el inicio
+        vid.currentTime = 0;
+        vid.play().catch(() => {});
       }
     });
   }, [activeShot]);
