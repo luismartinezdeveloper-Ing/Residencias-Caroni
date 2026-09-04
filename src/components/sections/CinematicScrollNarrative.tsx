@@ -173,17 +173,28 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
     };
   }, [activeShot]);
 
-  // Sincronizar reproducción al activar cada toma: rebobinar a 0 para que empiece desde el inicio
+  // Sincronizar reproducción al cambiar de toma activa
+  const prevShotRef = useRef<number>(activeShot);
+
   useEffect(() => {
+    const isShotChanged = prevShotRef.current !== activeShot;
+    prevShotRef.current = activeShot;
+
     videoRefs.forEach((ref, idx) => {
       const vid = ref.current;
       if (!vid) return;
 
       if (idx === activeShot) {
-        vid.currentTime = 0;
-        vid.play().catch(() => {});
+        if (isShotChanged) {
+          vid.currentTime = 0;
+        }
+        const playPromise = vid.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            // Manejo de restricciones de autoplay si fuera necesario
+          });
+        }
       } else {
-        // Pausar tomas que no están en pantalla para ahorrar CPU/GPU
         vid.pause();
       }
     });
@@ -291,35 +302,24 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
           {CINEMATIC_VIDEOS.map((video, idx) => {
             const isShotActive = activeShot === idx;
 
+            // En modo scroll se usa la animación ligada al desplazamiento vertical; en modo auto la visibilidad es gobernada por la toma activa
             return (
               <motion.video
                 key={video.id}
                 ref={videoRefs[idx]}
-                style={
-                  flowMode === 'scroll'
-                    ? {
-                        opacity:
-                          idx === 0
-                            ? manualShot1Opacity
-                            : idx === 1
-                            ? manualShot2Opacity
-                            : manualShot3Opacity,
-                        zIndex: isShotActive ? 10 : 1,
-                      }
-                    : {
-                        zIndex: isShotActive ? 10 : 1,
-                      }
-                }
-                animate={
-                  flowMode === 'auto'
-                    ? {
-                        opacity: isShotActive ? 1 : 0,
-                      }
-                    : undefined
-                }
-                transition={{
-                  duration: 0.8,
-                  ease: [0.22, 1, 0.36, 1],
+                style={{
+                  opacity:
+                    flowMode === 'scroll'
+                      ? idx === 0
+                        ? manualShot1Opacity
+                        : idx === 1
+                        ? manualShot2Opacity
+                        : manualShot3Opacity
+                      : isShotActive
+                      ? 1
+                      : 0,
+                  zIndex: isShotActive ? 10 : 1,
+                  transition: flowMode === 'auto' ? 'opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1)' : 'none',
                 }}
                 src={video.src}
                 autoPlay
