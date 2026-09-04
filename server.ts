@@ -36,14 +36,62 @@ async function startServer() {
 
   app.use(express.json());
 
+  // In-memory rate limiting and active session tracking for WebSocket & API
+  const MAX_CONCURRENT_VOICE_PER_IP = 2;
+  const INACTIVITY_TIMEOUT_MS = 180000; // 3 minutes timeout for voice calls
+  const activeIpConnections = new Map<string, number>();
+
+  // Leads storage (in-memory persistent during runtime with optional webhook dispatch)
+  const leadsRegistry: Array<{
+    id: string;
+    fullName: string;
+    email: string;
+    phone: string;
+    unitInterest: string;
+    accreditationStatus: string;
+    timestamp: string;
+    ip: string;
+  }> = [];
+
   // WebSocket Server for Gemini Live Real-time Bi-directional Voice
   const wss = new WebSocketServer({ server, path: "/api/live" });
 
-  wss.on("connection", (clientWs: WebSocket) => {
+  wss.on("connection", (clientWs: WebSocket, req: http.IncomingMessage) => {
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+    const currentCount = activeIpConnections.get(clientIp) || 0;
+
+    if (currentCount >= MAX_CONCURRENT_VOICE_PER_IP) {
+      clientWs.send(JSON.stringify({
+        type: "error",
+        error: "Límite de sesiones de voz simultáneas alcanzado para su conexión. Por favor intente más tarde."
+      }));
+      clientWs.close(1008, "Policy Violation - Connection Limit Exceeded");
+      return;
+    }
+
+    activeIpConnections.set(clientIp, currentCount + 1);
+
     let liveSession: any = null;
     let isConnected = true;
+    let inactivityTimer: NodeJS.Timeout | null = null;
+
+    const resetInactivityTimer = () => {
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        if (isConnected && clientWs.readyState === WebSocket.OPEN) {
+          clientWs.send(JSON.stringify({
+            type: "sessionClosed",
+            reason: "Sesión cerrada por inactividad prolongada para optimizar recursos."
+          }));
+          clientWs.close(1000, "Inactivity Timeout");
+        }
+      }, INACTIVITY_TIMEOUT_MS);
+    };
+
+    resetInactivityTimer();
 
     clientWs.on("message", async (data: Buffer | string) => {
+      resetInactivityTimer();
       try {
         const msg = JSON.parse(data.toString());
 
@@ -169,6 +217,15 @@ Responde de forma inmediata y conversacional.`;
 
     clientWs.on("close", () => {
       isConnected = false;
+      if (inactivityTimer) clearTimeout(inactivityTimer);
+      
+      const count = activeIpConnections.get(clientIp) || 1;
+      if (count <= 1) {
+        activeIpConnections.delete(clientIp);
+      } else {
+        activeIpConnections.set(clientIp, count - 1);
+      }
+
       if (liveSession) {
         try {
           liveSession.close();
@@ -184,6 +241,55 @@ Responde de forma inmediata y conversacional.`;
   });
 
   // API Routes
+  // Lead Registration & Institutional Dispatch Endpoint
+  app.post("/api/leads", async (req, res) => {
+    try {
+      const { fullName, email, phone, unitInterest, accreditationStatus } = req.body;
+
+      if (!fullName || !email || !phone) {
+        return res.status(400).json({ 
+          error: "Campos requeridos faltantes (Nombre, Correo o Teléfono)." 
+        });
+      }
+
+      const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+      const leadEntry = {
+        id: `LEAD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+        fullName: String(fullName).trim(),
+        email: String(email).trim().toLowerCase(),
+        phone: String(phone).trim(),
+        unitInterest: unitInterest || 'General',
+        accreditationStatus: accreditationStatus || 'Accredited_Buyer',
+        timestamp: new Date().toISOString(),
+        ip: clientIp
+      };
+
+      leadsRegistry.push(leadEntry);
+      console.log(`[LEAD CAPTURED] ${leadEntry.fullName} (${leadEntry.email}) interesado en: ${leadEntry.unitInterest}`);
+
+      // Webhook integration (if CRM_WEBHOOK_URL is defined)
+      if (process.env.CRM_WEBHOOK_URL) {
+        try {
+          await fetch(process.env.CRM_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(leadEntry)
+          });
+        } catch (webhookErr) {
+          console.warn("Failed to dispatch to CRM_WEBHOOK_URL:", webhookErr);
+        }
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Acreditación registrada exitosamente. Acceso a planos y cotizaciones otorgado.",
+        leadId: leadEntry.id
+      });
+    } catch (err: any) {
+      console.error("Error processing /api/leads:", err);
+      return res.status(500).json({ error: "Error interno al procesar acreditación." });
+    }
+  });
   app.post("/api/chat", async (req, res) => {
     try {
       const { history, context } = req.body;

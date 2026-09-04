@@ -143,3 +143,14 @@ html, body {
 .scrollbar-dark::-webkit-scrollbar-thumb:hover {
   background: rgba(140, 116, 82, 0.8);
 }
+
+/* Cursor de alta visibilidad para visualizador 3D arquitectónico */
+.cursor-architectural-orbit {
+  cursor: grab !important;
+}
+.cursor-architectural-orbit:active {
+  cursor: grabbing !important;
+}
+.cursor-architectural-interactive {
+  cursor: pointer !important;
+}

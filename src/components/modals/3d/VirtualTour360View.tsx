@@ -21,7 +21,10 @@ import {
   Zap,
   ShieldCheck,
   RefreshCw,
-  Mic
+  Mic,
+  Play,
+  Pause,
+  MessageSquare
 } from 'lucide-react';
 import { UnitData } from '../../../types/brand';
 import { TOUR_ROOMS_DATA, TourHotspot } from '../../../data/virtualTourData';
@@ -32,7 +35,7 @@ import {
   AsyncPanoramaProgress
 } from '../../../utils/panoramaGenerator';
 import { TourAudioAmbiance } from '../../../utils/tourAudioAmbiance';
-import { SolarTimeMode } from './ArchitecturalScene';
+import { SolarTimeMode, createArchitecturalEnvironmentMap } from './ArchitecturalScene';
 import { build3DInteriorRoom, Apartment3DEnvironment } from './Apartment3DInterior';
 import { WebXrTeleportManager } from './WebXrTeleportManager';
 import { VoiceNavigationController, VoiceNavigationCommand, VoiceFeedback } from '../../../utils/voiceNavigationController';
@@ -65,6 +68,8 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
   const [isAudioPlaying, setIsAudioPlaying] = useState<boolean>(false);
   const [selectedSpecHotspot, setSelectedSpecHotspot] = useState<TourHotspot | null>(null);
   const [isGyroActive, setIsGyroActive] = useState<boolean>(false);
+  const [isGuidedTour, setIsGuidedTour] = useState<boolean>(false);
+  const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
 
   // VR Immersion State Manager & Configuration
   const [vrState, setVrState] = useState<VrImmersionState>('idle');
@@ -215,7 +220,7 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
     mat.needsUpdate = true;
   }, []);
 
-  // Dynamic 3D Interior Apartment Geometry Loader
+  // Dynamic 3D Interior Apartment Geometry Loader with PBR IBL Environment Map
   const load3DRoomInterior = useCallback((roomId: string, mode: SolarTimeMode) => {
     if (!sceneRef.current) return;
     if (apartmentInteriorRef.current) {
@@ -224,6 +229,11 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
       apartmentInteriorRef.current = null;
     }
     try {
+      // 1. Apply Equirectangular IBL Environment Map for physical reflections on marble and bronze
+      const envMap = createArchitecturalEnvironmentMap(mode);
+      envMap.mapping = THREE.EquirectangularReflectionMapping;
+      sceneRef.current.environment = envMap;
+
       const interior = build3DInteriorRoom(roomId, mode);
       sceneRef.current.add(interior.group);
       apartmentInteriorRef.current = interior;
@@ -268,13 +278,23 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
     [applyTextureToSphere, load3DRoomInterior]
   );
 
-  // Change room smoothly
+  // Change room smoothly with Cinematic Warp Zoom Transition
   const handleSelectRoom = useCallback(
     async (roomId: string) => {
+      if (roomId === activeRoomId) return;
       const targetRoom = TOUR_ROOMS_DATA.find((r) => r.id === roomId);
       if (!targetRoom) return;
 
       playClickChime();
+      setIsTransitioning(true);
+
+      // 1. Warp push: decrease FOV dynamically for acceleration sensation
+      const initialFov = controlsRef.current.fov;
+      controlsRef.current.targetFov = Math.max(38, initialFov - 24);
+
+      // 2. Wait 220ms for forward dolly push, then switch room texture
+      await new Promise((res) => setTimeout(res, 220));
+
       setActiveRoomId(roomId);
       setSelectedSpecHotspot(null);
 
@@ -299,9 +319,18 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
         } catch {
           updateSphereTexture(roomId, solarTimeMode, vrQuality);
         }
+      } else {
+        updateSphereTexture(roomId, solarTimeMode, vrQuality);
       }
+
+      // 3. Relax FOV back to comfortable wide perspective
+      controlsRef.current.targetFov = initialFov;
+
+      setTimeout(() => {
+        setIsTransitioning(false);
+      }, 300);
     },
-    [playClickChime, isVrStereoMode, solarTimeMode, vrQuality, applyTextureToSphere, updateSphereTexture]
+    [activeRoomId, playClickChime, isVrStereoMode, solarTimeMode, vrQuality, applyTextureToSphere, updateSphereTexture]
   );
 
   // Mobile Device Orientation (Gyroscope) with strict NaN guards
@@ -342,6 +371,21 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
       enableDeviceOrientation();
     }
   };
+
+  // Guided Walkthrough Loop: smoothly auto-advances through rooms every 9 seconds
+  useEffect(() => {
+    if (!isGuidedTour) return;
+    setIsAutoRotating(true);
+
+    const roomSequence = TOUR_ROOMS_DATA.map((r) => r.id);
+    const interval = setInterval(() => {
+      const currentIndex = roomSequence.indexOf(activeRoomId);
+      const nextIndex = (currentIndex + 1) % roomSequence.length;
+      handleSelectRoom(roomSequence[nextIndex]);
+    }, 9000);
+
+    return () => clearInterval(interval);
+  }, [isGuidedTour, activeRoomId, handleSelectRoom]);
 
   // ================= VR ASYNC IMMERSION LAUNCHER =================
   const handleStartVrImmersion = async () => {
@@ -520,7 +564,7 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
     stereoCamera.eyeSep = 0.064; // Standard 64mm Interpupillary Distance
     stereoCameraRef.current = stereoCamera;
 
-    // 3. WebGL Renderer with stability optimizations
+    // 3. WebGL Renderer with stability optimizations & photorealistic tone mapping
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: false,
@@ -531,6 +575,8 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
     rendererRef.current = renderer;
 
     container.innerHTML = '';
@@ -979,7 +1025,14 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onWheel={handleWheel}
-        className="w-full h-full cursor-grab active:cursor-grabbing touch-none relative"
+        className="w-full h-full cursor-architectural-orbit relative"
+      />
+
+      {/* Cinematic Warp Zoom Motion Blur & Fade Overlay */}
+      <div
+        className={`absolute inset-0 bg-black pointer-events-none z-20 transition-opacity duration-300 ease-in-out ${
+          isTransitioning ? 'opacity-70' : 'opacity-0'
+        }`}
       />
 
       {/* ================= 3D VR Stereoscopic Split Divider & Dual Reticles ================= */}
@@ -1214,17 +1267,17 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
                     className="group relative flex items-center justify-center p-2 rounded-full cursor-pointer transition-transform hover:scale-110 active:scale-95"
                     title={hotspot.title}
                   >
-                    {/* Outer Pulsing Waves */}
-                    <span className="absolute w-12 h-12 rounded-full bg-[#8C7452]/40 animate-ping" />
-                    <span className="absolute w-9 h-9 rounded-full bg-[#1B1813]/80 backdrop-blur-md border border-[#8C7452] shadow-xl" />
+                    {/* Outer Pulsing Waves in Gold */}
+                    <span className="absolute w-12 h-12 rounded-full bg-[#C9A86A]/30 animate-ping" />
+                    <span className="absolute w-9 h-9 rounded-full bg-[#14120E]/90 backdrop-blur-md border border-[#C9A86A] shadow-[0_4px_16px_rgba(0,0,0,0.6)]" />
 
                     {/* Icon */}
-                    <DoorOpen className="w-4 h-4 text-[#FAF9F6] relative z-10 group-hover:text-[#F5C780] transition-colors" />
+                    <DoorOpen className="w-4 h-4 text-[#FAF8F5] relative z-10 group-hover:text-[#C9A86A] transition-colors" />
 
                     {/* Hover Floating Pill Tag */}
-                    <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-[#1B1813]/90 text-[#FAF9F6] border border-[#8C7452]/60 px-2.5 py-1 rounded-full text-[9px] font-meta uppercase tracking-wider whitespace-nowrap shadow-lg opacity-90 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                    <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-[#14120E]/95 text-[#FAF8F5] border border-[#C9A86A]/60 px-3 py-1 rounded-full text-[9px] font-meta uppercase tracking-wider whitespace-nowrap shadow-xl opacity-90 group-hover:opacity-100 transition-opacity flex items-center gap-1.5">
                       <span>{hotspot.title}</span>
-                      <ArrowUpRight className="w-2.5 h-2.5 text-[#8C7452]" />
+                      <ArrowUpRight className="w-2.5 h-2.5 text-[#C9A86A]" />
                     </div>
                   </button>
                 ) : (
@@ -1234,14 +1287,14 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
                     className="group relative flex items-center justify-center p-2 rounded-full cursor-pointer transition-transform hover:scale-110 active:scale-95"
                     title={hotspot.title}
                   >
-                    {/* Diamond Icon Pin */}
-                    <span className="absolute w-10 h-10 rounded-full bg-emerald-500/25 animate-ping" />
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#1B1813] to-[#3D3528] border-2 border-[#8C7452] text-[#FAF9F6] flex items-center justify-center shadow-2xl relative z-10 group-hover:border-emerald-400 transition-colors">
-                      <Sparkles className="w-3.5 h-3.5 text-[#F5C780]" />
+                    {/* Spec Pin in Gold Halo */}
+                    <span className="absolute w-10 h-10 rounded-full bg-[#C9A86A]/30 animate-ping" />
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#14120E] to-[#2E2820] border-2 border-[#C9A86A] text-[#FAF8F5] flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.7)] relative z-10 group-hover:border-white transition-colors">
+                      <Sparkles className="w-3.5 h-3.5 text-[#C9A86A] group-hover:text-white" />
                     </div>
 
                     {/* Floating Tag */}
-                    <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-white/95 text-[#1B1813] border border-[#8C7452]/40 px-2.5 py-0.5 rounded-full text-[9px] font-meta uppercase tracking-wider whitespace-nowrap shadow-md flex items-center gap-1 group-hover:bg-[#8C7452] group-hover:text-white transition-colors">
+                    <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-[#14120E]/95 text-[#FAF8F5] border border-[#C9A86A]/40 px-3 py-1 rounded-full text-[9px] font-meta uppercase tracking-wider whitespace-nowrap shadow-xl flex items-center gap-1.5 group-hover:bg-[#C9A86A] group-hover:text-[#0A0908] transition-colors">
                       <span className="font-semibold">{hotspot.title}</span>
                     </div>
                   </button>
@@ -1256,14 +1309,14 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
       {!isVrStereoMode && (
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-30">
           {/* Current Room Title Card */}
-          <div className="bg-[#1B1813]/85 backdrop-blur-xl border border-[#8C7452]/40 rounded-2xl px-4 py-2 shadow-2xl pointer-events-auto flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-[#8C7452]/30 border border-[#8C7452] flex items-center justify-center text-[#F5C780]">
+          <div className="bg-[#14120E]/90 backdrop-blur-xl border border-[#C9A86A]/30 rounded-2xl px-4 py-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.7)] pointer-events-auto flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-[#C9A86A]/20 border border-[#C9A86A]/60 flex items-center justify-center text-[#C9A86A]">
               <Compass className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-display font-bold text-sm text-[#FAF9F6]">{currentRoom.name}</span>
-                <span className="font-mono text-[10px] text-[#8C7452] font-semibold">
+                <span className="font-display font-bold text-sm text-[#FAF8F5]">{currentRoom.name}</span>
+                <span className="font-mono text-[10px] text-[#C9A86A] font-semibold">
                   {currentRoom.areaM2} m²
                 </span>
               </div>
@@ -1317,11 +1370,11 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
             </button>
 
             {/* Solar Ambiance Selector */}
-            <div className="flex items-center bg-[#1B1813]/85 backdrop-blur-xl border border-[#8C7452]/40 p-0.5 rounded-full shadow-lg">
+            <div className="flex items-center bg-[#14120E]/90 backdrop-blur-xl border border-[#C9A86A]/30 p-0.5 rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.6)]">
               <button
                 onClick={() => onSolarTimeChange?.('morning')}
                 className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                  solarTimeMode === 'morning' ? 'bg-[#8C7452] text-white shadow-sm' : 'text-[#C9C4B5] hover:text-white'
+                  solarTimeMode === 'morning' ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs' : 'text-[#C9C4B5] hover:text-white hover:bg-white/10'
                 }`}
                 title="10:00 AM · Sol Matutino"
               >
@@ -1330,7 +1383,7 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
               <button
                 onClick={() => onSolarTimeChange?.('golden')}
                 className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                  solarTimeMode === 'golden' ? 'bg-[#8C7452] text-white shadow-sm' : 'text-[#C9C4B5] hover:text-white'
+                  solarTimeMode === 'golden' ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs' : 'text-[#C9C4B5] hover:text-white hover:bg-white/10'
                 }`}
                 title="5:30 PM · Ocaso Dorado sobre El Ávila"
               >
@@ -1339,7 +1392,7 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
               <button
                 onClick={() => onSolarTimeChange?.('night')}
                 className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                  solarTimeMode === 'night' ? 'bg-[#8C7452] text-white shadow-sm' : 'text-[#C9C4B5] hover:text-white'
+                  solarTimeMode === 'night' ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs' : 'text-[#C9C4B5] hover:text-white hover:bg-white/10'
                 }`}
                 title="8:30 PM · Noche de Gala"
               >
@@ -1352,12 +1405,28 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
               onClick={toggleAudio}
               className={`p-2 rounded-full border transition-all shadow-md cursor-pointer ${
                 isAudioPlaying
-                  ? 'bg-[#8C7452] text-white border-[#8C7452]'
-                  : 'bg-[#1B1813]/85 text-[#C9C4B5] border-[#8C7452]/40 hover:text-white'
+                  ? 'bg-[#C9A86A] text-[#0A0908] border-[#C9A86A] font-bold shadow-xs'
+                  : 'bg-[#14120E]/90 text-[#FAF8F5] border-[#C9A86A]/30 hover:bg-[#C9A86A]/20 hover:text-white'
               }`}
               title={isAudioPlaying ? 'Silenciar ambiente' : 'Activar sonido ambiental de la brisa'}
             >
               {isAudioPlaying ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+            </button>
+
+            {/* Guided Walkthrough Toggle */}
+            <button
+              onClick={() => {
+                setIsGuidedTour(!isGuidedTour);
+              }}
+              className={`px-3 py-1.5 rounded-full border text-[10px] font-meta uppercase tracking-wider transition-all shadow-md cursor-pointer flex items-center gap-1.5 ${
+                isGuidedTour
+                  ? 'bg-[#C9A86A] text-[#0A0908] border-[#C9A86A] font-bold shadow-gold animate-pulse'
+                  : 'bg-[#14120E]/90 text-[#FAF8F5] border-[#C9A86A]/40 hover:bg-[#C9A86A]/20 hover:text-white'
+              }`}
+              title={isGuidedTour ? 'Detener recorrido guiado automático' : 'Iniciar recorrido guiado por toda la residencia'}
+            >
+              {isGuidedTour ? <Pause className="w-3.5 h-3.5 text-[#0A0908]" /> : <Play className="w-3.5 h-3.5 text-[#C9A86A]" />}
+              <span className="hidden xl:inline">{isGuidedTour ? 'Pausar Tour' : 'Recorrido Guiado'}</span>
             </button>
 
             {/* 360 Auto-Rotate */}
@@ -1365,8 +1434,8 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
               onClick={() => setIsAutoRotating(!isAutoRotating)}
               className={`p-2 rounded-full border transition-all shadow-md cursor-pointer ${
                 isAutoRotating
-                  ? 'bg-[#8C7452] text-white border-[#8C7452] animate-pulse'
-                  : 'bg-[#1B1813]/85 text-[#C9C4B5] border-[#8C7452]/40 hover:text-white'
+                  ? 'bg-[#C9A86A] text-[#0A0908] border-[#C9A86A] font-bold shadow-xs'
+                  : 'bg-[#14120E]/90 text-[#FAF8F5] border-[#C9A86A]/30 hover:bg-[#C9A86A]/20 hover:text-white'
               }`}
               title={isAutoRotating ? 'Pausar recorrido 360°' : 'Iniciar giro continuo 360°'}
             >
@@ -1379,7 +1448,7 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
               className={`p-2 rounded-full border transition-all shadow-md cursor-pointer ${
                 isGyroActive
                   ? 'bg-emerald-600 text-white border-emerald-500'
-                  : 'bg-[#1B1813]/85 text-[#C9C4B5] border-[#8C7452]/40 hover:text-white'
+                  : 'bg-[#14120E]/90 text-[#FAF8F5] border-[#C9A86A]/30 hover:bg-[#C9A86A]/20 hover:text-white'
               }`}
               title="Activar sensor giroscópico"
             >
@@ -1392,16 +1461,19 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
       {/* ================= Top-Right Mini Floorplan Radar (2D Mode) ================= */}
       {!isVrStereoMode && (
         <div className="absolute top-16 right-3 pointer-events-auto z-30 hidden sm:block">
-          <div className="bg-[#1B1813]/90 backdrop-blur-xl border border-[#8C7452]/40 rounded-2xl p-2.5 shadow-2xl w-40">
-            <div className="flex items-center justify-between text-[8px] font-meta uppercase tracking-wider text-[#8C8678] mb-1.5">
+          <div className="bg-[#14120E]/90 backdrop-blur-xl border border-[#C9A86A]/30 rounded-2xl p-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.7)] w-44">
+            <div className="flex items-center justify-between text-[8px] font-meta uppercase tracking-wider text-[#C9C4B5] mb-1.5 px-0.5">
               <span>Radar Espacial</span>
-              <span className="text-[#8C7452] font-semibold">{currentRoom.name.split(' ')[0]}</span>
+              <span className="text-[#C9A86A] font-bold">{currentRoom.name.split(' ')[0]}</span>
             </div>
 
             {/* Floorplan Box Schematic */}
-            <div className="relative w-full h-24 bg-[#2A241C] rounded-xl border border-[#8C7452]/30 overflow-hidden">
+            <div className="relative w-full h-24 bg-black/60 rounded-xl border border-[#C9A86A]/20 overflow-hidden shadow-inner">
+              {/* Architectural Grid Lines */}
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,#C9A86A08_1px,transparent_1px),linear-gradient(to_bottom,#C9A86A08_1px,transparent_1px)] bg-[size:12px_12px]" />
+
               {/* North Indicator */}
-              <div className="absolute top-1 left-1/2 -translate-x-1/2 text-[7px] font-mono text-emerald-400 font-bold tracking-widest uppercase">
+              <div className="absolute top-1 left-1/2 -translate-x-1/2 text-[7px] font-mono text-[#C9A86A] font-bold tracking-widest uppercase bg-black/50 px-1.5 py-0.5 rounded-full border border-[#C9A86A]/20">
                 ▲ N · ÁVILA
               </div>
 
@@ -1419,8 +1491,8 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
                     }}
                     className={`absolute w-3.5 h-3.5 rounded-full transition-all cursor-pointer flex items-center justify-center ${
                       isSelected
-                        ? 'bg-emerald-400 ring-2 ring-emerald-300 ring-offset-1 ring-offset-[#1B1813] z-20 scale-125'
-                        : 'bg-[#8C7452]/70 hover:bg-[#8C7452] hover:scale-110 z-10'
+                        ? 'bg-[#C9A86A] ring-2 ring-[#FAF8F5] ring-offset-1 ring-offset-black z-20 scale-125 shadow-gold'
+                        : 'bg-[#8C7452]/70 hover:bg-[#C9A86A] hover:scale-110 z-10'
                     }`}
                     title={`Ir a ${rm.name}`}
                   >
@@ -1430,7 +1502,7 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
                         ref={radarConeRef}
                         className="absolute w-12 h-12 pointer-events-none origin-center"
                       >
-                        <div className="w-full h-full bg-gradient-to-t from-emerald-400/40 via-emerald-400/10 to-transparent clip-triangle" />
+                        <div className="w-full h-full bg-gradient-to-t from-[#C9A86A]/50 via-[#C9A86A]/15 to-transparent clip-triangle" />
                       </div>
                     )}
                   </button>
@@ -1445,7 +1517,7 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
       {!isVrStereoMode && (
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-3 pointer-events-none z-30">
           {/* Left Side: Room Carousel */}
-          <div className="bg-[#1B1813]/90 backdrop-blur-xl border border-[#8C7452]/40 rounded-2xl p-1.5 shadow-2xl pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[calc(100%-120px)] sm:max-w-none">
+          <div className="bg-[#14120E]/90 backdrop-blur-xl border border-[#C9A86A]/30 rounded-2xl p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.7)] pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[calc(100%-120px)] sm:max-w-none">
             {TOUR_ROOMS_DATA.map((room, idx) => {
               const isActive = room.id === activeRoomId;
               return (
@@ -1454,8 +1526,8 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
                   onClick={() => handleSelectRoom(room.id)}
                   className={`px-3 py-2 rounded-xl transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
                     isActive
-                      ? 'bg-[#8C7452] text-[#FAF9F6] shadow-md font-semibold'
-                      : 'text-[#C9C4B5] hover:text-white hover:bg-white/5'
+                      ? 'bg-[#C9A86A] text-[#0A0908] shadow-md font-bold'
+                      : 'text-[#C9C4B5] hover:text-white hover:bg-white/10'
                   }`}
                 >
                   <span className="font-mono text-[9px] opacity-75">0{idx + 1}</span>
@@ -1472,10 +1544,10 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
           {onOpenAdvisor && (
             <button
               onClick={onOpenAdvisor}
-              className="bg-[#8C7452] hover:bg-[#A38760] text-[#1B1813] font-meta font-bold text-xs px-3.5 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 transition-all cursor-pointer pointer-events-auto shrink-0 hover:scale-105 active:scale-95"
+              className="bg-[#14120E]/90 hover:bg-[#C9A86A] text-[#FAF8F5] hover:text-[#0A0908] border border-[#C9A86A]/40 font-meta font-bold text-xs px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 transition-all cursor-pointer pointer-events-auto shrink-0 hover:scale-105 active:scale-95"
               title="Preguntar al Asesor IA sobre este ambiente"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5 text-[#C9A86A] group-hover:text-[#0A0908]" />
               <span className="hidden sm:inline">Consultar Asesor</span>
             </button>
           )}
@@ -1733,26 +1805,26 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
-            className="absolute bottom-20 left-1/2 -translate-x-1/2 z-40 w-[320px] sm:w-[400px] bg-[#FAF9F6] text-[#1B1813] border border-[#8C7452]/40 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.5)] p-5 overflow-hidden"
+            className="absolute bottom-20 left-1/2 -translate-x-1/2 z-40 w-[330px] sm:w-[440px] bg-[#14120E]/95 backdrop-blur-2xl text-[#FAF8F5] border border-[#C9A86A]/40 rounded-3xl shadow-[0_25px_60px_rgba(0,0,0,0.85)] p-5 overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-[#C9C4B5]/60 pb-3 mb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-[#8C7452]/20 text-[#8C7452]">
+            <div className="flex items-center justify-between border-b border-[#C9A86A]/20 pb-3 mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-[#C9A86A]/20 text-[#C9A86A] border border-[#C9A86A]/30">
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="font-meta text-[8.5px] uppercase tracking-widest text-[#8C8678] block">
+                  <span className="font-meta text-[8.5px] uppercase tracking-widest text-[#C9A86A] block font-semibold">
                     {selectedSpecHotspot.specDetails.category}
                   </span>
-                  <h4 className="font-display font-bold text-sm text-[#1B1813]">
+                  <h4 className="font-display font-bold text-sm sm:text-base text-[#FAF8F5]">
                     {selectedSpecHotspot.title}
                   </h4>
                 </div>
               </div>
               <button
                 onClick={() => setSelectedSpecHotspot(null)}
-                className="text-[#8C8678] hover:text-[#1B1813] p-1 rounded-full hover:bg-black/5 cursor-pointer"
+                className="text-[#C9C4B5] hover:text-white p-1 rounded-full hover:bg-white/10 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1760,33 +1832,43 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
 
             {/* Spec Details */}
             <div className="space-y-2.5 text-xs font-serif">
-              <div className="bg-white p-3 rounded-2xl border border-[#C9C4B5]/40 space-y-1.5 shadow-2xs">
-                <div className="flex justify-between items-center text-[10px]">
-                  <span className="font-meta uppercase text-[#8C8678] tracking-wider">Material:</span>
-                  <span className="font-medium text-[#1B1813] text-right">
+              <div className="bg-black/40 p-3 rounded-2xl border border-[#C9A86A]/20 space-y-2 shadow-inner">
+                <div className="flex justify-between items-center text-[10.5px]">
+                  <span className="font-meta uppercase text-[#C9C4B5] tracking-wider">Material:</span>
+                  <span className="font-medium text-[#FAF8F5] text-right font-serif">
                     {selectedSpecHotspot.specDetails.material}
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-[10px]">
-                  <span className="font-meta uppercase text-[#8C8678] tracking-wider">Origen / Firma:</span>
-                  <span className="font-medium text-[#8C7452] text-right">
+                <div className="flex justify-between items-center text-[10.5px]">
+                  <span className="font-meta uppercase text-[#C9C4B5] tracking-wider">Firma / Origen:</span>
+                  <span className="font-semibold text-[#C9A86A] text-right font-serif">
                     {selectedSpecHotspot.specDetails.brandOrOrigin}
                   </span>
                 </div>
               </div>
 
-              <p className="text-[#5C5549] text-xs leading-relaxed pt-1">
+              <p className="text-[#C9C4B5] text-xs leading-relaxed pt-1">
                 {selectedSpecHotspot.specDetails.description}
               </p>
             </div>
 
-            {/* Action */}
-            <div className="mt-4 pt-3 border-t border-[#C9C4B5]/40 flex justify-end">
+            {/* Actions: WhatsApp Consultation + Dismiss */}
+            <div className="mt-4 pt-3 border-t border-[#C9A86A]/20 flex flex-col sm:flex-row gap-2">
+              <a
+                href={`https://wa.me/584140000000?text=Hola,%20deseo%20consultar%20detalles%20sobre%20el%20acabado:%20${encodeURIComponent(selectedSpecHotspot.title)}%20(${encodeURIComponent(selectedSpecHotspot.specDetails.brandOrOrigin)})%20en%20Residencias%20Caroní.`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 bg-[#C9A86A] hover:bg-[#D9B87A] text-[#0A0908] font-meta font-bold text-[10px] uppercase tracking-wider py-2.5 px-3 rounded-xl transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 shadow-md"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Consultar Acabado</span>
+              </a>
+
               <button
                 onClick={() => setSelectedSpecHotspot(null)}
-                className="w-full bg-[#1B1813] hover:bg-[#8C7452] text-[#FAF9F6] font-meta text-xs uppercase tracking-wider py-2 rounded-xl transition-colors cursor-pointer"
+                className="bg-white/10 hover:bg-white/20 text-[#FAF8F5] font-meta text-[10px] uppercase tracking-wider py-2.5 px-4 rounded-xl transition-colors cursor-pointer text-center"
               >
-                Entendido · Continuar Recorrido
+                Continuar
               </button>
             </div>
           </motion.div>

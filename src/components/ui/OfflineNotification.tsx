@@ -23,6 +23,24 @@ export const OfflineNotification: React.FC = () => {
     }
   }, [isOnline, wasOffline]);
 
+  const [isInstallDismissed, setIsInstallDismissed] = useState(false);
+
+  useEffect(() => {
+    // Check if previously dismissed in session
+    try {
+      if (sessionStorage.getItem('rc_pwa_install_dismissed') === 'true') {
+        setIsInstallDismissed(true);
+      }
+    } catch (_) {}
+  }, []);
+
+  const handleDismissInstall = () => {
+    setIsInstallDismissed(true);
+    try {
+      sessionStorage.setItem('rc_pwa_install_dismissed', 'true');
+    } catch (_) {}
+  };
+
   return (
     <div className="fixed top-20 right-4 z-[99990] flex flex-col gap-2 max-w-sm pointer-events-none">
       <AnimatePresence>
@@ -81,8 +99,8 @@ export const OfflineNotification: React.FC = () => {
           </motion.div>
         )}
 
-        {/* PWA Install Suggestion Pill (when supported & not installed) */}
-        {isInstallable && !isPWAInstalled && (
+        {/* PWA Install Suggestion Pill (when supported & not installed & not dismissed) */}
+        {isInstallable && !isPWAInstalled && !isInstallDismissed && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -95,12 +113,22 @@ export const OfflineNotification: React.FC = () => {
                 Instalar App Residencias Caroní
               </span>
             </div>
-            <button
-              onClick={() => promptInstall()}
-              className="bg-[#1B1813] hover:bg-[#8C7452] text-white px-2.5 py-1 rounded-lg font-meta text-[9px] uppercase tracking-wider transition-colors cursor-pointer"
-            >
-              Instalar
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => promptInstall()}
+                className="bg-[#1B1813] hover:bg-[#8C7452] text-white px-2.5 py-1 rounded-lg font-meta text-[9px] uppercase tracking-wider transition-colors cursor-pointer"
+              >
+                Instalar
+              </button>
+              <button
+                onClick={handleDismissInstall}
+                className="text-[#8C7452] hover:text-[#1B1813] hover:bg-black/5 p-1 rounded-lg transition-colors cursor-pointer"
+                aria-label="Cerrar sugerencia de instalación"
+                title="Cerrar"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

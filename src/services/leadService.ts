@@ -119,6 +119,23 @@ export async function submitLeadToGoogleSheets(lead: Omit<LeadRecord, 'id' | 'ti
     // Update synced flag in local storage
     newLead.syncedToGoogleSheets = synced;
     localStorage.setItem(ACTIVE_LEAD_KEY, JSON.stringify(newLead));
+
+    // 3. Dispatch to local secure backend server endpoint /api/leads
+    try {
+      await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: newLead.fullName,
+          email: newLead.email,
+          phone: `${newLead.countryCode} ${newLead.phone}`.trim(),
+          unitInterest: newLead.preferredUnit || 'Residencias Caroní',
+          accreditationStatus: 'Accredited_Lead',
+        }),
+      });
+    } catch (backendErr) {
+      console.warn('Backend API /api/leads dispatch notice:', backendErr);
+    }
   } catch (err) {
     console.warn('Google Sheets sync notice (saved locally as fallback):', err);
     synced = false;

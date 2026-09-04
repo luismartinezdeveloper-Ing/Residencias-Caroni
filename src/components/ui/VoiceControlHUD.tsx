@@ -36,11 +36,11 @@ export const VoiceControlHUD: React.FC<VoiceControlHUDProps> = ({
         { label: 'Ir a la master suite', desc: 'Habitación principal' },
         { label: 'Hora dorada / Modo noche', desc: 'Cambia la simulación solar' },
         { label: 'Activar realidad virtual', desc: 'Lanza inmersión VR' },
-        { label: 'Modo despiece / Monolítico', desc: 'Regresa al estudio 3D' },
+        { label: 'Monolito / Despiece', desc: 'Regresa al estudio 3D' },
       ]
     : [
-        { label: 'Modo explosión', desc: 'Despiece vertical de estratos' },
-        { label: 'Modo monolítico', desc: 'Edificio ensamblado completo' },
+        { label: 'Monolito / Ensamblado', desc: 'Edificio ensamblado completo' },
+        { label: 'Modo explosión / Despiece', desc: 'Despiece vertical de estratos' },
         { label: 'Tour 360 interiores', desc: 'Entrar a las residencias' },
         { label: 'Ir a la cocina / salón', desc: 'Abre el tour en esa estancia' },
         { label: 'Ver el Ávila / Norte', desc: 'Orienta la cámara hacia la montaña' },

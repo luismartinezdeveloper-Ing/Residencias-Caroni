@@ -114,11 +114,11 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
     isDragging: false,
     prevMouseX: 0,
     prevMouseY: 0,
-    rotationX: 0.32,
-    rotationY: -0.78,
-    targetRotationX: 0.32,
+    rotationX: 0.45, // Starts slightly elevated for dramatic cinematic glide-in
+    rotationY: -1.15, // Starts with a slight yaw offset
+    targetRotationX: 0.32, // Calibrated target isometric angle
     targetRotationY: -0.78,
-    zoom: DEFAULT_ZOOM,
+    zoom: 118, // Starts further back for smooth camera descent
     targetZoom: DEFAULT_ZOOM,
     targetLookAtY: 10.5,
     currentLookAtY: 10.5,
@@ -147,20 +147,20 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
     }
     if (sceneRef.current) {
       if (solarTimeMode === 'morning') {
-        sceneRef.current.background = new THREE.Color('#FAF8F4');
+        sceneRef.current.background = new THREE.Color('#141311'); // Dark Studio Gallery Matutino (tonalidad sobria contemporánea)
       } else if (solarTimeMode === 'golden') {
-        sceneRef.current.background = new THREE.Color('#F0E3D3');
+        sceneRef.current.background = new THREE.Color('#1A140F'); // Dark Amber Crepuscular
       } else {
-        sceneRef.current.background = new THREE.Color('#141724');
+        sceneRef.current.background = new THREE.Color('#0A0A0E'); // Midnight Obsidian Puro
       }
     }
     if (groundMatRef.current) {
       if (solarTimeMode === 'night') {
-        groundMatRef.current.color.setHex(0x1B2030);
+        groundMatRef.current.color.setHex(0x12141A);
       } else if (solarTimeMode === 'golden') {
-        groundMatRef.current.color.setHex(0xECE3D4);
+        groundMatRef.current.color.setHex(0x221B14);
       } else {
-        groundMatRef.current.color.setHex(0xFAF9F6);
+        groundMatRef.current.color.setHex(0x1A1815);
       }
     }
   }, [solarTimeMode]);
@@ -190,12 +190,12 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
           if (isSelected) {
             mat.color.setHex(0xFFFFFF);
-            mat.emissive.setHex(0x8C7452);
-            mat.emissiveIntensity = solarTimeMode === 'night' ? 0.75 : 0.4;
+            mat.emissive.setHex(0xC9A86A); // Warm gold architectural glow
+            mat.emissiveIntensity = solarTimeMode === 'night' ? 0.95 : 0.65;
           } else if (isHovered) {
             mat.color.setHex(0xFFFFFF);
             mat.emissive.setHex(0x8C7452);
-            mat.emissiveIntensity = 0.25;
+            mat.emissiveIntensity = 0.35;
           } else {
             mat.color.setHex(solarTimeMode === 'night' ? 0xCBC4B6 : 0xFAF8F4);
             mat.emissive.setHex(0x000000);
@@ -367,10 +367,16 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
     // 5. PEDESTAL & GROUND
     const groundGeo = new THREE.CylinderGeometry(36, 36, 0.6, 64);
+    const initialGroundColor =
+      solarModeRef.current === 'night'
+        ? 0x12141A
+        : solarModeRef.current === 'golden'
+        ? 0x221B14
+        : 0x1A1815;
     const groundMat = new THREE.MeshStandardMaterial({
-      color: solarModeRef.current === 'night' ? 0x1B2030 : solarModeRef.current === 'golden' ? 0xECE3D4 : 0xFAF9F6,
-      roughness: 0.95,
-      metalness: 0.02,
+      color: initialGroundColor,
+      roughness: 0.92,
+      metalness: 0.08,
     });
     groundMatRef.current = groundMat;
     const groundMesh = new THREE.Mesh(groundGeo, groundMat);
@@ -378,11 +384,12 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
     groundMesh.receiveShadow = true;
     scene.add(groundMesh);
 
-    const gridHelper = new THREE.GridHelper(52, 26, 0x8C7452, 0xC9C4B5);
+    // Retícula arquitectónica refinada en bronce satinado
+    const gridHelper = new THREE.GridHelper(52, 26, 0xC9A86A, 0x3A342B);
     gridHelper.position.y = -4.19;
     scene.add(gridHelper);
 
-    // Ávila Mountain Background Silhouette
+    // Ávila Mountain Background Silhouette (con trazo nítido arquitectónico)
     const mountainPoints = [
       new THREE.Vector3(-65, -4.0, -42),
       new THREE.Vector3(-45, 11, -42),
@@ -394,10 +401,10 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
     ];
     const mountainGeo = new THREE.BufferGeometry().setFromPoints(mountainPoints);
     const mountainMat = new THREE.LineBasicMaterial({
-      color: 0x8C8678,
+      color: 0xC9A86A,
       linewidth: 1.5,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.45,
     });
     const mountainLine = new THREE.Line(mountainGeo, mountainMat);
     scene.add(mountainLine);
@@ -479,6 +486,9 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       clickStartX = e.clientX;
       clickStartY = e.clientY;
       setIsRotating(false);
+      if (mountRef.current) {
+        mountRef.current.style.cursor = 'grabbing';
+      }
     };
 
     const onMouseMove = (e: MouseEvent) => {
@@ -498,6 +508,16 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
         // Raycast hover check
         const hitUnitId = getRaycastHit(e.clientX, e.clientY);
         setHoveredUnitId(hitUnitId);
+        
+        // Dynamic architectural cursor feedback
+        if (mountRef.current) {
+          if (hitUnitId) {
+            mountRef.current.style.cursor = 'pointer';
+          } else {
+            mountRef.current.style.cursor = 'grab';
+          }
+        }
+
         if (hitUnitId) {
           const foundUnit = UNITS_DATA.find((u) => u.id === hitUnitId);
           if (foundUnit && mountRef.current) {
@@ -516,6 +536,9 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
     const onMouseUp = (e: MouseEvent) => {
       controlsStateRef.current.isDragging = false;
+      if (mountRef.current) {
+        mountRef.current.style.cursor = hoveredUnitId ? 'pointer' : 'grab';
+      }
       const dist = Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY);
       if (dist < 5) {
         const hitUnitId = getRaycastHit(e.clientX, e.clientY);
@@ -860,37 +883,37 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#1B1813]/80 backdrop-blur-md p-2 sm:p-4 md:p-6 select-none"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#0A0908]/85 backdrop-blur-xl p-2 sm:p-4 md:p-6 cursor-default"
         >
-          {/* Modal Container */}
+          {/* Modal Container: Studio Arquitectónico de Alta Gama */}
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 14 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 10 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className={`relative w-full bg-white/40 backdrop-blur-md border border-[#1B1813]/20 shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${
+            className={`relative w-full bg-[#14120E] text-[#FAF8F5] border border-[#C9A86A]/30 shadow-[0_30px_90px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden transition-all duration-300 ${
               isFullscreen
                 ? 'h-screen max-h-none w-screen max-w-none m-0 border-none rounded-none'
-                : 'w-full h-full max-w-[1800px] rounded-2xl'
+                : 'w-full h-full max-w-[1800px] rounded-3xl'
             }`}
           >
             {/* Top Institutional Header */}
-            <div className="flex flex-wrap items-center justify-between px-3 sm:px-5 py-2 sm:py-2.5 bg-transparent border-b border-[#1B1813]/20 gap-2 shrink-0">
+            <div className="flex flex-wrap items-center justify-between px-3 sm:px-5 py-2.5 sm:py-3 bg-[#1B1813] border-b border-[#C9A86A]/20 gap-2 shrink-0 shadow-md">
               {/* Brand Title */}
-              <div className="flex items-center space-x-2 sm:space-x-2.5 min-w-0">
-                <CaroniIsotype size={22} color="#1B1813" className="shrink-0" />
+              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+                <CaroniIsotype size={24} color="#C9A86A" className="shrink-0" />
                 <div className="min-w-0">
-                  <div className="font-display text-sm sm:text-base md:text-lg text-[#1B1813] leading-none truncate">
+                  <div className="font-display text-sm sm:text-base md:text-lg text-[#FAF8F5] leading-none truncate">
                     Estudio Volumétrico 3D & Estratos
                   </div>
-                  <div className="font-meta text-[8.5px] sm:text-[9.5px] text-[#8C8678] tracking-[0.16em] sm:tracking-[0.2em] mt-0.5 truncate">
+                  <div className="font-meta text-[8.5px] sm:text-[9.5px] text-[#C9A86A] tracking-[0.2em] mt-0.5 truncate font-semibold">
                     MAQUETA DIGITAL A TINTA · AÑIL ARQUITECTURA
                   </div>
                 </div>
               </div>
 
               {/* 5 Main View Modes Tabs */}
-              <div className="flex items-center border border-[#1B1813] bg-white p-1 rounded-full overflow-x-auto no-scrollbar max-w-full order-3 sm:order-2 shrink-0 shadow-2xs gap-1">
+              <div className="flex items-center border border-white/10 bg-black/50 p-1 rounded-full overflow-x-auto no-scrollbar max-w-full order-3 sm:order-2 shrink-0 shadow-inner gap-1">
                 {[
                   { id: 'assembled', label: '01 · MONOLÍTICO' },
                   { id: 'exploded', label: '02 · DESPIECE VERTICAL' },
@@ -901,14 +924,14 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                   <button
                     key={mode.id}
                     onClick={() => setViewMode(mode.id as any)}
-                    className={`font-meta text-[8.5px] sm:text-[9.5px] px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full whitespace-nowrap transition-colors cursor-pointer min-h-[28px] flex items-center justify-center ${
+                    className={`font-meta text-[8.5px] sm:text-[9.5px] px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer min-h-[28px] flex items-center justify-center ${
                       viewMode === mode.id
-                        ? 'bg-[#1B1813] text-[#EFEBE0] font-semibold shadow-2xs'
+                        ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-md'
                         : mode.id === 'tour360'
-                        ? 'text-emerald-800 bg-emerald-50/70 font-semibold hover:bg-emerald-100/80 border border-emerald-300/60'
+                        ? 'text-emerald-300 bg-emerald-950/50 font-semibold hover:bg-emerald-900/60 border border-emerald-500/40'
                         : mode.id === 'pricing'
-                        ? 'text-[#8C7452] font-semibold hover:bg-[#FAF9F6]'
-                        : 'text-[#1B1813] hover:text-[#8C7452] hover:bg-[#FAF9F6]'
+                        ? 'text-[#C9A86A] font-semibold hover:bg-white/10'
+                        : 'text-[#C9C4B5] hover:text-white hover:bg-white/5'
                     }`}
                   >
                     {mode.label}
@@ -929,17 +952,17 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                 />
 
                 {/* 3-State Solar Time Simulation Toggle */}
-                <div className="flex items-center border border-[#1B1813] bg-white p-0.5 rounded-full shadow-2xs">
+                <div className="flex items-center border border-[#C9A86A]/30 bg-black/60 p-0.5 rounded-full shadow-inner">
                   <button
                     onClick={() => setSolarTimeMode('morning')}
                     className={`font-meta text-[8.5px] sm:text-[9.5px] px-2 sm:px-2.5 py-1 rounded-full transition-colors flex items-center space-x-1 cursor-pointer min-h-[26px] ${
                       solarTimeMode === 'morning'
-                        ? 'bg-[#1B1813] text-[#EFEBE0] font-semibold'
-                        : 'text-[#1B1813] hover:bg-[#FAF9F6]'
+                        ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
+                        : 'text-[#C9C4B5] hover:text-white hover:bg-white/10'
                     }`}
                     title="10:00 AM · Sol Matutino (Alta claridad y cielo azul)"
                   >
-                    <Sun className={`w-3 h-3 ${solarTimeMode === 'morning' ? 'text-[#F5C780]' : 'text-[#8C7452]'}`} />
+                    <Sun className={`w-3 h-3 ${solarTimeMode === 'morning' ? 'text-[#0A0908]' : 'text-[#C9A86A]'}`} />
                     <span className="hidden xl:inline">10:00 AM</span>
                   </button>
 
@@ -947,12 +970,12 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                     onClick={() => setSolarTimeMode('golden')}
                     className={`font-meta text-[8.5px] sm:text-[9.5px] px-2 sm:px-2.5 py-1 rounded-full transition-colors flex items-center space-x-1 cursor-pointer min-h-[26px] ${
                       solarTimeMode === 'golden'
-                        ? 'bg-[#1B1813] text-[#EFEBE0] font-semibold'
-                        : 'text-[#1B1813] hover:bg-[#FAF9F6]'
+                        ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
+                        : 'text-[#C9C4B5] hover:text-white hover:bg-white/10'
                     }`}
                     title="5:30 PM · Hora Dorada (Ocaso sobre El Ávila y sombras rasantes)"
                   >
-                    <Sparkles className={`w-3 h-3 ${solarTimeMode === 'golden' ? 'text-[#F5C780]' : 'text-[#8C7452]'}`} />
+                    <Sparkles className={`w-3 h-3 ${solarTimeMode === 'golden' ? 'text-[#0A0908]' : 'text-[#C9A86A]'}`} />
                     <span className="hidden xl:inline">5:30 PM</span>
                   </button>
 
@@ -960,29 +983,29 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                     onClick={() => setSolarTimeMode('night')}
                     className={`font-meta text-[8.5px] sm:text-[9.5px] px-2 sm:px-2.5 py-1 rounded-full transition-colors flex items-center space-x-1 cursor-pointer min-h-[26px] ${
                       solarTimeMode === 'night'
-                        ? 'bg-[#1B1813] text-[#EFEBE0] font-semibold'
-                        : 'text-[#1B1813] hover:bg-[#FAF9F6]'
+                        ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
+                        : 'text-[#C9C4B5] hover:text-white hover:bg-white/10'
                     }`}
                     title="8:30 PM · Noche de Gala (Iluminación interior cálida habitada)"
                   >
-                    <Moon className={`w-3 h-3 ${solarTimeMode === 'night' ? 'text-[#F5C780]' : 'text-[#8C7452]'}`} />
+                    <Moon className={`w-3 h-3 ${solarTimeMode === 'night' ? 'text-[#0A0908]' : 'text-[#C9A86A]'}`} />
                     <span className="hidden xl:inline">8:30 PM</span>
                   </button>
                 </div>
 
                 <button
                   onClick={() => setIsFullscreen(!isFullscreen)}
-                  className="font-meta text-[8.5px] sm:text-[9.5px] px-2.5 sm:px-3 py-1 sm:py-1.5 border border-[#1B1813] bg-white hover:bg-[#FAF9F6] text-[#1B1813] transition-colors flex items-center space-x-1 cursor-pointer shadow-xs rounded-full min-h-[28px]"
+                  className="font-meta text-[8.5px] sm:text-[9.5px] px-2.5 sm:px-3 py-1 sm:py-1.5 border border-[#C9A86A]/30 bg-black/50 hover:bg-[#C9A86A]/20 text-[#FAF8F5] transition-colors flex items-center space-x-1 cursor-pointer shadow-xs rounded-full min-h-[28px]"
                   title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla Completa'}
                 >
                   {isFullscreen ? (
                     <>
-                      <Minimize2 className="w-3 h-3 text-[#8C7452]" />
+                      <Minimize2 className="w-3 h-3 text-[#C9A86A]" />
                       <span className="hidden sm:inline">REDUCIR</span>
                     </>
                   ) : (
                     <>
-                      <Maximize2 className="w-3 h-3 text-[#8C7452]" />
+                      <Maximize2 className="w-3 h-3 text-[#C9A86A]" />
                       <span className="hidden sm:inline">ENFOQUE</span>
                     </>
                   )}
@@ -990,10 +1013,12 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
                 <button
                   onClick={onClose}
-                  className="font-meta text-[8.5px] sm:text-[9.5px] px-3.5 sm:px-4 py-1 sm:py-1.5 border border-[#1B1813] bg-white hover:bg-[#1B1813] hover:text-[#EFEBE0] transition-colors flex items-center space-x-1.5 shrink-0 cursor-pointer shadow-xs rounded-full min-h-[28px]"
+                  className="font-meta text-[9px] sm:text-[9.5px] px-3.5 sm:px-4 py-2 sm:py-1.5 border border-[#C9A86A]/40 bg-[#C9A86A]/10 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer shadow-xs rounded-full min-h-[44px] sm:min-h-[28px]"
+                  title="Cerrar Maqueta 3D"
+                  aria-label="Cerrar Maqueta 3D"
                 >
-                  <span>CERRAR</span>
-                  <span>✕</span>
+                  <span className="font-semibold">CERRAR</span>
+                  <span className="font-bold">✕</span>
                 </button>
               </div>
             </div>
@@ -1286,7 +1311,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                   ) : (
                     <div
                       ref={mountRef}
-                      className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
+                      className="w-full h-full cursor-architectural-orbit relative overflow-hidden"
                     />
                   )}
 
@@ -1294,16 +1319,16 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                   {hoverTooltip && (
                     <div
                       style={{
-                        left: `${Math.min(hoverTooltip.x + 12, (mountRef.current?.clientWidth || 600) - 180)}px`,
-                        top: `${Math.max(hoverTooltip.y - 45, 15)}px`,
+                        left: `${Math.min(hoverTooltip.x + 14, (mountRef.current?.clientWidth || 600) - 200)}px`,
+                        top: `${Math.max(hoverTooltip.y - 50, 15)}px`,
                       }}
-                      className="absolute z-30 pointer-events-none bg-white/30 backdrop-blur-md text-[#1B1813] border border-[#1B1813]/20 rounded-xl px-3 py-2 shadow-xl animate-in fade-in zoom-in-95 duration-150"
+                      className="absolute z-30 pointer-events-none bg-[#14120E]/90 backdrop-blur-md text-[#FAF8F5] border border-[#C9A86A]/40 rounded-xl px-3.5 py-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.8)] animate-in fade-in zoom-in-95 duration-150"
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <span className="font-display text-xs text-[#1B1813] font-semibold">{hoverTooltip.unit.name}</span>
-                        <span className="font-mono text-[9px] text-[#8C7452] font-bold">{hoverTooltip.unit.level}</span>
+                        <span className="font-display text-xs text-[#FAF8F5] font-semibold">{hoverTooltip.unit.name}</span>
+                        <span className="font-mono text-[9.5px] text-[#C9A86A] font-bold">{hoverTooltip.unit.level}</span>
                       </div>
-                      <div className="font-mono text-[10px] text-[#8C8678] font-medium mt-0.5">
+                      <div className="font-mono text-[10px] text-[#C9C4B5] font-medium mt-0.5">
                         {hoverTooltip.unit.totalArea.toLocaleString('es-VE', { minimumFractionDigits: 2 })} m² · {hoverTooltip.unit.rooms} hab
                       </div>
                     </div>
@@ -1311,12 +1336,12 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
                   {/* Top Overlay: Stratum Filter Bar */}
                   <div className={`absolute top-2 left-2 right-2 sm:left-4 sm:right-auto flex flex-wrap items-center justify-between sm:justify-start gap-2 pointer-events-none z-30 transition-opacity duration-300 ${(viewMode === 'assembled' || viewMode === 'exploded') ? 'opacity-100' : 'opacity-0'}`}>
-                    <div className={`bg-white/95 backdrop-blur-md border border-[#C9C4B5] rounded-2xl p-1.5 sm:p-2 flex flex-col gap-1.5 shadow-sm pointer-events-auto max-w-full overflow-hidden`}>
+                    <div className="bg-[#14120E]/90 backdrop-blur-md border border-[#C9A86A]/30 rounded-2xl p-1.5 sm:p-2 flex flex-col gap-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.6)] pointer-events-auto max-w-full overflow-hidden">
                       <div className="flex items-center justify-between px-1">
-                        <span className="font-meta text-[8.5px] sm:text-[9.5px] text-[#8C8678] tracking-wider uppercase">
+                        <span className="font-meta text-[8px] sm:text-[9px] text-[#C9C4B5] tracking-wider uppercase">
                           Estratos en corte
                         </span>
-                        <span className="font-meta text-[8.5px] sm:text-[9.5px] text-[#8C7452] font-semibold">
+                        <span className="font-meta text-[8.5px] sm:text-[9.5px] text-[#C9A86A] font-semibold">
                           {activeFloorFilter}
                         </span>
                       </div>
@@ -1331,10 +1356,10 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                           <button
                             key={f.id}
                             onClick={() => setActiveFloorFilter(f.id as any)}
-                            className={`font-meta text-[8.5px] sm:text-[9.5px] px-2.5 sm:px-3 py-1 border rounded-full whitespace-nowrap transition-colors cursor-pointer min-h-[26px] flex items-center justify-center ${
+                            className={`font-meta text-[8.5px] sm:text-[9.5px] px-2.5 sm:px-3 py-1 border rounded-full whitespace-nowrap transition-all cursor-pointer min-h-[26px] flex items-center justify-center ${
                               activeFloorFilter === f.id
-                                ? 'bg-[#8C7452] text-[#EFEBE0] border-[#8C7452] font-bold shadow-2xs'
-                                : 'bg-white text-[#1B1813] border-[#C9C4B5] hover:border-[#8C7452]'
+                                ? 'bg-[#C9A86A] text-[#0A0908] border-[#C9A86A] font-bold shadow-xs'
+                                : 'bg-black/40 text-[#C9C4B5] border-white/10 hover:border-[#C9A86A]/50 hover:text-white'
                             }`}
                           >
                             {f.label}
@@ -1348,8 +1373,8 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                   <div className={`absolute bottom-3 left-3 right-3 flex flex-wrap items-center justify-between gap-2 pointer-events-none z-30 transition-opacity duration-300 ${(viewMode === 'assembled' || viewMode === 'exploded') ? 'opacity-100' : 'opacity-0'}`}>
                     
                     {/* Left Group: Camera Presets & Orbit Toggle */}
-                    <div className={`bg-white/95 backdrop-blur-md border border-[#C9C4B5] rounded-full px-2.5 sm:px-3 py-1 sm:py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-sm pointer-events-auto max-w-full overflow-x-auto no-scrollbar`}>
-                      <span className="font-meta text-[8px] sm:text-[9px] text-[#8C8678] tracking-wider uppercase shrink-0 hidden md:inline">
+                    <div className="bg-[#14120E]/90 backdrop-blur-md border border-[#C9A86A]/30 rounded-full px-2.5 sm:px-3 py-1 sm:py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-[0_10px_30px_rgba(0,0,0,0.6)] pointer-events-auto max-w-full overflow-x-auto no-scrollbar">
+                      <span className="font-meta text-[8px] sm:text-[9px] text-[#C9C4B5] tracking-wider uppercase shrink-0 hidden md:inline">
                         Perspectiva:
                       </span>
                       <div className="flex items-center gap-1">
@@ -1362,10 +1387,10 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                           <button
                             key={cam.id}
                             onClick={() => setCameraPreset(cam.id as any)}
-                            className={`font-meta text-[8px] sm:text-[9px] px-2 sm:px-2.5 py-1 border rounded-full whitespace-nowrap transition-colors cursor-pointer min-h-[26px] flex items-center justify-center ${
+                            className={`font-meta text-[8px] sm:text-[9px] px-2 sm:px-2.5 py-1 border rounded-full whitespace-nowrap transition-all cursor-pointer min-h-[26px] flex items-center justify-center ${
                               cameraView === cam.id
-                                ? 'bg-[#1B1813] text-[#EFEBE0] border-[#1B1813] font-bold shadow-2xs'
-                                : 'bg-white text-[#1B1813] border-[#C9C4B5] hover:border-[#8C7452]'
+                                ? 'bg-[#C9A86A] text-[#0A0908] border-[#C9A86A] font-bold shadow-xs'
+                                : 'bg-black/40 text-[#C9C4B5] border-white/10 hover:border-[#C9A86A]/50 hover:text-white'
                             }`}
                           >
                             {cam.label}
@@ -1375,10 +1400,10 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                         {/* 360 Rotate Button */}
                         <button
                           onClick={() => setIsRotating(!isRotating)}
-                          className={`font-meta text-[8px] sm:text-[9px] px-2.5 py-1 border rounded-full whitespace-nowrap transition-colors flex items-center space-x-1 cursor-pointer min-h-[26px] ${
+                          className={`font-meta text-[8px] sm:text-[9px] px-2.5 py-1 border rounded-full whitespace-nowrap transition-all flex items-center space-x-1 cursor-pointer min-h-[26px] ${
                             isRotating
-                              ? 'bg-[#8C7452] text-[#EFEBE0] border-[#8C7452] font-bold animate-pulse'
-                              : 'bg-white text-[#1B1813] border-[#C9C4B5] hover:border-[#8C7452]'
+                              ? 'bg-[#C9A86A] text-[#0A0908] border-[#C9A86A] font-bold shadow-xs'
+                              : 'bg-black/40 text-[#C9C4B5] border-white/10 hover:border-[#C9A86A]/50 hover:text-white'
                           }`}
                         >
                           <span>{isRotating ? '■' : '▶'}</span>
@@ -1388,25 +1413,25 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                     </div>
 
                     {/* Right Group: Zoom In / Zoom Out / Reset View */}
-                    <div className={`bg-white/95 backdrop-blur-md border border-[#C9C4B5] rounded-full px-2 py-1 flex flex-row items-center gap-1.5 shadow-sm pointer-events-auto`}>
+                    <div className="bg-[#14120E]/90 backdrop-blur-md border border-[#C9A86A]/30 rounded-full px-2 py-1 flex flex-row items-center gap-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.6)] pointer-events-auto">
                       <button
                         onClick={() => handleZoomChange(10)}
                         title="Alejar modelo"
-                        className="font-mono text-sm w-7 h-7 flex items-center justify-center rounded-full border border-[#C9C4B5] bg-white hover:bg-[#1B1813] hover:text-[#EFEBE0] text-[#1B1813] transition-colors cursor-pointer active:scale-95"
+                        className="font-mono text-sm w-7 h-7 flex items-center justify-center rounded-full border border-white/10 bg-black/40 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all cursor-pointer active:scale-95"
                       >
                         −
                       </button>
                       <button
                         onClick={handleResetView}
                         title="Encuadre inicial estándar"
-                        className="font-meta text-[8px] sm:text-[9px] px-2.5 h-7 flex items-center justify-center rounded-full border border-[#C9C4B5] bg-white hover:border-[#8C7452] text-[#8C8678] hover:text-[#1B1813] transition-colors cursor-pointer active:scale-95 whitespace-nowrap"
+                        className="font-meta text-[8px] sm:text-[9px] px-2.5 h-7 flex items-center justify-center rounded-full border border-white/10 bg-black/40 hover:border-[#C9A86A] hover:text-[#C9A86A] text-[#C9C4B5] transition-all cursor-pointer active:scale-95 whitespace-nowrap"
                       >
                         REAJUSTAR
                       </button>
                       <button
                         onClick={() => handleZoomChange(-10)}
                         title="Acercar modelo"
-                        className="font-mono text-sm w-7 h-7 flex items-center justify-center rounded-full border border-[#C9C4B5] bg-white hover:bg-[#1B1813] hover:text-[#EFEBE0] text-[#1B1813] transition-colors cursor-pointer active:scale-95"
+                        className="font-mono text-sm w-7 h-7 flex items-center justify-center rounded-full border border-white/10 bg-black/40 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all cursor-pointer active:scale-95"
                       >
                         +
                       </button>

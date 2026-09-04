@@ -14,102 +14,396 @@ export interface Apartment3DEnvironment {
   dispose: () => void;
 }
 
-// Reusable procedural texture generator for wood, marble, fabric and rugs
-function createWoodTexture(): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    ctx.fillStyle = '#6E482B';
-    ctx.fillRect(0, 0, 512, 512);
-    for (let i = 0; i < 400; i++) {
-      ctx.fillStyle = i % 2 === 0 ? 'rgba(60, 36, 18, 0.15)' : 'rgba(145, 102, 65, 0.12)';
-      ctx.fillRect(0, (i * 1.3) % 512, 512, 1.5 + Math.random() * 2);
-    }
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  return tex;
+// Advanced PBR Texture Generator with Color, Bump/Normal and Roughness Maps
+interface PBRTextureSet {
+  colorMap: THREE.CanvasTexture;
+  bumpMap: THREE.CanvasTexture;
+  roughnessMap: THREE.CanvasTexture;
 }
 
-function createFabricTexture(): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 256;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    ctx.fillStyle = '#F2EDE4';
-    ctx.fillRect(0, 0, 256, 256);
-    for (let y = 0; y < 256; y += 4) {
-      for (let x = 0; x < 256; x += 4) {
-        if ((x + y) % 8 === 0) {
-          ctx.fillStyle = 'rgba(180, 168, 150, 0.25)';
-          ctx.fillRect(x, y, 2, 2);
-        }
+// 1. Mármol Calacatta Vagli / Gold PBR (1024x1024 con vetas doradas/grises y micro-relieve)
+function createCalacattaMarblePBR(): PBRTextureSet {
+  const size = 1024;
+  const cCanvas = document.createElement('canvas');
+  cCanvas.width = size;
+  cCanvas.height = size;
+  const cCtx = cCanvas.getContext('2d')!;
+
+  const bCanvas = document.createElement('canvas');
+  bCanvas.width = size;
+  bCanvas.height = size;
+  const bCtx = bCanvas.getContext('2d')!;
+
+  const rCanvas = document.createElement('canvas');
+  rCanvas.width = size;
+  rCanvas.height = size;
+  const rCtx = rCanvas.getContext('2d')!;
+
+  // Fondo blanco cálido marfil de Carrara
+  cCtx.fillStyle = '#FAF8F4';
+  cCtx.fillRect(0, 0, size, size);
+
+  // Bump baseline (128 gris neutro)
+  bCtx.fillStyle = '#808080';
+  bCtx.fillRect(0, 0, size, size);
+
+  // Rugosidad base pulida (roughness ~ 0.15)
+  rCtx.fillStyle = '#262626';
+  rCtx.fillRect(0, 0, size, size);
+
+  // Micro cristalización translúcida del mármol
+  for (let i = 0; i < 40000; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const g = Math.floor(248 + Math.random() * 7);
+    cCtx.fillStyle = `rgba(${g}, ${g - 3}, ${g - 8}, 0.5)`;
+    cCtx.fillRect(x, y, 2, 2);
+  }
+
+  // Vetas primarias dramáticas Calacatta (Gris grafito + toques de oro y ámbar)
+  const veinCount = 18;
+  for (let v = 0; v < veinCount; v++) {
+    const isGold = v % 3 === 0;
+    const startX = Math.random() * size;
+    const startY = 0;
+
+    cCtx.beginPath();
+    cCtx.moveTo(startX, startY);
+    bCtx.beginPath();
+    bCtx.moveTo(startX, startY);
+    rCtx.beginPath();
+    rCtx.moveTo(startX, startY);
+
+    const cp1x = startX + (Math.random() - 0.5) * 400;
+    const cp1y = size * 0.33 + (Math.random() - 0.5) * 100;
+    const cp2x = startX + (Math.random() - 0.5) * 450;
+    const cp2y = size * 0.66 + (Math.random() - 0.5) * 100;
+    const endX = startX + (Math.random() - 0.5) * 350;
+    const endY = size;
+
+    cCtx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+    bCtx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+    rCtx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+
+    const lineWidth = isGold ? 1.5 + Math.random() * 2.5 : 2.5 + Math.random() * 5.0;
+    cCtx.lineWidth = lineWidth;
+    cCtx.strokeStyle = isGold ? 'rgba(195, 155, 95, 0.45)' : 'rgba(90, 85, 80, 0.35)';
+    cCtx.stroke();
+
+    // Bump sutil en las vetas
+    bCtx.lineWidth = lineWidth;
+    bCtx.strokeStyle = 'rgba(100, 100, 100, 0.3)';
+    bCtx.stroke();
+
+    // Las vetas son ligeramente más mates que el fondo pulido
+    rCtx.lineWidth = lineWidth;
+    rCtx.strokeStyle = 'rgba(90, 90, 90, 0.5)';
+    rCtx.stroke();
+  }
+
+  const colorMap = new THREE.CanvasTexture(cCanvas);
+  colorMap.wrapS = THREE.RepeatWrapping;
+  colorMap.wrapT = THREE.RepeatWrapping;
+
+  const bumpMap = new THREE.CanvasTexture(bCanvas);
+  bumpMap.wrapS = THREE.RepeatWrapping;
+  bumpMap.wrapT = THREE.RepeatWrapping;
+
+  const roughnessMap = new THREE.CanvasTexture(rCanvas);
+  roughnessMap.wrapS = THREE.RepeatWrapping;
+  roughnessMap.wrapT = THREE.RepeatWrapping;
+
+  return { colorMap, bumpMap, roughnessMap };
+}
+
+// 2. Roble Europeo Ahumado / Nogal Canaletto PBR (1024x1024 con relieve de veta leñosa)
+function createEuropeanOakWoodPBR(): PBRTextureSet {
+  const size = 1024;
+  const cCanvas = document.createElement('canvas');
+  cCanvas.width = size;
+  cCanvas.height = size;
+  const cCtx = cCanvas.getContext('2d')!;
+
+  const bCanvas = document.createElement('canvas');
+  bCanvas.width = size;
+  bCanvas.height = size;
+  const bCtx = bCanvas.getContext('2d')!;
+
+  const rCanvas = document.createElement('canvas');
+  rCanvas.width = size;
+  rCanvas.height = size;
+  const rCtx = rCanvas.getContext('2d')!;
+
+  // Tono base nogal/roble arquitectónico
+  cCtx.fillStyle = '#68452B';
+  cCtx.fillRect(0, 0, size, size);
+
+  bCtx.fillStyle = '#808080';
+  bCtx.fillRect(0, 0, size, size);
+
+  // Rugosidad satinada (roughness ~ 0.48)
+  rCtx.fillStyle = '#7A7A7A';
+  rCtx.fillRect(0, 0, size, size);
+
+  // Vetas longitudinales de alta resolución
+  for (let i = 0; i < 900; i++) {
+    const y = (i * 1.15) % size;
+    const isDark = i % 2 === 0;
+    cCtx.fillStyle = isDark ? 'rgba(50, 30, 16, 0.22)' : 'rgba(150, 105, 65, 0.16)';
+    cCtx.fillRect(0, y, size, 1.2 + Math.random() * 2.2);
+
+    bCtx.fillStyle = isDark ? 'rgba(55, 55, 55, 0.25)' : 'rgba(165, 165, 165, 0.25)';
+    bCtx.fillRect(0, y, size, 1.2 + Math.random() * 2.2);
+  }
+
+  // Nudos de madera sutiles
+  for (let k = 0; k < 6; k++) {
+    const kx = Math.random() * size;
+    const ky = Math.random() * size;
+    cCtx.fillStyle = 'rgba(40, 22, 10, 0.35)';
+    cCtx.beginPath();
+    cCtx.ellipse(kx, ky, 6, 22, Math.PI / 12, 0, Math.PI * 2);
+    cCtx.fill();
+
+    bCtx.fillStyle = 'rgba(40, 40, 40, 0.4)';
+    bCtx.beginPath();
+    bCtx.ellipse(kx, ky, 6, 22, Math.PI / 12, 0, Math.PI * 2);
+    bCtx.fill();
+  }
+
+  const colorMap = new THREE.CanvasTexture(cCanvas);
+  colorMap.wrapS = THREE.RepeatWrapping;
+  colorMap.wrapT = THREE.RepeatWrapping;
+
+  const bumpMap = new THREE.CanvasTexture(bCanvas);
+  bumpMap.wrapS = THREE.RepeatWrapping;
+  bumpMap.wrapT = THREE.RepeatWrapping;
+
+  const roughnessMap = new THREE.CanvasTexture(rCanvas);
+  roughnessMap.wrapS = THREE.RepeatWrapping;
+  roughnessMap.wrapT = THREE.RepeatWrapping;
+
+  return { colorMap, bumpMap, roughnessMap };
+}
+
+// 3. Travertino Navona Honed PBR (1024x1024 con microporos sedimentarios y juntas)
+function createTravertineNavonaPBR(): PBRTextureSet {
+  const size = 1024;
+  const cCanvas = document.createElement('canvas');
+  cCanvas.width = size;
+  cCanvas.height = size;
+  const cCtx = cCanvas.getContext('2d')!;
+
+  const bCanvas = document.createElement('canvas');
+  bCanvas.width = size;
+  bCanvas.height = size;
+  const bCtx = bCanvas.getContext('2d')!;
+
+  const rCanvas = document.createElement('canvas');
+  rCanvas.width = size;
+  rCanvas.height = size;
+  const rCtx = rCanvas.getContext('2d')!;
+
+  // Base caliza crema travertino
+  cCtx.fillStyle = '#E8E1D3';
+  cCtx.fillRect(0, 0, size, size);
+
+  bCtx.fillStyle = '#808080';
+  bCtx.fillRect(0, 0, size, size);
+
+  // Rugosidad apomazada mate (roughness ~ 0.38)
+  rCtx.fillStyle = '#606060';
+  rCtx.fillRect(0, 0, size, size);
+
+  // Micro porosidad de cantera y sedimentos
+  for (let i = 0; i < 45000; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const c = Math.floor(215 + Math.random() * 25);
+    cCtx.fillStyle = `rgb(${c}, ${c - 8}, ${c - 18})`;
+    cCtx.fillRect(x, y, 1.5, 1.5);
+
+    const b = Math.floor(115 + Math.random() * 25);
+    bCtx.fillStyle = `rgb(${b}, ${b}, ${b})`;
+    bCtx.fillRect(x, y, 1.5, 1.5);
+  }
+
+  // Veteado horizontal estratificado natural
+  for (let s = 0; s < 36; s++) {
+    const y = Math.random() * size;
+    cCtx.strokeStyle = 'rgba(180, 168, 148, 0.22)';
+    cCtx.lineWidth = 2 + Math.random() * 3;
+    cCtx.beginPath();
+    cCtx.moveTo(0, y);
+    cCtx.bezierCurveTo(size * 0.3, y + 8, size * 0.7, y - 8, size, y);
+    cCtx.stroke();
+
+    bCtx.strokeStyle = 'rgba(100, 100, 100, 0.25)';
+    bCtx.lineWidth = cCtx.lineWidth;
+    bCtx.beginPath();
+    bCtx.moveTo(0, y);
+    bCtx.bezierCurveTo(size * 0.3, y + 8, size * 0.7, y - 8, size, y);
+    bCtx.stroke();
+  }
+
+  // Despiece de baldosas de gran formato 120x60cm con llaga fina
+  const tileCols = 4;
+  const tileRows = 8;
+  const colW = size / tileCols;
+  const rowH = size / tileRows;
+
+  cCtx.strokeStyle = 'rgba(130, 120, 105, 0.35)';
+  cCtx.lineWidth = 1.8;
+  bCtx.strokeStyle = '#404040';
+  bCtx.lineWidth = 2.0;
+
+  for (let col = 1; col < tileCols; col++) {
+    const x = col * colW;
+    cCtx.beginPath();
+    cCtx.moveTo(x, 0);
+    cCtx.lineTo(x, size);
+    cCtx.stroke();
+
+    bCtx.beginPath();
+    bCtx.moveTo(x, 0);
+    bCtx.lineTo(x, size);
+    bCtx.stroke();
+  }
+
+  for (let row = 1; row < tileRows; row++) {
+    const y = row * rowH;
+    cCtx.beginPath();
+    cCtx.moveTo(0, y);
+    cCtx.lineTo(size, y);
+    cCtx.stroke();
+
+    bCtx.beginPath();
+    bCtx.moveTo(0, y);
+    bCtx.lineTo(size, y);
+    bCtx.stroke();
+  }
+
+  const colorMap = new THREE.CanvasTexture(cCanvas);
+  colorMap.wrapS = THREE.RepeatWrapping;
+  colorMap.wrapT = THREE.RepeatWrapping;
+
+  const bumpMap = new THREE.CanvasTexture(bCanvas);
+  bumpMap.wrapS = THREE.RepeatWrapping;
+  bumpMap.wrapT = THREE.RepeatWrapping;
+
+  const roughnessMap = new THREE.CanvasTexture(rCanvas);
+  roughnessMap.wrapS = THREE.RepeatWrapping;
+  roughnessMap.wrapT = THREE.RepeatWrapping;
+
+  return { colorMap, bumpMap, roughnessMap };
+}
+
+// 4. Tejido Bouclé Dedar Milano PBR (micro-tramado textil de alta densidad)
+function createBoucleFabricPBR(): PBRTextureSet {
+  const size = 512;
+  const cCanvas = document.createElement('canvas');
+  cCanvas.width = size;
+  cCanvas.height = size;
+  const cCtx = cCanvas.getContext('2d')!;
+
+  const bCanvas = document.createElement('canvas');
+  bCanvas.width = size;
+  bCanvas.height = size;
+  const bCtx = bCanvas.getContext('2d')!;
+
+  const rCanvas = document.createElement('canvas');
+  rCanvas.width = size;
+  rCanvas.height = size;
+  const rCtx = rCanvas.getContext('2d')!;
+
+  cCtx.fillStyle = '#F4EFE6';
+  cCtx.fillRect(0, 0, size, size);
+
+  bCtx.fillStyle = '#808080';
+  bCtx.fillRect(0, 0, size, size);
+
+  // Superficie textil muy rugosa y suave (roughness ~ 0.95)
+  rCtx.fillStyle = '#F2F2F2';
+  rCtx.fillRect(0, 0, size, size);
+
+  // Bucles textiles
+  for (let y = 0; y < size; y += 4) {
+    for (let x = 0; x < size; x += 4) {
+      if ((x + y) % 8 === 0) {
+        cCtx.fillStyle = 'rgba(185, 172, 155, 0.35)';
+        cCtx.fillRect(x, y, 2, 2);
+
+        bCtx.fillStyle = '#B0B0B0';
+        bCtx.fillRect(x, y, 2, 2);
+      } else {
+        bCtx.fillStyle = '#656565';
+        bCtx.fillRect(x, y, 2, 2);
       }
     }
   }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(4, 4);
-  return tex;
+
+  const colorMap = new THREE.CanvasTexture(cCanvas);
+  colorMap.wrapS = THREE.RepeatWrapping;
+  colorMap.wrapT = THREE.RepeatWrapping;
+  colorMap.repeat.set(4, 4);
+
+  const bumpMap = new THREE.CanvasTexture(bCanvas);
+  bumpMap.wrapS = THREE.RepeatWrapping;
+  bumpMap.wrapT = THREE.RepeatWrapping;
+  bumpMap.repeat.set(4, 4);
+
+  const roughnessMap = new THREE.CanvasTexture(rCanvas);
+  roughnessMap.wrapS = THREE.RepeatWrapping;
+  roughnessMap.wrapT = THREE.RepeatWrapping;
+  roughnessMap.repeat.set(4, 4);
+
+  return { colorMap, bumpMap, roughnessMap };
 }
 
-function createRugTexture(): THREE.CanvasTexture {
+// 5. Alfombra de Diseño Geométrico Contemporáneo PBR
+function createDesignerRugPBR(): PBRTextureSet {
+  const size = 1024;
   const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    ctx.fillStyle = '#DDD6C8';
-    ctx.fillRect(0, 0, 512, 512);
-    ctx.strokeStyle = 'rgba(160, 140, 120, 0.4)';
-    ctx.lineWidth = 4;
-    for (let i = 0; i < 512; i += 32) {
-      ctx.beginPath();
-      ctx.moveTo(i, 0);
-      ctx.lineTo(i, 512);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(0, i);
-      ctx.lineTo(512, i);
-      ctx.stroke();
-    }
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  return tex;
-}
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
 
-function createMarbleTexture(): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
-    ctx.fillStyle = '#F8F6F0';
-    ctx.fillRect(0, 0, 512, 512);
-    ctx.strokeStyle = 'rgba(170, 145, 110, 0.35)';
-    ctx.lineWidth = 2.5;
-    for (let i = 0; i < 14; i++) {
-      ctx.beginPath();
-      ctx.moveTo(Math.random() * 512, 0);
-      ctx.bezierCurveTo(
-        Math.random() * 512, 160,
-        Math.random() * 512, 340,
-        Math.random() * 512, 512
-      );
-      ctx.stroke();
-    }
+  // Tono base de lana virgen cruda
+  ctx.fillStyle = '#E5DFD4';
+  ctx.fillRect(0, 0, size, size);
+
+  // Trazos lineales minimalistas en carbón y arena
+  ctx.strokeStyle = 'rgba(120, 105, 90, 0.35)';
+  ctx.lineWidth = 4;
+  for (let i = 0; i < size; i += 64) {
+    ctx.beginPath();
+    ctx.moveTo(i, 0);
+    ctx.lineTo(i, size);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(0, i);
+    ctx.lineTo(size, i);
+    ctx.stroke();
   }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  return tex;
+
+  // Micro-textura de nudo de alfombra
+  for (let i = 0; i < 30000; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    ctx.fillStyle = 'rgba(90, 80, 70, 0.08)';
+    ctx.fillRect(x, y, 2, 2);
+  }
+
+  const colorMap = new THREE.CanvasTexture(canvas);
+  colorMap.wrapS = THREE.RepeatWrapping;
+  colorMap.wrapT = THREE.RepeatWrapping;
+
+  return {
+    colorMap,
+    bumpMap: colorMap,
+    roughnessMap: colorMap,
+  };
 }
 
 export function build3DInteriorRoom(
@@ -119,22 +413,30 @@ export function build3DInteriorRoom(
   const group = new THREE.Group();
   const lights: THREE.Light[] = [];
 
-  // Material Palette
-  const woodTex = createWoodTexture();
-  const fabricTex = createFabricTexture();
-  const rugTex = createRugTexture();
-  const marbleTex = createMarbleTexture();
+  // Material Palette - High Fidelity PBR Textures
+  const woodPBR = createEuropeanOakWoodPBR();
+  const fabricPBR = createBoucleFabricPBR();
+  const rugPBR = createDesignerRugPBR();
+  const marblePBR = createCalacattaMarblePBR();
+  const travertinePBR = createTravertineNavonaPBR();
 
   const matFloorTravertine = new THREE.MeshStandardMaterial({
-    color: 0xECE5D8,
-    roughness: 0.28,
-    metalness: 0.05,
+    map: travertinePBR.colorMap,
+    bumpMap: travertinePBR.bumpMap,
+    bumpScale: 0.015,
+    roughnessMap: travertinePBR.roughnessMap,
+    color: 0xF2ECE2,
+    roughness: 0.35,
+    metalness: 0.03,
   });
 
   const matFloorWood = new THREE.MeshStandardMaterial({
-    map: woodTex,
-    color: 0x9A6C45,
-    roughness: 0.45,
+    map: woodPBR.colorMap,
+    bumpMap: woodPBR.bumpMap,
+    bumpScale: 0.02,
+    roughnessMap: woodPBR.roughnessMap,
+    color: 0x94653F,
+    roughness: 0.46,
     metalness: 0.02,
   });
 
@@ -149,44 +451,52 @@ export function build3DInteriorRoom(
   });
 
   const matWallWalnut = new THREE.MeshStandardMaterial({
-    map: woodTex,
-    color: 0x5C3B24,
-    roughness: 0.55,
+    map: woodPBR.colorMap,
+    bumpMap: woodPBR.bumpMap,
+    bumpScale: 0.018,
+    color: 0x54351F,
+    roughness: 0.52,
   });
 
   const matBronze = new THREE.MeshStandardMaterial({
     color: 0x8C7452,
-    metalness: 0.85,
-    roughness: 0.25,
+    metalness: 0.88,
+    roughness: 0.22,
   });
 
   const matDarkMetal = new THREE.MeshStandardMaterial({
-    color: 0x1A1815,
-    metalness: 0.8,
-    roughness: 0.35,
+    color: 0x161512,
+    metalness: 0.85,
+    roughness: 0.3,
   });
 
   const matBoucleWhite = new THREE.MeshStandardMaterial({
-    map: fabricTex,
-    color: 0xF7F4EC,
-    roughness: 0.95,
+    map: fabricPBR.colorMap,
+    bumpMap: fabricPBR.bumpMap,
+    bumpScale: 0.025,
+    roughnessMap: fabricPBR.roughnessMap,
+    color: 0xF8F5EC,
+    roughness: 0.94,
   });
 
   const matVelvetSage = new THREE.MeshStandardMaterial({
-    color: 0x4A6B53,
-    roughness: 0.8,
+    color: 0x46664F,
+    roughness: 0.78,
   });
 
   const matVelvetTerracotta = new THREE.MeshStandardMaterial({
-    color: 0xA65335,
-    roughness: 0.8,
+    color: 0xA35032,
+    roughness: 0.78,
   });
 
   const matMarbleCalacatta = new THREE.MeshStandardMaterial({
-    map: marbleTex,
-    color: 0xFFFCF5,
-    roughness: 0.18,
-    metalness: 0.05,
+    map: marblePBR.colorMap,
+    bumpMap: marblePBR.bumpMap,
+    bumpScale: 0.012,
+    roughnessMap: marblePBR.roughnessMap,
+    color: 0xFFFDF7,
+    roughness: 0.16,
+    metalness: 0.04,
   });
 
   const matGlass = new THREE.MeshPhysicalMaterial({
@@ -384,7 +694,12 @@ export function build3DInteriorRoom(
     // A. Large Textured Designer Area Rug
     const rugGeo = new THREE.PlaneGeometry(5.6, 4.4);
     rugGeo.rotateX(-Math.PI / 2);
-    const rug = new THREE.Mesh(rugGeo, new THREE.MeshStandardMaterial({ map: rugTex, roughness: 0.95 }));
+    const rug = new THREE.Mesh(rugGeo, new THREE.MeshStandardMaterial({
+      map: rugPBR.colorMap,
+      bumpMap: rugPBR.bumpMap,
+      bumpScale: 0.02,
+      roughness: 0.95,
+    }));
     rug.position.set(0, 0.01, 0.5);
     group.add(rug);
 
@@ -836,10 +1151,24 @@ export function build3DInteriorRoom(
         }
       }
     });
-    woodTex.dispose();
-    fabricTex.dispose();
-    rugTex.dispose();
-    marbleTex.dispose();
+    // Dispose PBR texture maps
+    woodPBR.colorMap.dispose();
+    woodPBR.bumpMap.dispose();
+    woodPBR.roughnessMap.dispose();
+
+    fabricPBR.colorMap.dispose();
+    fabricPBR.bumpMap.dispose();
+    fabricPBR.roughnessMap.dispose();
+
+    rugPBR.colorMap.dispose();
+
+    marblePBR.colorMap.dispose();
+    marblePBR.bumpMap.dispose();
+    marblePBR.roughnessMap.dispose();
+
+    travertinePBR.colorMap.dispose();
+    travertinePBR.bumpMap.dispose();
+    travertinePBR.roughnessMap.dispose();
   };
 
   return {

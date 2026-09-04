@@ -222,13 +222,19 @@ export class VoiceNavigationController {
     }
 
     if (
+      clean.includes('monolito') ||
       clean.includes('monolitico') ||
+      clean.includes('modo monolito') ||
+      clean.includes('modo monolitico') ||
       clean.includes('ensamblado') ||
       clean.includes('edificio completo') ||
+      clean.includes('unir pisos') ||
       clean.includes('armar') ||
       clean.includes('cerrar explosion') ||
+      clean.includes('cerrar despiece') ||
       clean.includes('vista general') ||
-      clean.includes('fachada')
+      clean.includes('fachada principal') ||
+      (clean.includes('fachada') && !clean.includes('sur') && !clean.includes('norte') && !clean.includes('avila'))
     ) {
       return { type: 'SET_VIEW_MODE', mode: 'assembled', label: 'Modo Monolítico' };
     }

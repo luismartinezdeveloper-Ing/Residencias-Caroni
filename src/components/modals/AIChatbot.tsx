@@ -482,24 +482,24 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
                   </button>
                 </div>
 
-                {/* Minimize Button */}
+                {/* Minimize Button - Optimized 44x44px Touch Target for Mobile UX */}
                 <button
                   onClick={() => setIsMinimized(true)}
-                  className="bg-white/10 hover:bg-white/20 text-[#FAF9F6] min-w-[32px] min-h-[32px] p-1.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                  className="bg-white/10 hover:bg-white/20 text-[#FAF9F6] min-w-[44px] min-h-[44px] sm:min-w-[32px] sm:min-h-[32px] p-2 sm:p-1.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
                   title="Minimizar Asesor"
                   aria-label="Minimizar Asesor"
                 >
-                  <Minus className="w-3.5 h-3.5" />
+                  <Minus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                 </button>
 
-                {/* High-Visibility Close Button */}
+                {/* High-Visibility Close Button - Optimized 44x44px Touch Target for Mobile UX */}
                 <button
                   onClick={onClose}
-                  className="bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white min-w-[34px] min-h-[34px] sm:min-w-[32px] sm:min-h-[32px] p-1.5 sm:p-2 rounded-lg transition-colors cursor-pointer shadow-md flex items-center justify-center"
+                  className="bg-rose-600 hover:bg-rose-700 active:bg-rose-800 text-white min-w-[44px] min-h-[44px] sm:min-w-[32px] sm:min-h-[32px] p-2 sm:p-1.5 rounded-lg transition-colors cursor-pointer shadow-md flex items-center justify-center"
                   title="Cerrar Asesor"
                   aria-label="Cerrar Asesor"
                 >
-                  <X className="w-4 h-4 font-bold" />
+                  <X className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                 </button>
               </div>
             </div>

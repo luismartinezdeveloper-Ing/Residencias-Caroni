@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ExperienceHeader, NavSection } from './components/layout/ExperienceHeader';
 import { HeroCinematic } from './components/sections/HeroCinematic';
+import { CinematicScrollNarrative } from './components/sections/CinematicScrollNarrative';
 import { InteractiveElevationViewer } from './components/sections/InteractiveElevationViewer';
 import { InvestmentTermSheet } from './components/sections/InvestmentTermSheet';
 import { InstitutionalLedger } from './components/sections/InstitutionalLedger';
@@ -15,12 +16,17 @@ import { UNITS_DATA, BRAND_INFO } from './data/brandData';
 import { CaroniIsotype } from './components/ui/ArchitecturalDrawings';
 import { OfflineNotification } from './components/ui/OfflineNotification';
 
+import { CinematicIntroLoader } from './components/ui/CinematicIntroLoader';
+import { AIChatbot } from './components/modals/AIChatbot';
+import { Sparkles, PhoneCall, Bot } from 'lucide-react';
+
 function MainAppContent() {
   const { isAdvisorMode, openAuthModal, isAccredited } = useConfidentiality();
   const [activeSection, setActiveSection] = useState<NavSection>('obra');
   const [selectedUnit, setSelectedUnit] = useState<UnitData>(UNITS_DATA[0]);
   const [is3DModalOpen, setIs3DModalOpen] = useState<boolean>(false);
   const [isLeadGateOpen, setIsLeadGateOpen] = useState<boolean>(false);
+  const [isVoiceAdvisorOpen, setIsVoiceAdvisorOpen] = useState<boolean>(false);
   const [modalInitialViewMode, setModalInitialViewMode] = useState<'assembled' | 'exploded' | 'tour360' | 'floorplan' | 'pricing'>('assembled');
 
   // Smooth Scroll Anchor Navigation
@@ -106,6 +112,9 @@ function MainAppContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#EFEBE0] text-[#1B1813] font-sans antialiased selection:bg-[#8C7452] selection:text-[#EFEBE0]">
+      {/* 00. Cinematic Intro Loader (Institutional Gala Curtain) */}
+      <CinematicIntroLoader minDurationMs={1500} />
+
       {/* Confidentiality & Accreditation Modal */}
       <ConfidentialityModal />
 
@@ -145,19 +154,12 @@ function MainAppContent() {
 
       {/* Main Continuous Scroll Narrative with Apple-Style Section Transitions */}
       <main className="flex-1">
-        {/* 01. LA PIEZA (Hero Cinematic Opening) */}
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={sectionVariants}
-        >
-          <HeroCinematic
-            onExploreUnits={() => handleNavigate('elevacion')}
-            onSimulateInvestment={() => handleNavigate('inversion')}
-            onViewElevation={() => handleNavigate('elevacion')}
-            onOpen3DOrGate={handleOpen3DOrGate}
-          />
-        </motion.div>
+        {/* 01. LA PIEZA (Experiencia Cinemática Protagónica en Video por Scroll) */}
+        <CinematicScrollNarrative
+          onOpen3DModal={() => handleOpen3DOrGate('assembled')}
+          onExploreElevation={() => handleNavigate('elevacion')}
+          onRequestDossier={() => handleOpen3DOrGate('pricing')}
+        />
 
         {/* 02. FACHADAS & COTAS (Interactive Elevation) */}
         <motion.div
@@ -218,6 +220,39 @@ function MainAppContent() {
 
       {/* Floating Executive Action Hub (Phase 1 Conversion Engine) */}
       
+
+      {/* Floating Concierge / Gemini Live Voice Advisor Orb */}
+      <div className="fixed bottom-5 right-5 z-40 flex items-center">
+        <button
+          onClick={() => setIsVoiceAdvisorOpen(true)}
+          className="group relative flex items-center space-x-2.5 bg-gradient-to-r from-[#1B1813] to-[#2A241C] text-[#FAF8F5] pl-3.5 pr-4 py-2.5 rounded-full border border-[#C9A86A]/50 shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:border-[#C9A86A] transition-all cursor-pointer select-none active:scale-95"
+          title="Hablar en Vivo con el Asesor IA de Residencias Caroní"
+        >
+          {/* Glowing Aura Ring */}
+          <span className="absolute -inset-0.5 rounded-full bg-[#C9A86A]/30 blur-sm group-hover:bg-[#C9A86A]/50 animate-pulse pointer-events-none" />
+
+          {/* Golden Orb Icon */}
+          <div className="relative w-7 h-7 rounded-full bg-[#8C7452] flex items-center justify-center shadow-inner">
+            <PhoneCall className="w-3.5 h-3.5 text-[#FAF8F5] animate-bounce" />
+          </div>
+
+          <div className="relative flex flex-col items-start leading-none pr-1">
+            <span className="text-[10.5px] font-display font-semibold tracking-wide text-[#FAF8F5]">
+              Asesor de Voz IA
+            </span>
+            <span className="text-[8px] font-mono tracking-widest text-[#C9A86A] uppercase mt-0.5">
+              Gemini Live · En Línea
+            </span>
+          </div>
+        </button>
+      </div>
+
+      {/* AIChatbot Modal (Voz en Tiempo Real & Asesoría Inmobiliaria) */}
+      <AIChatbot
+        isOpen={isVoiceAdvisorOpen}
+        onClose={() => setIsVoiceAdvisorOpen(false)}
+        selectedUnit={selectedUnit}
+      />
 
       {/* Slim Minimalist Footer */}
       <footer className="w-full bg-[#14120E] text-[#8C8678] border-t border-[#FAF9F6]/10 py-6 pb-28 md:pb-8">
