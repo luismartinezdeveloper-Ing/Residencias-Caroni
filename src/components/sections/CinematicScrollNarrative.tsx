@@ -85,10 +85,13 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
     offset: ['start start', 'end end'],
   });
 
-  // Manual Scroll Opacities (Clean Fade-to-Black)
-  const manualShot1Opacity = useTransform(scrollYProgress, [0, 0.28, 0.31], [1, 1, 0]);
-  const manualShot2Opacity = useTransform(scrollYProgress, [0.31, 0.34, 0.62, 0.65], [0, 1, 1, 0]);
-  const manualShot3Opacity = useTransform(scrollYProgress, [0.65, 0.68, 1], [0, 1, 1]);
+  // Manual Scroll Opacities: Clean Dip-to-Black Transitions (Never overlap two semi-transparent videos)
+  // Shot 1: [0 -> 0.28 fully visible, 0.28 -> 0.32 fades cleanly to black]
+  const manualShot1Opacity = useTransform(scrollYProgress, [0, 0.27, 0.31, 0.35], [1, 1, 0, 0]);
+  // Shot 2: [0.31 -> 0.35 fades in from black, 0.35 -> 0.61 fully visible, 0.61 -> 0.65 fades to black]
+  const manualShot2Opacity = useTransform(scrollYProgress, [0.30, 0.34, 0.61, 0.65], [0, 1, 1, 0]);
+  // Shot 3: [0.64 -> 0.68 fades in from black, 0.68 -> 1 fully visible]
+  const manualShot3Opacity = useTransform(scrollYProgress, [0.64, 0.68, 1], [0, 1, 1]);
   const outroFadeOpacity = useTransform(scrollYProgress, [0.93, 1], [0, 1]);
 
   // Subtle initial hint that disappears on scroll
@@ -288,7 +291,6 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
         {/* 1. CINEMA VIDEO VIEWPORT (PURE FULLSCREEN - HYBRID TRANSITION ENGINE) */}
         <div className="absolute inset-0 w-full h-full bg-[#070706] pointer-events-none">
           {CINEMATIC_VIDEOS.map((video, idx) => {
-            // In manual scroll mode, use motion scroll transforms; in auto mode, use discrete active state with smooth CSS fade-to-black
             const isShotActive = activeShot === idx;
 
             return (
@@ -304,8 +306,11 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
                             : idx === 1
                             ? manualShot2Opacity
                             : manualShot3Opacity,
+                        zIndex: isShotActive ? 10 : 1,
                       }
-                    : undefined
+                    : {
+                        zIndex: isShotActive ? 10 : 1,
+                      }
                 }
                 animate={
                   flowMode === 'auto'
@@ -315,8 +320,8 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
                     : undefined
                 }
                 transition={{
-                  duration: 0.65,
-                  ease: [0.16, 1, 0.3, 1],
+                  duration: 0.8,
+                  ease: [0.22, 1, 0.36, 1],
                 }}
                 src={video.src}
                 autoPlay
