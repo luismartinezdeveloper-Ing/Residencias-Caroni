@@ -301,25 +301,26 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
         <div className="absolute inset-0 w-full h-full bg-[#070706] pointer-events-none">
           {CINEMATIC_VIDEOS.map((video, idx) => {
             const isShotActive = activeShot === idx;
+            const scrollOpacity =
+              idx === 0 ? manualShot1Opacity : idx === 1 ? manualShot2Opacity : manualShot3Opacity;
 
-            // En modo scroll se usa la animación ligada al desplazamiento vertical; en modo auto la visibilidad es gobernada por la toma activa
             return (
               <motion.video
                 key={video.id}
                 ref={videoRefs[idx]}
                 style={{
-                  opacity:
-                    flowMode === 'scroll'
-                      ? idx === 0
-                        ? manualShot1Opacity
-                        : idx === 1
-                        ? manualShot2Opacity
-                        : manualShot3Opacity
-                      : isShotActive
-                      ? 1
-                      : 0,
+                  opacity: flowMode === 'scroll' ? scrollOpacity : (isShotActive ? 1 : 0),
                   zIndex: isShotActive ? 10 : 1,
-                  transition: flowMode === 'auto' ? 'opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1)' : 'none',
+                  pointerEvents: 'none',
+                }}
+                animate={
+                  flowMode === 'auto'
+                    ? { opacity: isShotActive ? 1 : 0 }
+                    : undefined
+                }
+                transition={{
+                  duration: 0.6,
+                  ease: 'easeInOut',
                 }}
                 src={video.src}
                 autoPlay
