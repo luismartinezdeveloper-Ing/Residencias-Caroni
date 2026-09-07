@@ -11,7 +11,7 @@ dotenv.config();
 async function startServer() {
   const app = express();
   const server = http.createServer(app);
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+  const PORT = 3000;
 
   // Trust proxy for secure HTTPS detection in Cloud Run / Reverse Proxies
   app.set('trust proxy', 1);
@@ -35,6 +35,16 @@ async function startServer() {
   });
 
   app.use(express.json());
+
+  // Static serving for high-performance video streaming with HTTP 206 partial ranges
+  app.use('/videos', (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+  }, express.static(path.join(process.cwd(), 'public', 'videos'), {
+    acceptRanges: true,
+  }));
 
   // In-memory rate limiting and active session tracking for WebSocket & API
   const MAX_CONCURRENT_VOICE_PER_IP = 2;
