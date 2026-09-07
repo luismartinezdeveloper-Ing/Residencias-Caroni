@@ -6,6 +6,8 @@ import { submitLeadToGoogleSheets } from '../../services/leadService';
 import { CaroniIsotype } from '../ui/ArchitecturalDrawings';
 import { BRAND_INFO, UNITS_DATA } from '../../data/brandData';
 
+import { validateFullName, validateEmailAddress, validatePhoneNumber } from '../../utils/leadValidation';
+
 interface LeadGateModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -50,6 +52,9 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
   const [preferredUnit, setPreferredUnit] = useState<string>('Todas / Por Definir');
   const [vipCode, setVipCode] = useState('');
 
+  // Honeypot anti-bot (invisible para humanos)
+  const [botHoneypot, setBotHoneypot] = useState('');
+
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -61,31 +66,51 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
     e.preventDefault();
     setErrorMsg(null);
 
-    // Validations
-    if (!fullName.trim() || fullName.trim().length < 3) {
-      setErrorMsg('Por favor ingrese su nombre y apellido completo.');
+    // 1. Detección silenciosa de robots (Honeypot Trap)
+    if (botHoneypot.trim()) {
+      // Simular éxito sin almacenar spam ni gastar cuota de red
+      setIsSubmitting(true);
+      setTimeout(() => {
+        setIsSubmitting(false);
+        setIsSuccess(true);
+        setTimeout(() => {
+          setIsSuccess(false);
+          onClose();
+          onUnlocked();
+        }, 800);
+      }, 500);
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email.trim() || !emailRegex.test(email.trim())) {
-      setErrorMsg('Por favor ingrese una dirección de correo electrónico válida.');
+    // 2. Validación de Nombre Completo
+    const nameValidation = validateFullName(fullName);
+    if (!nameValidation.isValid) {
+      setErrorMsg(nameValidation.error || 'Por favor ingrese su nombre y apellido.');
       return;
     }
 
-    const cleanPhone = phone.trim().replace(/\D/g, '');
-    if (!phone.trim() || cleanPhone.length < 6) {
-      setErrorMsg('Por favor ingrese un número de teléfono / WhatsApp de contacto.');
+    // 3. Validación de Email y Bloqueo de Correos Desechables
+    const emailValidation = validateEmailAddress(email);
+    if (!emailValidation.isValid) {
+      setErrorMsg(emailValidation.error || 'Por favor ingrese una dirección de correo válida.');
+      return;
+    }
+
+    // 4. Validación Estricta de Teléfono y Prefijos por País
+    const phoneValidation = validatePhoneNumber(phone, countryCode);
+    if (!phoneValidation.isValid) {
+      setErrorMsg(phoneValidation.error || 'Por favor ingrese un número de teléfono de contacto válido.');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
+      const sanitizedPhone = phoneValidation.sanitizedValue || phone.trim();
       const result = await submitLeadToGoogleSheets({
-        fullName: fullName.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim(),
+        fullName: nameValidation.sanitizedValue || fullName.trim(),
+        email: emailValidation.sanitizedValue || email.trim().toLowerCase(),
+        phone: sanitizedPhone,
         countryCode,
         interestType,
         preferredUnit,
@@ -326,6 +351,20 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
             ) : (
               /* Main Lead Registration Form (High Conversion) */
               <form onSubmit={handleSubmitLead} className="space-y-4">
+                {/* Honeypot Trap (Anti-Bot: invisible para humanos) */}
+                <div className="opacity-0 pointer-events-none absolute -left-[9999px]" aria-hidden="true">
+                  <label htmlFor="company_website">Website</label>
+                  <input
+                    id="company_website"
+                    type="text"
+                    name="company_website"
+                    value={botHoneypot}
+                    onChange={(e) => setBotHoneypot(e.target.value)}
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+                </div>
+
                 {/* Full Name */}
                 <div>
                   <label className="block font-meta text-[10px] uppercase tracking-wider text-[#C9C4B5] mb-1.5 flex items-center space-x-1.5">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { UNITS_DATA, MILESTONES_DATA, BRAND_INFO } from '../../data/brandData';
 import { UnitData, MilestoneData } from '../../types/brand';
@@ -6,6 +6,11 @@ import { CaroniIsotype, CaroniSeal } from '../ui/ArchitecturalDrawings';
 import { useConfidentiality } from '../../context/ConfidentialityContext';
 import { AnimatedCounter } from '../ui/AnimatedCounter';
 import { ShieldCheck, FileCheck2, ArrowRight, Building, Sparkles } from 'lucide-react';
+import {
+  getDefaultPricePerM2,
+  calculateInvestmentTotals,
+  clampValidityDays,
+} from '../../utils/financialCalculations';
 
 interface InvestmentTermSheetProps {
   selectedUnit: UnitData;
@@ -21,12 +26,21 @@ export const InvestmentTermSheet: React.FC<InvestmentTermSheetProps> = ({
   const [selectedMilestone, setSelectedMilestone] = useState<MilestoneData>(MILESTONES_DATA[1]);
   const [watermarkOpacity, setWatermarkOpacity] = useState<number>(8); // 8% per manual
 
-  // Investment Model Parameters (Institucional)
-  const defaultPricePerM2 = selectedUnit.typology === 'Mirador' ? 3600 : selectedUnit.typology === 'Jardín' ? 2950 : 3300;
-  const [pricePerM2, setPricePerM2] = useState<number>(defaultPricePerM2);
+  // Sincronización reactiva del precio por m² según la tipología oficial
+  const [pricePerM2, setPricePerM2] = useState<number>(() =>
+    getDefaultPricePerM2(selectedUnit.typology)
+  );
 
-  const totalValueUsd = Math.round(selectedUnit.totalArea * pricePerM2);
-  const reserveDepositUsd = Math.round(totalValueUsd * 0.10); // 10% de señal de reserva
+  // Sincronizar automáticamente cuando cambia la unidad seleccionada
+  useEffect(() => {
+    setPricePerM2(getDefaultPricePerM2(selectedUnit.typology));
+  }, [selectedUnit.id, selectedUnit.typology]);
+
+  // Cálculos financieros derivados inmutables
+  const { totalValueUsd, reserveDepositUsd } = calculateInvestmentTotals(
+    selectedUnit.totalArea,
+    pricePerM2
+  );
 
   // Editable LOI Investor Fields
   const [buyerName, setBuyerName] = useState(() => credentials?.holderName || 'Inversiones & Patrimonio Caracas, C.A.');
@@ -301,10 +315,10 @@ export const InvestmentTermSheet: React.FC<InvestmentTermSheetProps> = ({
                       <label className="font-meta text-[9px] text-[#8C8678] block">VIGENCIA DE RESERVA (DÍAS)</label>
                       <input
                         type="number"
-                        min="5"
-                        max="60"
+                        min="7"
+                        max="30"
                         value={validityDays}
-                        onChange={(e) => setValidityDays(Number(e.target.value))}
+                        onChange={(e) => setValidityDays(clampValidityDays(Number(e.target.value)))}
                         className="w-full bg-[#FAF9F6] border border-[#C9C4B5] px-2.5 py-1.5 font-serif text-xs text-[#1B1813]"
                       />
                     </div>
@@ -356,7 +370,10 @@ export const InvestmentTermSheet: React.FC<InvestmentTermSheetProps> = ({
               </div>
 
               {/* Right Panel: Official Document Canvas (A4 Sheet Simulation) */}
-              <div className="lg:col-span-8 bg-white border border-[#1B1813] p-4 sm:p-8 md:p-12 shadow-md relative min-h-[600px] sm:min-h-[750px] flex flex-col justify-between overflow-hidden">
+              <div
+                id="printable-document-canvas"
+                className="lg:col-span-8 bg-white border border-[#1B1813] p-4 sm:p-8 md:p-12 shadow-md relative min-h-[600px] sm:min-h-[750px] flex flex-col justify-between overflow-hidden"
+              >
                 {/* Watermark Logo in center */}
                 <div
                   className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0"

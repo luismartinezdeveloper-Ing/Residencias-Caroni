@@ -25,6 +25,11 @@ import { UnitData } from '../../types/brand';
 import { LiveAudioClient } from '../../utils/liveAudioClient';
 import { useResponsiveChat } from '../../hooks/useResponsiveChat';
 import { SSEStreamParser } from '../../utils/sseParser';
+import {
+  calculateInvestmentTotals,
+  getDefaultPricePerM2,
+  formatUsdCurrency,
+} from '../../utils/financialCalculations';
 
 interface AIChatbotProps {
   isOpen: boolean;
@@ -79,8 +84,11 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatAbortControllerRef = useRef<AbortController | null>(null);
 
-  // Format unit context for the AI
+  // Format unit context for the AI using official financial calculations
   const getUnitContext = () => {
+    const defaultPrice = getDefaultPricePerM2(selectedUnit.typology);
+    const totals = calculateInvestmentTotals(selectedUnit.totalArea, defaultPrice);
+
     return `
       Residencias Caroní · Altamira, Caracas
       Unidad: ${selectedUnit.name}
@@ -92,14 +100,8 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
       Habitaciones: ${selectedUnit.rooms} (todas en suite)
       Puestos de Estacionamiento: ${selectedUnit.parkingSpots}
       Maleteros: ${selectedUnit.storageUnits}
-      Precio Referencial: USD ${(
-        selectedUnit.totalArea *
-        (selectedUnit.typology === 'Mirador'
-          ? 3600
-          : selectedUnit.typology === 'Jardín'
-          ? 2950
-          : 3300)
-      ).toLocaleString('en-US')}
+      Precio Referencial: ${formatUsdCurrency(totals.totalValueUsd)} (a $${totals.pricePerM2}/m²)
+      Señal de Reserva en Escrow (10%): ${formatUsdCurrency(totals.reserveDepositUsd)}
       Distribución: ${selectedUnit.roomList.join(', ')}
       Atributo Distintivo: "${selectedUnit.distinctiveAttribute}"
     `;

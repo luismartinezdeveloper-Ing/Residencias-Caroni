@@ -51,13 +51,25 @@
   height: 20px;
 }
 
-/* Print optimizations */
+/* Print optimizations & Official Document Isolation */
 @media print {
   body {
     background-color: #FFFFFF !important;
+    color: #1B1813 !important;
   }
-  .no-print {
+  /* Ocultar elementos de navegación web e interactivos */
+  nav, header, footer, button, .no-print, [role="dialog"], #three-canvas-container {
     display: none !important;
+  }
+  /* Si el lienzo documental fiduciario está presente, darle prioridad exclusiva de página */
+  #printable-document-canvas {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    min-height: auto !important;
+    display: flex !important;
   }
 }
 

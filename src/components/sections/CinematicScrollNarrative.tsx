@@ -2,6 +2,10 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
 import { CaroniIsotype } from '../ui/ArchitecturalDrawings';
 import {
+  calculateSegmentTargetTime,
+  VideoScrubberController,
+} from '../../utils/videoScrubEngine';
+import {
   Play,
   Pause,
   ChevronDown,
@@ -63,7 +67,15 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
     useRef<HTMLVideoElement>(null),
   ];
 
-  // Active shot index (0, 1, 2)
+  // Precarga preventiva en memoria de GPU (Zero-Lag Pre-buffering)
+  useEffect(() => {
+    videoRefs.forEach((ref) => {
+      const vid = ref.current;
+      if (vid) {
+        vid.load();
+      }
+    });
+  }, []);
   const [activeShot, setActiveShot] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isAudioActive, setIsAudioActive] = useState(false);
@@ -134,6 +146,16 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
     return () => unsub();
   }, [scrollYProgress, handleUserInteraction]);
 
+  // Telemetría topográfica dinámica: desciende desde +948.50 m (vista aérea Ávila) hasta +918.00 m (acceso peatonal calle)
+  const currentAltitude = useTransform(scrollYProgress, [0, 1], [948.5, 918.0]);
+  const [displayedAltitude, setDisplayedAltitude] = useState('948.50');
+
+  useEffect(() => {
+    return currentAltitude.on('change', (v) => {
+      setDisplayedAltitude(v.toFixed(2));
+    });
+  }, [currentAltitude]);
+
   // Detección de eventos de interacción física explícita (rueda o toque)
   useEffect(() => {
     const handlePhysicalInteraction = () => handleUserInteraction();
@@ -149,34 +171,78 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
     };
   }, [handleUserInteraction]);
 
-  // Manejo de avance al finalizar un video de forma natural
+  // Instancias del controlador de scrubbing inercial para cada una de las 3 tomas (respuesta ágil e inmediata)
+  const scrubbersRef = useRef<VideoScrubberController[]>([
+    new VideoScrubberController({ lerpFactor: 0.28, seekThreshold: 0.04 }),
+    new VideoScrubberController({ lerpFactor: 0.28, seekThreshold: 0.04 }),
+    new VideoScrubberController({ lerpFactor: 0.28, seekThreshold: 0.04 }),
+  ]);
+
+  // Manejo de avance al finalizar un video en modo auto
   const handleVideoEnded = useCallback((endedIndex: number) => {
     if (flowMode === 'auto') {
       setActiveShot((prev) => (prev + 1) % 3);
     }
   }, [flowMode]);
 
-  // Loop de progreso de alta precisión sincronizado al tiempo real del video
+  // Loop principal sincronizado en RAF:
+  // En modo 'scroll': el scroll conduce la aguja de tiempo del video con inercia suave
+  // En modo 'auto': el video avanza a velocidad natural
   useEffect(() => {
     let animFrame: number;
 
-    const syncProgress = () => {
+    const tick = () => {
       const activeVideo = videoRefs[activeShot]?.current;
+      const scrubber = scrubbersRef.current[activeShot];
+
       if (activeVideo && activeVideo.duration > 0) {
-        const pct = (activeVideo.currentTime / activeVideo.duration) * 100;
-        setAutoplayProgress(Math.min(100, Math.max(0, pct)));
+        if (flowMode === 'scroll') {
+          // Si el usuario está scrolleando, pausar la reproducción continua y conducir por lerp
+          if (!activeVideo.paused) {
+            activeVideo.pause();
+          }
+
+          // Rangos de las tomas: Toma 1 [0, 0.33], Toma 2 [0.33, 0.66], Toma 3 [0.66, 1.0]
+          const segments = [
+            { start: 0.0, end: 0.33 },
+            { start: 0.33, end: 0.66 },
+            { start: 0.66, end: 1.0 },
+          ];
+          const seg = segments[activeShot];
+          const targetTime = calculateSegmentTargetTime(
+            scrollYProgress.get(),
+            seg.start,
+            seg.end,
+            activeVideo.duration
+          );
+
+          scrubber.setTargetTime(targetTime);
+          scrubber.update(activeVideo);
+
+          const pct = (activeVideo.currentTime / activeVideo.duration) * 100;
+          setAutoplayProgress(Math.min(100, Math.max(0, pct)));
+        } else {
+          // Modo auto: reproducir suavemente si no está pausado
+          if (isPlaying && activeVideo.paused) {
+            const playPromise = activeVideo.play();
+            if (playPromise !== undefined) playPromise.catch(() => {});
+          }
+          const pct = (activeVideo.currentTime / activeVideo.duration) * 100;
+          setAutoplayProgress(Math.min(100, Math.max(0, pct)));
+        }
       }
-      animFrame = requestAnimationFrame(syncProgress);
+
+      animFrame = requestAnimationFrame(tick);
     };
 
-    animFrame = requestAnimationFrame(syncProgress);
+    animFrame = requestAnimationFrame(tick);
 
     return () => {
       cancelAnimationFrame(animFrame);
     };
-  }, [activeShot]);
+  }, [activeShot, flowMode, isPlaying, scrollYProgress]);
 
-  // Sincronizar reproducción al cambiar de toma activa
+  // Sincronizar cambios de toma activa
   const prevShotRef = useRef<number>(activeShot);
 
   useEffect(() => {
@@ -188,20 +254,20 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
       if (!vid) return;
 
       if (idx === activeShot) {
-        if (isShotChanged) {
-          vid.currentTime = 0;
-        }
-        const playPromise = vid.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            // Manejo de restricciones de autoplay si fuera necesario
-          });
+        if (flowMode === 'auto') {
+          if (isShotChanged) {
+            vid.currentTime = 0;
+          }
+          if (isPlaying) {
+            const playPromise = vid.play();
+            if (playPromise !== undefined) playPromise.catch(() => {});
+          }
         }
       } else {
         vid.pause();
       }
     });
-  }, [activeShot]);
+  }, [activeShot, flowMode, isPlaying]);
 
   // Procedural Web Audio Ambient Soundscape
   const toggleAudioAmbient = () => {
@@ -444,12 +510,16 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
 
         {/* 4. BOTTOM MINIMALIST FOOTER: TECHNICAL TELEMETRY & STRATEGIC CTAS */}
         <div className="relative z-30 max-w-7xl mx-auto px-6 w-full pb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pointer-events-auto">
-          {/* Micro Blueprint Technical Crosshair */}
+          {/* Micro Blueprint Technical Crosshair con Telemetría Dinámica */}
           <div className="flex flex-col text-[8.5px] sm:text-[9px] font-mono tracking-wider text-white/60">
             <div className="flex items-center space-x-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#C9A86A] animate-pulse" />
               <span className="text-white/40">TOMA 0{activeShot + 1}/03 ·</span>
-              <span className="text-[#C9A86A] font-semibold">{CINEMATIC_VIDEOS[activeShot].cotaTag}</span>
+              <span className="text-[#C9A86A] font-semibold">
+                COTA DINÁMICA: +{displayedAltitude} M.S.N.M.
+              </span>
+              <span className="text-white/30">|</span>
+              <span className="text-white/70 hidden sm:inline">{CINEMATIC_VIDEOS[activeShot].name}</span>
             </div>
             <div className="text-white/40 pl-3.5 hidden md:block">
               {CINEMATIC_VIDEOS[activeShot].aspectTag}

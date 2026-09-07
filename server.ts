@@ -60,6 +60,9 @@ async function startServer() {
   const heartbeatInterval = setInterval(() => {
     wss.clients.forEach((ws: any) => {
       if (ws.isAlive === false) {
+        if (typeof ws.cleanup === 'function') {
+          ws.cleanup();
+        }
         return ws.terminate();
       }
       ws.isAlive = false;
@@ -235,7 +238,10 @@ Responde de forma inmediata y conversacional.`;
       }
     });
 
-    clientWs.on("close", () => {
+    let isCleanedUp = false;
+    const cleanupConnection = () => {
+      if (isCleanedUp) return;
+      isCleanedUp = true;
       isConnected = false;
       if (inactivityTimer) clearTimeout(inactivityTimer);
       
@@ -253,10 +259,15 @@ Responde de forma inmediata y conversacional.`;
           // ignore
         }
       }
-    });
+    };
+
+    (clientWs as any).cleanup = cleanupConnection;
+
+    clientWs.on("close", cleanupConnection);
 
     clientWs.on("error", (err) => {
       console.error("WebSocket client error:", err);
+      cleanupConnection();
     });
   });
 
@@ -266,11 +277,44 @@ Responde de forma inmediata y conversacional.`;
 
   app.post("/api/leads", async (req, res) => {
     try {
-      const { fullName, email, phone, countryCode, unitInterest, interestType, source, accreditationStatus } = req.body;
+      const { fullName, email, phone, countryCode, unitInterest, interestType, source, accreditationStatus, company_website } = req.body;
+
+      // 1. Silent Honeypot Trap for automated bots
+      if (company_website && String(company_website).trim().length > 0) {
+        console.warn(`[BOT BLOCKED] Detección de bot en /api/leads desde IP ${req.socket.remoteAddress}`);
+        return res.status(200).json({
+          success: true,
+          leadId: `LEAD-SIMULATED-${Date.now()}`,
+          accessToken: Buffer.from(JSON.stringify({ simulated: true })).toString('base64'),
+          synced: { gsheets: false, crm: false }
+        });
+      }
 
       if (!fullName || !email || !phone) {
         return res.status(400).json({ 
           error: "Campos requeridos faltantes (Nombre, Correo o Teléfono)." 
+        });
+      }
+
+      // 2. Disposable Email Filter Server-Side
+      const normalizedEmail = String(email).trim().toLowerCase();
+      const emailDomain = normalizedEmail.split('@')[1];
+      const DISPOSABLE_DOMAINS = [
+        'mailinator.com', 'tempmail.com', 'temp-mail.org', 'guerrillamail.com',
+        '10minutemail.com', 'sharklasers.com', 'yopmail.com', 'dispostable.com',
+        'throwawaymail.com', 'test.com', 'example.com'
+      ];
+      if (emailDomain && DISPOSABLE_DOMAINS.includes(emailDomain)) {
+        return res.status(400).json({
+          error: "Por favor utilice una dirección de correo corporativa o personal válida (no temporal)."
+        });
+      }
+
+      // 3. Sanity check for phone length
+      const cleanedPhoneDigits = String(phone).replace(/\D/g, '');
+      if (cleanedPhoneDigits.length < 7 || /^(\d)\1+$/.test(cleanedPhoneDigits)) {
+        return res.status(400).json({
+          error: "El número de teléfono ingresado no corresponde a una línea válida."
         });
       }
 
@@ -298,7 +342,7 @@ Responde de forma inmediata y conversacional.`;
       leadsRegistry.push(leadEntry);
       console.log(`[LEAD CAPTURED] ${leadEntry.fullName} (${leadEntry.email}) interesado en: ${leadEntry.unitInterest}`);
 
-      // Dispatch to external Google Sheets Webhook server-side (handles actual status and hides URL)
+      // Dispatch to external Google Sheets Webhook server-side (with 4s atomic timeout)
       const gsheetsWebhook = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
       let gsheetsSynced = false;
 
@@ -307,6 +351,7 @@ Responde de forma inmediata y conversacional.`;
           const gsheetsRes = await fetch(gsheetsWebhook, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(4000),
             body: JSON.stringify({
               action: 'ADD_LEAD',
               leadId: leadEntry.id,
@@ -322,22 +367,23 @@ Responde de forma inmediata y conversacional.`;
           });
           gsheetsSynced = gsheetsRes.ok;
         } catch (gsheetsErr) {
-          console.warn("Failed to dispatch to GOOGLE_SHEETS_WEBHOOK_URL:", gsheetsErr);
+          console.warn("Failed or timed out dispatching to GOOGLE_SHEETS_WEBHOOK_URL:", gsheetsErr);
         }
       }
 
-      // Webhook integration (if CRM_WEBHOOK_URL is defined)
+      // Webhook integration (with 4s atomic timeout)
       let crmSynced = false;
       if (process.env.CRM_WEBHOOK_URL) {
         try {
           const crmRes = await fetch(process.env.CRM_WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(4000),
             body: JSON.stringify(leadEntry)
           });
           crmSynced = crmRes.ok;
         } catch (webhookErr) {
-          console.warn("Failed to dispatch to CRM_WEBHOOK_URL:", webhookErr);
+          console.warn("Failed or timed out dispatching to CRM_WEBHOOK_URL:", webhookErr);
         }
       }
 
@@ -478,14 +524,16 @@ Responde en español.`;
       }
     } catch (error: any) {
       console.error("Error in /api/chat:", error);
-      if (!res.headersSent) {
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
+      if (isClientConnected && !res.writableEnded) {
+        if (!res.headersSent) {
+          res.setHeader('Content-Type', 'text/event-stream');
+          res.setHeader('Cache-Control', 'no-cache');
+          res.setHeader('Connection', 'keep-alive');
+        }
+        res.write(`data: ${JSON.stringify({ text: "Las unidades de Residencias Caroní cuentan con acabados de primera, vistas panorámicas y financiamiento flexible. ¿En qué tipología estás interesado?" })}\n\n`);
+        res.write('data: [DONE]\n\n');
+        res.end();
       }
-      res.write(`data: ${JSON.stringify({ text: "Las unidades de Residencias Caroní cuentan con acabados de primera, vistas panorámicas y financiamiento flexible. ¿En qué tipología estás interesado?" })}\n\n`);
-      res.write('data: [DONE]\n\n');
-      res.end();
     }
   });
 
