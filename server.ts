@@ -56,7 +56,27 @@ async function startServer() {
   // WebSocket Server for Gemini Live Real-time Bi-directional Voice
   const wss = new WebSocketServer({ server, path: "/api/live" });
 
+  // Heartbeat RFC 6455 to evict dead TCP sockets and prevent rate-limiting lockouts
+  const heartbeatInterval = setInterval(() => {
+    wss.clients.forEach((ws: any) => {
+      if (ws.isAlive === false) {
+        return ws.terminate();
+      }
+      ws.isAlive = false;
+      ws.ping();
+    });
+  }, 30000);
+
+  wss.on("close", () => {
+    clearInterval(heartbeatInterval);
+  });
+
   wss.on("connection", (clientWs: WebSocket, req: http.IncomingMessage) => {
+    (clientWs as any).isAlive = true;
+    clientWs.on('pong', () => {
+      (clientWs as any).isAlive = true;
+    });
+
     const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
     const currentCount = activeIpConnections.get(clientIp) || 0;
 
@@ -242,9 +262,11 @@ Responde de forma inmediata y conversacional.`;
 
   // API Routes
   // Lead Registration & Institutional Dispatch Endpoint
+  const MAX_STORED_LEADS = 500;
+
   app.post("/api/leads", async (req, res) => {
     try {
-      const { fullName, email, phone, unitInterest, accreditationStatus } = req.body;
+      const { fullName, email, phone, countryCode, unitInterest, interestType, source, accreditationStatus } = req.body;
 
       if (!fullName || !email || !phone) {
         return res.status(400).json({ 
@@ -253,37 +275,86 @@ Responde de forma inmediata y conversacional.`;
       }
 
       const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+      const formattedPhone = countryCode ? `${countryCode} ${phone}`.trim() : String(phone).trim();
+      
       const leadEntry = {
         id: `LEAD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
         fullName: String(fullName).trim(),
         email: String(email).trim().toLowerCase(),
-        phone: String(phone).trim(),
+        phone: formattedPhone,
+        countryCode: countryCode || '+58',
+        interestType: interestType || 'inversion',
         unitInterest: unitInterest || 'General',
+        source: source || 'Hero Cinematic Funnel',
         accreditationStatus: accreditationStatus || 'Accredited_Buyer',
         timestamp: new Date().toISOString(),
-        ip: clientIp
+        ip: clientIp,
       };
 
+      // Bounded circular buffer: prevent memory leaks in node process
+      if (leadsRegistry.length >= MAX_STORED_LEADS) {
+        leadsRegistry.shift();
+      }
       leadsRegistry.push(leadEntry);
       console.log(`[LEAD CAPTURED] ${leadEntry.fullName} (${leadEntry.email}) interesado en: ${leadEntry.unitInterest}`);
 
+      // Dispatch to external Google Sheets Webhook server-side (handles actual status and hides URL)
+      const gsheetsWebhook = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
+      let gsheetsSynced = false;
+
+      if (gsheetsWebhook && !gsheetsWebhook.includes('placeholder')) {
+        try {
+          const gsheetsRes = await fetch(gsheetsWebhook, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'ADD_LEAD',
+              leadId: leadEntry.id,
+              timestamp: leadEntry.timestamp,
+              fullName: leadEntry.fullName,
+              email: leadEntry.email,
+              phone: leadEntry.phone,
+              interestType: leadEntry.interestType,
+              preferredUnit: leadEntry.unitInterest,
+              source: leadEntry.source,
+              project: 'Residencias Caroní - Altamira',
+            })
+          });
+          gsheetsSynced = gsheetsRes.ok;
+        } catch (gsheetsErr) {
+          console.warn("Failed to dispatch to GOOGLE_SHEETS_WEBHOOK_URL:", gsheetsErr);
+        }
+      }
+
       // Webhook integration (if CRM_WEBHOOK_URL is defined)
+      let crmSynced = false;
       if (process.env.CRM_WEBHOOK_URL) {
         try {
-          await fetch(process.env.CRM_WEBHOOK_URL, {
+          const crmRes = await fetch(process.env.CRM_WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(leadEntry)
           });
+          crmSynced = crmRes.ok;
         } catch (webhookErr) {
           console.warn("Failed to dispatch to CRM_WEBHOOK_URL:", webhookErr);
         }
       }
 
+      // Generate a secure verification token for the client session
+      const verificationToken = Buffer.from(
+        JSON.stringify({ id: leadEntry.id, email: leadEntry.email, ts: Date.now() })
+      ).toString('base64');
+
       return res.status(200).json({
         success: true,
         message: "Acreditación registrada exitosamente. Acceso a planos y cotizaciones otorgado.",
-        leadId: leadEntry.id
+        leadId: leadEntry.id,
+        accessToken: verificationToken,
+        synced: {
+          gsheets: gsheetsSynced,
+          crm: crmSynced
+        }
       });
     } catch (err: any) {
       console.error("Error processing /api/leads:", err);
@@ -323,12 +394,11 @@ Responde en español.`;
         parts: [{ text: msg.content }]
       }));
 
-      // Candidate models in prioritized fallback order according to @google/genai guidelines
+      // Canonical and stable Gemini models in prioritized order
       const candidateModels = [
-        "gemini-3.7-flash",
-        "gemini-3.1-pro-preview",
-        "gemini-flash-latest",
-        "gemini-3.1-flash-lite",
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+        "gemini-2.0-flash",
       ];
       let streamResponse: any = null;
       let lastModelError: any = null;
@@ -351,12 +421,22 @@ Responde en español.`;
         }
       }
 
+      // Track client disconnection to stop consuming Gemini generation stream immediately
+      let isClientConnected = true;
+      req.on('close', () => {
+        isClientConnected = false;
+      });
+
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
 
       if (streamResponse) {
         for await (const chunk of streamResponse) {
+          if (!isClientConnected) {
+            console.log("Client aborted chat stream early. Breaking generator.");
+            break;
+          }
           if (chunk.text) {
             res.write(`data: ${JSON.stringify({ text: chunk.text })}\n\n`);
           }
@@ -386,13 +466,16 @@ Responde en español.`;
         // Stream the response smoothly
         const words = fallbackReply.split(' ');
         for (const word of words) {
+          if (!isClientConnected) break;
           res.write(`data: ${JSON.stringify({ text: word + ' ' })}\n\n`);
           await new Promise((resolve) => setTimeout(resolve, 35));
         }
       }
 
-      res.write('data: [DONE]\n\n');
-      res.end();
+      if (isClientConnected) {
+        res.write('data: [DONE]\n\n');
+        res.end();
+      }
     } catch (error: any) {
       console.error("Error in /api/chat:", error);
       if (!res.headersSent) {

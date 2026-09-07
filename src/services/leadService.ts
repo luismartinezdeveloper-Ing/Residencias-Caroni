@@ -9,29 +9,13 @@ export interface LeadRecord {
   source: string;
   timestamp: string;
   userAgent?: string;
-  syncedToGoogleSheets?: boolean;
+  syncedToBackend?: boolean;
+  accessToken?: string;
 }
 
 const STORAGE_KEY = 'caroni_lead_records';
 const ACTIVE_LEAD_KEY = 'caroni_active_lead';
-const GOOGLE_SHEETS_WEBHOOK_KEY = 'caroni_gsheets_webhook_url';
-
-// Default Google Sheets Webhook endpoint (Google Apps Script Web App / Proxy)
-export const DEFAULT_GOOGLE_SHEETS_WEBHOOK = 'https://script.google.com/macros/s/AKfycbz_placeholder_caroni_leads/exec';
-
-/**
- * Retrieves the configured Google Sheets Webhook URL or returns default
- */
-export function getGoogleSheetsWebhookUrl(): string {
-  return localStorage.getItem(GOOGLE_SHEETS_WEBHOOK_KEY) || DEFAULT_GOOGLE_SHEETS_WEBHOOK;
-}
-
-/**
- * Allows the admin or user to configure a custom Google Sheets Webhook URL
- */
-export function setGoogleSheetsWebhookUrl(url: string): void {
-  localStorage.setItem(GOOGLE_SHEETS_WEBHOOK_KEY, url.trim());
-}
+const OUTBOX_KEY = 'caroni_leads_outbox';
 
 /**
  * Retrieves stored leads from localStorage
@@ -58,9 +42,100 @@ export function getActiveLead(): LeadRecord | null {
 }
 
 /**
- * Submits a new lead to Google Sheets & local cache
+ * Retrieves offline leads waiting in outbox queue
  */
-export async function submitLeadToGoogleSheets(lead: Omit<LeadRecord, 'id' | 'timestamp' | 'syncedToGoogleSheets'>): Promise<{
+export function getOutboxLeads(): LeadRecord[] {
+  try {
+    const raw = localStorage.getItem(OUTBOX_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveOutboxLeads(leads: LeadRecord[]): void {
+  try {
+    localStorage.setItem(OUTBOX_KEY, JSON.stringify(leads));
+  } catch (e) {
+    console.error('Failed to save outbox leads to storage:', e);
+  }
+}
+
+/**
+ * Dispatches a lead directly to the backend /api/leads endpoint
+ */
+async function dispatchToBackend(lead: LeadRecord): Promise<{ success: boolean; accessToken?: string }> {
+  const response = await fetch('/api/leads', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fullName: lead.fullName,
+      email: lead.email,
+      phone: lead.phone,
+      countryCode: lead.countryCode,
+      unitInterest: lead.preferredUnit || 'Residencias Caroní',
+      interestType: lead.interestType,
+      source: lead.source,
+      accreditationStatus: 'Accredited_Lead',
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}: Failed to register lead on backend`);
+  }
+
+  const data = await response.json();
+  return {
+    success: true,
+    accessToken: data.accessToken,
+  };
+}
+
+/**
+ * Flushes pending outbox leads when connectivity is restored
+ */
+export async function flushOutboxQueue(): Promise<number> {
+  const outbox = getOutboxLeads();
+  if (outbox.length === 0) return 0;
+
+  const remaining: LeadRecord[] = [];
+  let flushedCount = 0;
+
+  for (const lead of outbox) {
+    try {
+      const res = await dispatchToBackend(lead);
+      if (res.success) {
+        flushedCount++;
+        // Update local records to synced
+        lead.syncedToBackend = true;
+        lead.accessToken = res.accessToken;
+      } else {
+        remaining.push(lead);
+      }
+    } catch {
+      remaining.push(lead);
+    }
+  }
+
+  saveOutboxLeads(remaining);
+  return flushedCount;
+}
+
+// Auto-register online listener to flush pending leads
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    flushOutboxQueue().then((count) => {
+      if (count > 0) {
+        console.log(`[OUTBOX SYNC] Sincronizados exitosamente ${count} leads pendientes.`);
+      }
+    });
+  });
+}
+
+/**
+ * Submits a new lead to backend & local cache with outbox resilience
+ */
+export async function submitLeadToGoogleSheets(lead: Omit<LeadRecord, 'id' | 'timestamp' | 'syncedToBackend'>): Promise<{
   success: boolean;
   lead: LeadRecord;
   synced: boolean;
@@ -70,8 +145,8 @@ export async function submitLeadToGoogleSheets(lead: Omit<LeadRecord, 'id' | 'ti
     ...lead,
     id: `lead_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     timestamp: new Date().toISOString(),
-    userAgent: navigator.userAgent,
-    syncedToGoogleSheets: false,
+    userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+    syncedToBackend: false,
   };
 
   // 1. Store locally immediately
@@ -81,70 +156,28 @@ export async function submitLeadToGoogleSheets(lead: Omit<LeadRecord, 'id' | 'ti
   localStorage.setItem(ACTIVE_LEAD_KEY, JSON.stringify(newLead));
   localStorage.setItem('caroni_accredited', 'true');
 
-  // 2. Attempt Google Sheets Webhook submission
-  const webhookUrl = getGoogleSheetsWebhookUrl();
+  // 2. Dispatch to Backend API
   let synced = false;
-
   try {
-    const payload = {
-      action: 'ADD_LEAD',
-      leadId: newLead.id,
-      timestamp: newLead.timestamp,
-      fullName: newLead.fullName,
-      email: newLead.email,
-      phone: `${newLead.countryCode} ${newLead.phone}`.trim(),
-      interestType: newLead.interestType,
-      preferredUnit: newLead.preferredUnit || 'No especificada',
-      source: newLead.source || 'Hero Cinematic Funnel',
-      project: 'Residencias Caroní - Altamira',
-    };
-
-    // We use mode: 'no-cors' for Google Apps Script Webhooks so CORS preflight doesn't block the client
-    if (webhookUrl && !webhookUrl.includes('placeholder')) {
-      await fetch(webhookUrl, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-      synced = true;
-    } else {
-      // If default placeholder is set, we simulate a fast 400ms network sync and store locally
-      await new Promise((resolve) => setTimeout(resolve, 450));
-      synced = true;
-    }
-
-    // Update synced flag in local storage
-    newLead.syncedToGoogleSheets = synced;
+    const res = await dispatchToBackend(newLead);
+    synced = res.success;
+    newLead.syncedToBackend = true;
+    newLead.accessToken = res.accessToken;
     localStorage.setItem(ACTIVE_LEAD_KEY, JSON.stringify(newLead));
-
-    // 3. Dispatch to local secure backend server endpoint /api/leads
-    try {
-      await fetch('/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: newLead.fullName,
-          email: newLead.email,
-          phone: `${newLead.countryCode} ${newLead.phone}`.trim(),
-          unitInterest: newLead.preferredUnit || 'Residencias Caroní',
-          accreditationStatus: 'Accredited_Lead',
-        }),
-      });
-    } catch (backendErr) {
-      console.warn('Backend API /api/leads dispatch notice:', backendErr);
-    }
-  } catch (err) {
-    console.warn('Google Sheets sync notice (saved locally as fallback):', err);
-    synced = false;
+  } catch (networkErr) {
+    console.warn('[OUTBOX] Conexión no disponible o servidor ocupado. Encolando en Outbox local:', networkErr);
+    // Queue for subsequent background sync
+    const outbox = getOutboxLeads();
+    outbox.push(newLead);
+    saveOutboxLeads(outbox);
   }
 
   return {
     success: true,
     lead: newLead,
     synced,
-    message: 'Lead registrado exitosamente en Google Sheets y acceso exclusivo concedido.',
+    message: synced
+      ? 'Acreditación registrada exitosamente. Acceso a planos y cotizaciones otorgado.'
+      : 'Datos guardados localmente. Se sincronizarán automáticamente al restablecerse la conexión.',
   };
 }

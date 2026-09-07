@@ -24,6 +24,7 @@ import {
 import { UnitData } from '../../types/brand';
 import { LiveAudioClient } from '../../utils/liveAudioClient';
 import { useResponsiveChat } from '../../hooks/useResponsiveChat';
+import { SSEStreamParser } from '../../utils/sseParser';
 
 interface AIChatbotProps {
   isOpen: boolean;
@@ -76,6 +77,7 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
 
   const liveClientRef = useRef<LiveAudioClient | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatAbortControllerRef = useRef<AbortController | null>(null);
 
   // Format unit context for the AI
   const getUnitContext = () => {
@@ -132,12 +134,18 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
     return () => {
       client.disconnect();
       liveClientRef.current = null;
+      if (chatAbortControllerRef.current) {
+        chatAbortControllerRef.current.abort();
+      }
     };
   }, []);
 
   // Handle modal close / open
   useEffect(() => {
     if (!isOpen) {
+      if (chatAbortControllerRef.current) {
+        chatAbortControllerRef.current.abort();
+      }
       if (liveClientRef.current) {
         liveClientRef.current.disconnect();
       }
@@ -176,6 +184,9 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
 
   // Start Live Voice Call
   const handleStartLiveCall = async () => {
+    if (window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
     setErrorMessage(null);
     setUserLiveTranscript('');
     setModelLiveTranscript('');
@@ -207,6 +218,13 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
     if (window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
+    
+    // Cancel any ongoing fetch request
+    if (chatAbortControllerRef.current) {
+      chatAbortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    chatAbortControllerRef.current = abortController;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -223,6 +241,7 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: abortController.signal,
         body: JSON.stringify({
           history: newMessages,
           context: getUnitContext(),
@@ -237,6 +256,7 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
+      const sseParser = new SSEStreamParser();
 
       const assistantMessageId = (Date.now() + 1).toString();
       setMessages((prev) => [
@@ -247,33 +267,39 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
       let done = false;
       let fullText = '';
 
+      const appendPayloads = (payloads: string[]) => {
+        for (const payload of payloads) {
+          try {
+            const data = JSON.parse(payload);
+            if (data.text) {
+              fullText += data.text;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMessageId
+                    ? { ...msg, content: msg.content + data.text }
+                    : msg
+                )
+              );
+            }
+          } catch (e) {
+            // ignore non-json or partial payload
+          }
+        }
+      };
+
       while (!done) {
         const { value, done: readerDone } = await reader.read();
         done = readerDone;
         if (value) {
           const chunkStr = decoder.decode(value, { stream: true });
-          const lines = chunkStr.split('\n');
-          for (const line of lines) {
-            if (line.startsWith('data: ') && line !== 'data: [DONE]') {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.text) {
-                  fullText += data.text;
-                  setMessages((prev) =>
-                    prev.map((msg) =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, content: msg.content + data.text }
-                        : msg
-                    )
-                  );
-                }
-              } catch (e) {
-                // ignore parse chunk error
-              }
-            }
-          }
+          const payloads = sseParser.feed(chunkStr);
+          appendPayloads(payloads);
         }
       }
+
+      // Flush remaining SSE buffer
+      const finalPayloads = sseParser.flush();
+      appendPayloads(finalPayloads);
 
       if (isTtsEnabled && fullText.trim() && window.speechSynthesis) {
         window.speechSynthesis.cancel();
@@ -283,6 +309,10 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
         window.speechSynthesis.speak(utterance);
       }
     } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        // Petición cancelada intencionalmente
+        return;
+      }
       console.error('Chat error:', err);
       const friendlyMsg = err?.message && !err.message.includes('object') 
         ? err.message 
@@ -296,6 +326,9 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
         },
       ]);
     } finally {
+      if (chatAbortControllerRef.current === abortController) {
+        chatAbortControllerRef.current = null;
+      }
       setIsLoadingText(false);
     }
   };

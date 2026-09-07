@@ -53,10 +53,18 @@ export class LiveAudioClient {
       this.outputAudioCtx = new AudioCtx({ sampleRate: 24000 });
 
       if (this.inputAudioCtx.state === 'suspended') {
-        await this.inputAudioCtx.resume();
+        try {
+          await this.inputAudioCtx.resume();
+        } catch (e) {
+          console.warn('Could not resume input AudioContext:', e);
+        }
       }
       if (this.outputAudioCtx.state === 'suspended') {
-        await this.outputAudioCtx.resume();
+        try {
+          await this.outputAudioCtx.resume();
+        } catch (e) {
+          console.warn('Could not resume output AudioContext:', e);
+        }
       }
 
       // Setup AI Output Analyser
@@ -127,13 +135,11 @@ export class LiveAudioClient {
       let errorMsg = 'No se pudo inicializar el micrófono o la conexión.';
       
       const isNotAllowed = err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError' || err?.message?.includes('Permission');
-      const isSecurityError = err?.name === 'SecurityError' || !window.isSecureContext;
+      const isSecurityError = err?.name === 'SecurityError' || (typeof window !== 'undefined' && window.isSecureContext === false);
 
-      if (isSecurityError) {
-        errorMsg = 'El navegador requiere conexión segura HTTPS para activar el micrófono.';
-      } else if (isNotAllowed) {
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-        const isAndroid = /Android/.test(navigator.userAgent);
+      if (isNotAllowed) {
+        const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isAndroid = typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent);
 
         if (isIOS) {
           errorMsg = 'Permiso de micrófono denegado. En Safari: toca "aA" junto a la URL > Configuración de sitio web > Micrófono > Permitir.';
@@ -142,6 +148,8 @@ export class LiveAudioClient {
         } else {
           errorMsg = 'Permiso de micrófono denegado. Por favor, habilita el micrófono en los permisos de tu navegador.';
         }
+      } else if (isSecurityError) {
+        errorMsg = 'El navegador requiere conexión segura HTTPS para activar el micrófono.';
       }
 
       this.callbacks.onError?.(errorMsg);

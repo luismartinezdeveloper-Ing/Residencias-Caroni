@@ -1,31 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { LeadRecord, getActiveLead } from '../services/leadService';
+import { ConfidentialityContext, InvestorCredentials } from './confidentialityTypes';
 
-export interface InvestorCredentials {
-  holderName: string;
-  representativeOrg?: string;
-  accessCode: string;
-  isAccredited: boolean;
-  unlockedAt?: string;
-  leadData?: LeadRecord;
-}
-
-interface ConfidentialityContextType {
-  isAccredited: boolean;
-  credentials: InvestorCredentials | null;
-  activeLead: LeadRecord | null;
-  authenticate: (name: string, code: string, org?: string) => boolean;
-  unlockWithLead: (lead: LeadRecord) => void;
-  revokeAccess: () => void;
-  isAuthModalOpen: boolean;
-  isAdvisorMode: boolean;
-  toggleAdvisorMode: () => void;
-  openAuthModal: (targetSection?: string) => void;
-  closeAuthModal: () => void;
-  targetAfterAuth?: string;
-}
-
-const ConfidentialityContext = createContext<ConfidentialityContextType | undefined>(undefined);
+export { type InvestorCredentials } from './confidentialityTypes';
 
 const VALID_ACCESS_CODES = ['ANIL-2026', 'CARONI-VIII', 'LANCARA', 'PATRIMONIAL', 'VIP-CARONI'];
 
@@ -86,11 +63,11 @@ export const ConfidentialityProvider: React.FC<{ children: React.ReactNode }> = 
     const normalizedCode = code.trim().toUpperCase();
     const isValid = VALID_ACCESS_CODES.includes(normalizedCode) || normalizedCode.startsWith('RCAR-');
 
-    if (isValid || name.trim().length > 3) {
+    if (isValid) {
       const creds: InvestorCredentials = {
         holderName: name.trim() || 'Comprador Acreditado',
         representativeOrg: org?.trim() || 'Fideicomiso Patrimonial Privado',
-        accessCode: normalizedCode || 'CITA-DIRECTA',
+        accessCode: normalizedCode,
         isAccredited: true,
         unlockedAt: new Date().toISOString(),
       };
@@ -146,10 +123,4 @@ export const ConfidentialityProvider: React.FC<{ children: React.ReactNode }> = 
   );
 };
 
-export const useConfidentiality = () => {
-  const context = useContext(ConfidentialityContext);
-  if (!context) {
-    throw new Error('useConfidentiality must be used within a ConfidentialityProvider');
-  }
-  return context;
-};
+export { useConfidentiality } from '../hooks/useConfidentiality';

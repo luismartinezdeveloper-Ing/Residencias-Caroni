@@ -128,6 +128,13 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
     initialPinchZoom: DEFAULT_ZOOM,
   });
 
+  // Decoupled mouse coordinates ref for high-framerate raycasting in RAF
+  const mouseCoordsRef = useRef<{ clientX: number; clientY: number; dirty: boolean }>({
+    clientX: 0,
+    clientY: 0,
+    dirty: false,
+  });
+
   // Sync explosion target when viewMode changes
   useEffect(() => {
     if (viewMode === 'exploded') {
@@ -505,32 +512,10 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
         controlsStateRef.current.prevMouseX = e.clientX;
         controlsStateRef.current.prevMouseY = e.clientY;
       } else {
-        // Raycast hover check
-        const hitUnitId = getRaycastHit(e.clientX, e.clientY);
-        setHoveredUnitId(hitUnitId);
-        
-        // Dynamic architectural cursor feedback
-        if (mountRef.current) {
-          if (hitUnitId) {
-            mountRef.current.style.cursor = 'pointer';
-          } else {
-            mountRef.current.style.cursor = 'grab';
-          }
-        }
-
-        if (hitUnitId) {
-          const foundUnit = UNITS_DATA.find((u) => u.id === hitUnitId);
-          if (foundUnit && mountRef.current) {
-            const rect = mountRef.current.getBoundingClientRect();
-            setHoverTooltip({
-              unit: foundUnit,
-              x: e.clientX - rect.left,
-              y: e.clientY - rect.top,
-            });
-          }
-        } else {
-          setHoverTooltip(null);
-        }
+        // High-performance decoupled coordinates update for RAF loop
+        mouseCoordsRef.current.clientX = e.clientX;
+        mouseCoordsRef.current.clientY = e.clientY;
+        mouseCoordsRef.current.dirty = true;
       }
     };
 
@@ -624,18 +609,18 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
     window.addEventListener('touchmove', onTouchMove, { passive: true });
     window.addEventListener('touchend', onTouchEnd);
 
-    // Resize
+    // Resize with strict zero-division protection
     const handleResize = () => {
       if (!mountRef.current || !renderer || !camera) return;
-      const w = mountRef.current.clientWidth;
-      const h = mountRef.current.clientHeight;
+      const w = Math.max(1, mountRef.current.clientWidth);
+      const h = Math.max(1, mountRef.current.clientHeight);
       const currentIsDesktop =
         typeof window !== 'undefined' &&
         !('ontouchstart' in window || navigator.maxTouchPoints > 0) &&
         window.innerWidth >= 768;
       const currentPixelRatio = currentIsDesktop
         ? Math.min(Math.max(window.devicePixelRatio || 1, 1.75), 2.0)
-        : Math.min(window.devicePixelRatio || 1, 2.0);
+        : Math.min(window.devicePixelRatio || 1, 1.75); // Cap mobile DPI to 1.75 for thermal and battery efficiency
 
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
@@ -689,6 +674,31 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       camera.position.y = Math.sin(rX) * zoom + lookAtY;
       camera.position.z = Math.cos(rY) * Math.cos(rX) * zoom;
       camera.lookAt(0, lookAtY, 0);
+
+      // Throttled 60 FPS Raycasting in RAF loop (eliminates CPU stalls on 1000Hz gaming/Mac mice)
+      if (mouseCoordsRef.current.dirty && !controlsStateRef.current.isDragging) {
+        mouseCoordsRef.current.dirty = false;
+        const hitUnitId = getRaycastHit(mouseCoordsRef.current.clientX, mouseCoordsRef.current.clientY);
+        setHoveredUnitId(hitUnitId);
+
+        if (mountRef.current) {
+          mountRef.current.style.cursor = hitUnitId ? 'pointer' : 'grab';
+        }
+
+        if (hitUnitId) {
+          const foundUnit = UNITS_DATA.find((u) => u.id === hitUnitId);
+          if (foundUnit && mountRef.current) {
+            const rect = mountRef.current.getBoundingClientRect();
+            setHoverTooltip({
+              unit: foundUnit,
+              x: mouseCoordsRef.current.clientX - rect.left,
+              y: mouseCoordsRef.current.clientY - rect.top,
+            });
+          }
+        } else {
+          setHoverTooltip(null);
+        }
+      }
 
       // Continuous smooth interpolation for glass materials and architectural lighting
       if (transitionStepRef.current) {
@@ -865,6 +875,13 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       controller.destroy();
     };
   }, [isOpen, onSelectUnit]);
+
+  // Strict mutual exclusion: stop 3D Voice HUD when AI Chatbot opens to avoid hardware collision
+  useEffect(() => {
+    if (isChatOpen && voiceControllerRef.current) {
+      voiceControllerRef.current.stopListening();
+    }
+  }, [isChatOpen]);
 
   const handleToggleVoiceControl = () => {
     if (voiceControllerRef.current) {

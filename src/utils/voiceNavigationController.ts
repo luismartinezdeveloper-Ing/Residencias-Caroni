@@ -299,6 +299,7 @@ export class VoiceNavigationController {
     if (
       clean.includes('noche') ||
       clean.includes('nocturno') ||
+      clean.includes('nocturna') ||
       clean.includes('luz calida') ||
       clean.includes('8:30') ||
       clean.includes('modo noche') ||

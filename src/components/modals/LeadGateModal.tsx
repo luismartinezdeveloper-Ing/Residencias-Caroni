@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lock, Unlock, ShieldCheck, X, Sparkles, CheckCircle2, Building, Send, KeyRound, ExternalLink, Settings, Smartphone, Mail, User } from 'lucide-react';
 import { useConfidentiality } from '../../context/ConfidentialityContext';
-import { submitLeadToGoogleSheets, getGoogleSheetsWebhookUrl, setGoogleSheetsWebhookUrl } from '../../services/leadService';
+import { submitLeadToGoogleSheets } from '../../services/leadService';
 import { CaroniIsotype } from '../ui/ArchitecturalDrawings';
 import { BRAND_INFO, UNITS_DATA } from '../../data/brandData';
 
@@ -49,9 +49,6 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
   const [interestType, setInterestType] = useState<'inversion' | 'vivienda' | 'family_office' | 'otro'>('inversion');
   const [preferredUnit, setPreferredUnit] = useState<string>('Todas / Por Definir');
   const [vipCode, setVipCode] = useState('');
-
-  // Settings input
-  const [customWebhookUrl, setCustomWebhookUrl] = useState(() => getGoogleSheetsWebhookUrl());
 
   // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -154,11 +151,6 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
     });
   };
 
-  const handleSaveWebhook = () => {
-    setGoogleSheetsWebhookUrl(customWebhookUrl);
-    setActiveTab('register');
-  };
-
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-5 bg-[#0A0908]/80 backdrop-blur-md">
@@ -228,14 +220,16 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
                 </button>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setActiveTab(activeTab === 'settings' ? 'register' : 'settings')}
-                title="Configuración de Google Sheets Webhook"
-                className="text-[#8C8678] hover:text-[#8C7452] p-1 transition-colors cursor-pointer"
-              >
-                <Settings className="w-3.5 h-3.5" />
-              </button>
+              {import.meta.env.DEV && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab(activeTab === 'settings' ? 'register' : 'settings')}
+                  title="Configuración de Integración (Solo DEV)"
+                  className="text-[#8C8678] hover:text-[#8C7452] p-1 transition-colors cursor-pointer"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -262,47 +256,31 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
                 </div>
               </motion.div>
             ) : activeTab === 'settings' ? (
-              /* Google Sheets Configuration Drawer */
+              /* System Architecture Status Drawer (DEV only) */
               <div className="space-y-4">
                 <div className="flex items-center space-x-2 text-[#8C7452] font-meta text-xs uppercase tracking-wider">
                   <Settings className="w-4 h-4" />
-                  <span>Configuración de Google Sheets Webhook</span>
+                  <span>Arquitectura de Captura & Sincronización</span>
                 </div>
                 <p className="text-xs text-[#A6A092] leading-relaxed font-sans">
-                  Los leads capturados se envían automáticamente al Webhook de Google Apps Script configurado. Puede pegar la URL de su Web App de Google Sheets a continuación:
+                  Los prospectos se despachan a través del backend orquestador institucional (/api/leads) con buffer circular en memoria y cola Outbox local resiliente.
                 </p>
-                <div>
-                  <label className="block font-meta text-[10px] uppercase tracking-wider text-[#A6A092] mb-1">
-                    Google Apps Script Web App URL
-                  </label>
-                  <input
-                    type="url"
-                    value={customWebhookUrl}
-                    onChange={(e) => setCustomWebhookUrl(e.target.value)}
-                    placeholder="https://script.google.com/macros/s/.../exec"
-                    className="w-full bg-[#1C1813] border border-[#FAF9F6]/15 rounded-xl px-3.5 py-2.5 text-xs text-[#EFEBE0] font-mono focus:outline-hidden focus:border-[#8C7452]"
-                  />
+
+                <div className="bg-[#1C1813] p-3.5 rounded-xl border border-[#FAF9F6]/10 text-[11px] text-[#8C8678] space-y-1.5 font-mono">
+                  <div className="text-[#8C7452] font-bold">Estado de Orquestación:</div>
+                  <div>• Backend: Express /api/leads (Activo)</div>
+                  <div>• Google Sheets: Despacho seguro Server-Side</div>
+                  <div>• Resiliencia: Patrón Outbox con auto-sincronización</div>
+                  <div>• Memoria: Buffer circular LRU (500 registros)</div>
                 </div>
 
-                <div className="bg-[#1C1813] p-3 rounded-xl border border-[#FAF9F6]/10 text-[11px] text-[#8C8678] space-y-1 font-mono">
-                  <div className="text-[#8C7452] font-bold">Campos enviados al sheet:</div>
-                  <div>fullName, email, phone, interestType, preferredUnit, timestamp, source</div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={handleSaveWebhook}
-                    className="flex-1 bg-[#8C7452] text-[#14120E] font-meta font-bold text-xs py-2.5 rounded-full hover:bg-[#FAF9F6] transition-colors cursor-pointer"
-                  >
-                    Guardar Configuración
-                  </button>
+                <div className="pt-2">
                   <button
                     type="button"
                     onClick={() => setActiveTab('register')}
-                    className="px-4 bg-[#1C1813] text-[#A6A092] font-meta text-xs py-2.5 rounded-full hover:text-[#EFEBE0] transition-colors cursor-pointer"
+                    className="w-full bg-[#8C7452] text-[#14120E] font-meta font-bold text-xs py-2.5 rounded-full hover:bg-[#FAF9F6] transition-colors cursor-pointer"
                   >
-                    Cancelar
+                    Volver al Formulario
                   </button>
                 </div>
               </div>
@@ -488,16 +466,19 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
 
                   <div className="flex items-center justify-between text-[10px] font-meta text-[#8C8678] pt-1">
                     <span className="flex items-center space-x-1">
-                      <ShieldCheck className="w-3.5 h-3.5 text-[#8C7452]" />
-                      <span>Privacidad estricta · Sin intermediarios</span>
+                       <ShieldCheck className="w-3.5 h-3.5 text-[#8C7452]" />
+                       <span>Privacidad estricta · Sin intermediarios</span>
                     </span>
-                    <button
-                      type="button"
-                      onClick={handleQuickDemo}
-                      className="text-[#8C7452] hover:underline cursor-pointer"
-                    >
-                      Pase rápido demo
-                    </button>
+                    {import.meta.env.DEV && (
+                      <button
+                        type="button"
+                        onClick={handleQuickDemo}
+                        className="text-[#8C7452] hover:underline cursor-pointer font-mono"
+                        title="Solo visible en entorno de desarrollo"
+                      >
+                        [DEV] Pase rápido demo
+                      </button>
+                    )}
                   </div>
                 </div>
               </form>
