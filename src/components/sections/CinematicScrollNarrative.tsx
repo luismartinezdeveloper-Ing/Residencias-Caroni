@@ -19,7 +19,8 @@ import {
 const CINEMATIC_VIDEOS = [
   {
     id: 1,
-    src: '/videos/Camera_rotating_around_building.mp4',
+    src: '/videos/Camera_rotating_around_building.mp4?v=8b960e32',
+    poster: '/videos/Camera_rotating_around_building_poster.jpg?v=8b960e32',
     name: 'Órbita Volumétrica',
     durationSec: 10,
     cotaTag: 'COTA BASE: +920.00 M.S.N.M. · VISTA NORTE EL ÁVILA',
@@ -27,7 +28,8 @@ const CINEMATIC_VIDEOS = [
   },
   {
     id: 2,
-    src: '/videos/Building_transforms_into_luxury.mp4',
+    src: '/videos/Building_transforms_into_luxury.mp4?v=f366899e',
+    poster: '/videos/Building_transforms_into_luxury_poster.jpg?v=f366899e',
     name: 'Materia & Construcción',
     durationSec: 10,
     cotaTag: 'SISTEMA ESTRUCTURAL: CONCRETO LIMPIO & MÁRMOL',
@@ -35,7 +37,8 @@ const CINEMATIC_VIDEOS = [
   },
   {
     id: 3,
-    src: '/videos/vFirst_person_wide_angle_archi.mp4',
+    src: '/videos/vFirst_person_wide_angle_archi.mp4?v=d790875c',
+    poster: '/videos/vFirst_person_wide_angle_archi_poster.jpg?v=d790875c',
     name: 'Recorrido Interior',
     durationSec: 20,
     cotaTag: 'ALTURA LIBRE: 3.20 M · PENTHOUSES HASTA 450 M²',
@@ -57,11 +60,10 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
   onRequestDossier,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const videoRefs = [
-    useRef<HTMLVideoElement>(null),
-    useRef<HTMLVideoElement>(null),
-    useRef<HTMLVideoElement>(null),
-  ];
+  const video1Ref = useRef<HTMLVideoElement>(null);
+  const video2Ref = useRef<HTMLVideoElement>(null);
+  const video3Ref = useRef<HTMLVideoElement>(null);
+  const videoRefs = [video1Ref, video2Ref, video3Ref];
 
   // Active shot index (0, 1, 2)
   const [activeShot, setActiveShot] = useState(0);
@@ -76,9 +78,11 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
   const audioCtxRef = useRef<AudioContext | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
 
-  // Inactivity tracking refs
+  // Inactivity tracking refs & jump guard
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
   const progressAnimationRef = useRef<number | null>(null);
+  const isJumpingRef = useRef(false);
+  const jumpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 480vh de recorrido vertical para visualización fluida y extendida sin prisas
   const { scrollYProgress } = useScroll({
@@ -87,12 +91,6 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
   });
 
   // Transiciones cinematográficas limpias con "dip to black"
-  // Toma 1: [0 -> 0.28 nítido, 0.28 -> 0.33 funde a negro]
-  const manualShot1Opacity = useTransform(scrollYProgress, [0, 0.28, 0.33, 0.37], [1, 1, 0, 0]);
-  // Toma 2: [0.33 -> 0.37 emerge de negro, 0.37 -> 0.62 nítido, 0.62 -> 0.67 funde a negro]
-  const manualShot2Opacity = useTransform(scrollYProgress, [0.33, 0.37, 0.62, 0.67], [0, 1, 1, 0]);
-  // Toma 3: [0.66 -> 0.70 emerge de negro, 0.70 -> 1 nítido hasta el final]
-  const manualShot3Opacity = useTransform(scrollYProgress, [0.66, 0.70, 1], [0, 1, 1]);
   const outroFadeOpacity = useTransform(scrollYProgress, [0.94, 1], [0, 1]);
 
   // Sutil indicación inicial que desaparece al iniciar el recorrido
@@ -111,12 +109,13 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
     }, IDLE_DELAY_MS);
   }, []);
 
-  // Sincronización del scroll manual: solo conmuta a 'scroll' cuando hay desplazamiento real
+  // Sincronización del scroll manual: conmuta la toma según el progreso de scroll
   useEffect(() => {
     let lastProgress = scrollYProgress.get();
 
     const unsub = scrollYProgress.on('change', (v) => {
-      // Ignorar variaciones imperceptibles de micro-scroll o estabilización inicial
+      if (isJumpingRef.current) return;
+
       if (Math.abs(v - lastProgress) > 0.002) {
         lastProgress = v;
         handleUserInteraction();
@@ -275,14 +274,19 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
 
   // Direct Jump to a specific shot
   const jumpToShot = (index: number) => {
-    handleUserInteraction();
+    isJumpingRef.current = true;
+    if (jumpTimeoutRef.current) clearTimeout(jumpTimeoutRef.current);
+    jumpTimeoutRef.current = setTimeout(() => {
+      isJumpingRef.current = false;
+    }, 1200);
+
     setActiveShot(index);
 
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
       const totalHeight = containerRef.current.offsetHeight - window.innerHeight;
-      const targets = [0.02, 0.48, 0.85];
+      const targets = [0.05, 0.50, 0.88];
       const targetScroll = scrollTop + rect.top + targets[index] * totalHeight;
 
       window.scrollTo({
@@ -304,28 +308,24 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
         <div className="absolute inset-0 w-full h-full bg-[#070706] pointer-events-none">
           {CINEMATIC_VIDEOS.map((video, idx) => {
             const isShotActive = activeShot === idx;
-            const scrollOpacity =
-              idx === 0 ? manualShot1Opacity : idx === 1 ? manualShot2Opacity : manualShot3Opacity;
 
             return (
               <motion.video
                 key={video.id}
                 ref={videoRefs[idx]}
                 style={{
-                  opacity: flowMode === 'scroll' ? scrollOpacity : (isShotActive ? 1 : 0),
                   zIndex: isShotActive ? 10 : 1,
                   pointerEvents: 'none',
                 }}
-                animate={
-                  flowMode === 'auto'
-                    ? { opacity: isShotActive ? 1 : 0 }
-                    : undefined
-                }
+                animate={{
+                  opacity: isShotActive ? 1 : 0,
+                }}
                 transition={{
-                  duration: 0.6,
+                  duration: 0.5,
                   ease: 'easeInOut',
                 }}
                 src={video.src}
+                poster={video.poster}
                 autoPlay
                 muted
                 playsInline

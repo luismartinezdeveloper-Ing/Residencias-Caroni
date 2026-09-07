@@ -1,5 +1,5 @@
 /* Residencias Caroní - Service Worker for Offline Consultation */
-const CACHE_NAME = 'caroni-pwa-v1';
+const CACHE_NAME = 'caroni-pwa-v3';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
@@ -54,6 +54,17 @@ self.addEventListener('fetch', (event) => {
 
   // 2. Ignore browser extension schemes or live WebSockets
   if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // 2.5 CRITICAL: Never intercept video streams, media or HTTP Range requests
+  // Browsers require native HTTP 206 Partial Content negotiation for video streaming
+  if (
+    url.pathname.startsWith('/videos/') ||
+    request.destination === 'video' ||
+    request.destination === 'audio' ||
+    request.headers.has('range')
+  ) {
     return;
   }
 
