@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI } from '@google/genai';
+import { AI_MODELS, AI_PROMPTS } from '../src/config/aiConfig';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -34,28 +35,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       },
     });
 
-    const systemInstruction = `Eres un Asesor Inmobiliario IA de Lujo experto en 'Residencias Caroní'.
-REGLAS DE ORO:
-1. Sé EXTREMADAMENTE BREVE, preciso y directo al grano (máximo 2 oraciones).
-2. Tono amigable, pero enfocado en lo que un comprador quiere saber: Precio, M², Distribución y Vistas.
-3. Cero redundancias, cero introducciones largas. Tono elegante de cerrador de ventas.
-
-Unidad actual del usuario:
-${context || 'Residencias Caroní General'}
-
-Responde en español.`;
+    const systemInstruction = AI_PROMPTS.getChatSystemInstruction(context);
 
     const contents = (history || []).map((msg: any) => ({
       role: msg.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: msg.content }],
     }));
 
-    const candidateModels = [
-      'gemini-3.7-flash',
-      'gemini-3.1-pro-preview',
-      'gemini-flash-latest',
-      'gemini-3.1-flash-lite',
-    ];
+    const candidateModels = AI_MODELS.CHAT_STREAMING;
 
     let streamResponse: any = null;
 

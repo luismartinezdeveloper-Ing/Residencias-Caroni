@@ -5,6 +5,7 @@ import {
   calculateSegmentTargetTime,
   VideoScrubberController,
 } from '../../utils/videoScrubEngine';
+import { getMediaAssetUrl } from '../../config/mediaConfig';
 import {
   Play,
   Pause,
@@ -23,8 +24,8 @@ import {
 const CINEMATIC_VIDEOS = [
   {
     id: 1,
-    src: '/videos/Camera_rotating_around_building.mp4?v=8b960e32',
-    poster: '/videos/Camera_rotating_around_building_poster.jpg?v=8b960e32',
+    src: getMediaAssetUrl('/videos/Camera_rotating_around_building.mp4?v=8b960e32'),
+    poster: getMediaAssetUrl('/videos/Camera_rotating_around_building_poster.jpg?v=8b960e32'),
     name: 'Órbita Volumétrica',
     durationSec: 10,
     cotaTag: 'COTA BASE: +920.00 M.S.N.M. · VISTA NORTE EL ÁVILA',
@@ -32,8 +33,8 @@ const CINEMATIC_VIDEOS = [
   },
   {
     id: 2,
-    src: '/videos/Building_transforms_into_luxury.mp4?v=f366899e',
-    poster: '/videos/Building_transforms_into_luxury_poster.jpg?v=f366899e',
+    src: getMediaAssetUrl('/videos/Building_transforms_into_luxury.mp4?v=f366899e'),
+    poster: getMediaAssetUrl('/videos/Building_transforms_into_luxury_poster.jpg?v=f366899e'),
     name: 'Materia & Construcción',
     durationSec: 10,
     cotaTag: 'SISTEMA ESTRUCTURAL: CONCRETO LIMPIO & MÁRMOL',
@@ -41,8 +42,8 @@ const CINEMATIC_VIDEOS = [
   },
   {
     id: 3,
-    src: '/videos/vFirst_person_wide_angle_archi.mp4?v=d790875c',
-    poster: '/videos/vFirst_person_wide_angle_archi_poster.jpg?v=d790875c',
+    src: getMediaAssetUrl('/videos/vFirst_person_wide_angle_archi.mp4?v=d790875c'),
+    poster: getMediaAssetUrl('/videos/vFirst_person_wide_angle_archi_poster.jpg?v=d790875c'),
     name: 'Recorrido Interior',
     durationSec: 20,
     cotaTag: 'ALTURA LIBRE: 3.20 M · PENTHOUSES HASTA 450 M²',

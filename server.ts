@@ -5,6 +5,9 @@ import { WebSocketServer, WebSocket } from "ws";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Modality, LiveServerMessage } from "@google/genai";
 import dotenv from "dotenv";
+import { AI_MODELS, AI_PROMPTS, AI_VOICES } from "./src/config/aiConfig";
+import { JsonFileLeadRepository } from "./src/services/leadRepository";
+import { startLeadSyncWorker } from "./src/services/leadSyncWorker";
 
 dotenv.config();
 
@@ -51,17 +54,11 @@ async function startServer() {
   const INACTIVITY_TIMEOUT_MS = 180000; // 3 minutes timeout for voice calls
   const activeIpConnections = new Map<string, number>();
 
-  // Leads storage (in-memory persistent during runtime with optional webhook dispatch)
-  const leadsRegistry: Array<{
-    id: string;
-    fullName: string;
-    email: string;
-    phone: string;
-    unitInterest: string;
-    accreditationStatus: string;
-    timestamp: string;
-    ip: string;
-  }> = [];
+  // Leads transactional repository with disk persistence and in-memory cache
+  const leadRepository = new JsonFileLeadRepository();
+
+  // Background Autonomous Sync Worker for Unsynced Leads
+  const syncWorker = startLeadSyncWorker(leadRepository, 60000);
 
   // WebSocket Server for Gemini Live Real-time Bi-directional Voice
   const wss = new WebSocketServer({ server, path: "/api/live" });
@@ -146,24 +143,13 @@ async function startServer() {
             }
           });
 
-          const voiceName = msg.voiceName || "Aoede";
+          const voiceName = msg.voiceName || AI_VOICES.DEFAULT_LIVE;
           const unitContext = msg.context || "Residencias Caroní en Altamira, Caracas.";
-
-          const systemInstruction = `Eres el Asesor Inmobiliario IA Oficial y de Lujo de 'Residencias Caroní', un exclusivo edificio residencial de autor en Altamira, Caracas, diseñado por Añil Arquitectura.
-
-REGLAS DE CONVERSACIÓN DE VOZ EN VIVO:
-1. Estás en una llamada telefónica / conversación de voz en tiempo real con un comprador o inversionista de alto nivel.
-2. Sé MUY CONCISO, claro y natural (1 a 2 oraciones máximo por turno). Jamás uses listas largas o viñetas por voz.
-3. Habla en español con tono distinguido, acogedor, sobrio y seguro.
-4. Responde directamente lo que pregunte el cliente sobre precios estimados ($2,950 a $3,600 / m²), metrajes (desde 220 m² hasta 450 m² con terrazas), acabados de mármol y maderas nobles, vistas al Ávila, estacionamientos o amenidades privadas (gimnasio, piscina infinita, vigilancia 24/7 y planta eléctrica 100%).
-5. Si te preguntan detalles específicos de la unidad seleccionada:
-${unitContext}
-
-Responde de forma inmediata y conversacional.`;
+          const systemInstruction = AI_PROMPTS.getLiveVoiceSystemInstruction(unitContext);
 
           try {
             liveSession = await ai.live.connect({
-              model: "gemini-3.1-flash-live-preview",
+              model: AI_MODELS.LIVE_WEBSOCKET,
               config: {
                 responseModalities: [Modality.AUDIO],
                 speechConfig: {
@@ -345,11 +331,12 @@ Responde de forma inmediata y conversacional.`;
         ip: clientIp,
       };
 
-      // Bounded circular buffer: prevent memory leaks in node process
-      if (leadsRegistry.length >= MAX_STORED_LEADS) {
-        leadsRegistry.shift();
-      }
-      leadsRegistry.push(leadEntry);
+      // Persistir lead en el repositorio transaccional
+      await leadRepository.saveLead({
+        ...leadEntry,
+        syncedGSheets: false,
+        syncedCrm: false,
+      });
       console.log(`[LEAD CAPTURED] ${leadEntry.fullName} (${leadEntry.email}) interesado en: ${leadEntry.unitInterest}`);
 
       // Dispatch to external Google Sheets Webhook server-side (with 4s atomic timeout)
@@ -376,6 +363,9 @@ Responde de forma inmediata y conversacional.`;
             })
           });
           gsheetsSynced = gsheetsRes.ok;
+          if (gsheetsSynced) {
+            await leadRepository.markSynced(leadEntry.id, 'gsheets');
+          }
         } catch (gsheetsErr) {
           console.warn("Failed or timed out dispatching to GOOGLE_SHEETS_WEBHOOK_URL:", gsheetsErr);
         }
@@ -392,6 +382,9 @@ Responde de forma inmediata y conversacional.`;
             body: JSON.stringify(leadEntry)
           });
           crmSynced = crmRes.ok;
+          if (crmSynced) {
+            await leadRepository.markSynced(leadEntry.id, 'crm');
+          }
         } catch (webhookErr) {
           console.warn("Failed or timed out dispatching to CRM_WEBHOOK_URL:", webhookErr);
         }
@@ -434,16 +427,7 @@ Responde de forma inmediata y conversacional.`;
         }
       });
 
-      const systemInstruction = `Eres un Asesor Inmobiliario IA de Lujo experto en 'Residencias Caroní'.
-REGLAS DE ORO:
-1. Sé EXTREMADAMENTE BREVE, preciso y directo al grano (máximo 2 oraciones).
-2. Tono amigable, pero enfocado en lo que un comprador quiere saber: Precio, M², Distribución y Vistas.
-3. Cero redundancias, cero introducciones largas. Tono elegante de cerrador de ventas.
-
-Unidad actual del usuario:
-${context}
-
-Responde en español.`;
+      const systemInstruction = AI_PROMPTS.getChatSystemInstruction(context);
 
       const contents = history.map((msg: any) => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
@@ -451,11 +435,7 @@ Responde en español.`;
       }));
 
       // Canonical and stable Gemini models in prioritized order
-      const candidateModels = [
-        "gemini-2.5-flash",
-        "gemini-2.5-pro",
-        "gemini-2.0-flash",
-      ];
+      const candidateModels = AI_MODELS.CHAT_STREAMING;
       let streamResponse: any = null;
       let lastModelError: any = null;
 
@@ -560,13 +540,13 @@ Responde en español.`;
       });
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-flash-tts-preview",
+        model: AI_MODELS.TTS,
         contents: [{ parts: [{ text }] }],
         config: {
           responseModalities: ["AUDIO"],
           speechConfig: {
               voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: 'Kore' },
+                prebuiltVoiceConfig: { voiceName: AI_VOICES.DEFAULT_TTS },
               },
           },
         },
@@ -602,6 +582,17 @@ Responde en español.`;
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
+
+  const gracefulShutdown = () => {
+    console.log("Shutting down gracefully...");
+    syncWorker.stop();
+    server.close(() => {
+      process.exit(0);
+    });
+  };
+
+  process.on("SIGINT", gracefulShutdown);
+  process.on("SIGTERM", gracefulShutdown);
 }
 
 startServer();

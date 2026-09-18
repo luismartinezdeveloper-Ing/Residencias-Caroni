@@ -1,5 +1,7 @@
 // Client Audio & WebSocket Manager for Gemini Live API Real-Time Voice
 
+import { audioUnlockManager } from './audioUnlockManager';
+
 export interface LiveAudioCallbacks {
   onStatusChange?: (status: 'disconnected' | 'connecting' | 'connected' | 'speaking' | 'listening' | 'error') => void;
   onUserTranscription?: (text: string) => void;
@@ -51,6 +53,10 @@ export class LiveAudioClient {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       this.inputAudioCtx = new AudioCtx();
       this.outputAudioCtx = new AudioCtx({ sampleRate: 24000 });
+
+      // Registrar en el gestor universal de desbloqueo de audio
+      audioUnlockManager.registerContext(this.inputAudioCtx);
+      audioUnlockManager.registerContext(this.outputAudioCtx);
 
       if (this.inputAudioCtx.state === 'suspended') {
         try {
@@ -364,13 +370,19 @@ export class LiveAudioClient {
       this.mediaStream = null;
     }
 
-    if (this.inputAudioCtx && this.inputAudioCtx.state !== 'closed') {
-      this.inputAudioCtx.close().catch(() => {});
+    if (this.inputAudioCtx) {
+      audioUnlockManager.unregisterContext(this.inputAudioCtx);
+      if (this.inputAudioCtx.state !== 'closed') {
+        this.inputAudioCtx.close().catch(() => {});
+      }
       this.inputAudioCtx = null;
     }
 
-    if (this.outputAudioCtx && this.outputAudioCtx.state !== 'closed') {
-      this.outputAudioCtx.close().catch(() => {});
+    if (this.outputAudioCtx) {
+      audioUnlockManager.unregisterContext(this.outputAudioCtx);
+      if (this.outputAudioCtx.state !== 'closed') {
+        this.outputAudioCtx.close().catch(() => {});
+      }
       this.outputAudioCtx = null;
     }
 
