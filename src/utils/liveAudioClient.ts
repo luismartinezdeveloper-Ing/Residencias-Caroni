@@ -15,7 +15,7 @@ export class LiveAudioClient {
   private inputAudioCtx: AudioContext | null = null;
   private outputAudioCtx: AudioContext | null = null;
   private mediaStream: MediaStream | null = null;
-  private scriptProcessor: ScriptProcessorNode | null = null;
+  private audioWorkletNode: AudioWorkletNode | null = null;
   private userAnalyser: AnalyserNode | null = null;
   private aiAnalyser: AnalyserNode | null = null;
   private activeSources: AudioBufferSourceNode[] = [];
@@ -164,38 +164,68 @@ export class LiveAudioClient {
     }
   }
 
-  private startMicRecording() {
+  private async startMicRecording() {
     if (!this.inputAudioCtx || !this.mediaStream || !this.ws) return;
 
     const source = this.inputAudioCtx.createMediaStreamSource(this.mediaStream);
     this.userAnalyser = this.inputAudioCtx.createAnalyser();
     this.userAnalyser.fftSize = 64;
 
-    // Buffer size 2048 or 4096 gives smooth streaming chunks
-    const bufferSize = 2048;
-    this.scriptProcessor = this.inputAudioCtx.createScriptProcessor(bufferSize, 1, 1);
+    const workletCode = `
+      class PCMProcessor extends AudioWorkletProcessor {
+        process(inputs, outputs, parameters) {
+          const input = inputs[0];
+          if (input && input.length > 0) {
+            const channelData = input[0];
+            this.port.postMessage(channelData);
+          }
+          return true;
+        }
+      }
+      registerProcessor('pcm-processor', PCMProcessor);
+    `;
 
-    source.connect(this.userAnalyser);
-    this.userAnalyser.connect(this.scriptProcessor);
-    this.scriptProcessor.connect(this.inputAudioCtx.destination);
+    const blob = new Blob([workletCode], { type: 'application/javascript' });
+    const url = URL.createObjectURL(blob);
 
-    this.scriptProcessor.onaudioprocess = (e) => {
-      if (this.isMuted || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    try {
+      await this.inputAudioCtx.audioWorklet.addModule(url);
+      URL.revokeObjectURL(url);
+      this.audioWorkletNode = new AudioWorkletNode(this.inputAudioCtx, 'pcm-processor');
+      
+      source.connect(this.userAnalyser);
+      this.userAnalyser.connect(this.audioWorkletNode);
+      this.audioWorkletNode.connect(this.inputAudioCtx.destination);
 
-      const inputData = e.inputBuffer.getChannelData(0);
-      const inputSampleRate = e.inputBuffer.sampleRate;
+      let buffer: number[] = [];
+      const sampleRate = this.inputAudioCtx.sampleRate;
 
-      // Resample Float32 buffer to 16000Hz PCM
-      const pcm16 = this.downsampleTo16k(inputData, inputSampleRate);
-      const base64Audio = this.arrayBufferToBase64(pcm16.buffer);
+      this.audioWorkletNode.port.onmessage = (e) => {
+        if (this.isMuted || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
-      this.ws.send(
-        JSON.stringify({
-          type: 'audio',
-          audio: base64Audio,
-        })
-      );
-    };
+        const channelData = e.data as Float32Array;
+        for (let i = 0; i < channelData.length; i++) {
+          buffer.push(channelData[i]);
+        }
+
+        if (buffer.length >= 2048) {
+          const inputData = new Float32Array(buffer);
+          buffer = [];
+
+          const pcm16 = this.downsampleTo16k(inputData, sampleRate);
+          const base64Audio = this.arrayBufferToBase64(pcm16.buffer);
+
+          this.ws.send(
+            JSON.stringify({
+              type: 'audio',
+              audio: base64Audio,
+            })
+          );
+        }
+      };
+    } catch (err) {
+      console.error('Failed to load AudioWorklet:', err);
+    }
   }
 
   private downsampleTo16k(inputBuffer: Float32Array, inputSampleRate: number): Int16Array {
@@ -360,9 +390,9 @@ export class LiveAudioClient {
 
     this.stopAllPlayback();
 
-    if (this.scriptProcessor) {
-      this.scriptProcessor.disconnect();
-      this.scriptProcessor = null;
+    if (this.audioWorkletNode) {
+      this.audioWorkletNode.disconnect();
+      this.audioWorkletNode = null;
     }
 
     if (this.mediaStream) {

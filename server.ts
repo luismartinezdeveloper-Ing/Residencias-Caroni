@@ -1,9 +1,11 @@
 import express from "express";
 import http from "http";
 import path from "path";
+import crypto from "crypto";
 import { WebSocketServer, WebSocket } from "ws";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Modality, LiveServerMessage } from "@google/genai";
+import { SignJWT, jwtVerify } from "jose";
 import dotenv from "dotenv";
 import { AI_MODELS, AI_PROMPTS, AI_VOICES } from "./src/config/aiConfig";
 import { JsonFileLeadRepository } from "./src/services/leadRepository";
@@ -53,6 +55,48 @@ async function startServer() {
   const MAX_CONCURRENT_VOICE_PER_IP = 2;
   const INACTIVITY_TIMEOUT_MS = 180000; // 3 minutes timeout for voice calls
   const activeIpConnections = new Map<string, number>();
+
+  // Rate limiter for /api/leads (max 5 requests per IP per 60 seconds)
+  const LEADS_RATE_LIMIT_WINDOW_MS = 60000;
+  const LEADS_RATE_LIMIT_MAX = 5;
+  const leadsRateLimitMap = new Map<string, { count: number; windowStart: number }>();
+
+  function isLeadRateLimited(ip: string): boolean {
+    const now = Date.now();
+    const entry = leadsRateLimitMap.get(ip);
+    if (!entry || now - entry.windowStart > LEADS_RATE_LIMIT_WINDOW_MS) {
+      leadsRateLimitMap.set(ip, { count: 1, windowStart: now });
+      return false;
+    }
+    entry.count++;
+    return entry.count > LEADS_RATE_LIMIT_MAX;
+  }
+
+  // JWT Secret for signed access tokens (auto-generated if not in .env)
+  const JWT_SECRET = new TextEncoder().encode(
+    process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex')
+  );
+
+  // XSS Sanitization helper — strips HTML tags and trims
+  function sanitizeInput(value: string): string {
+    return String(value || '').replace(/<[^>]*>/g, '').replace(/[<>"'`]/g, '').trim();
+  }
+
+  // Singleton GoogleGenAI SDK client (reused across all routes)
+  let aiClient: GoogleGenAI | null = null;
+  function getAIClient(): GoogleGenAI | null {
+    if (!process.env.GEMINI_API_KEY) return null;
+    if (!aiClient) {
+      aiClient = new GoogleGenAI({
+        apiKey: process.env.GEMINI_API_KEY,
+        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } },
+      });
+    }
+    return aiClient;
+  }
+
+  // Valid access codes for server-side verification (removed from client bundle)
+  const VALID_ACCESS_CODES = ['ANIL-2026', 'CARONI-VIII', 'LANCARA', 'PATRIMONIAL', 'VIP-CARONI'];
 
   // Leads transactional repository with disk persistence and in-memory cache
   const leadRepository = new JsonFileLeadRepository();
@@ -134,14 +178,11 @@ async function startServer() {
             return;
           }
 
-          const ai = new GoogleGenAI({
-            apiKey: process.env.GEMINI_API_KEY,
-            httpOptions: {
-              headers: {
-                'User-Agent': 'aistudio-build',
-              }
-            }
-          });
+          const ai = getAIClient();
+          if (!ai) {
+            clientWs.send(JSON.stringify({ type: "error", error: "GEMINI_API_KEY no configurada." }));
+            return;
+          }
 
           const voiceName = msg.voiceName || AI_VOICES.DEFAULT_LIVE;
           const unitContext = msg.context || "Residencias Caroní en Altamira, Caracas.";
@@ -271,17 +312,55 @@ async function startServer() {
   // Lead Registration & Institutional Dispatch Endpoint
   const MAX_STORED_LEADS = 500;
 
+  // Server-side VIP Access Code Verification Endpoint
+  app.post("/api/verify-code", async (req, res) => {
+    try {
+      const { name, code, org } = req.body;
+      const normalizedCode = String(code || '').trim().toUpperCase();
+      const isValid = VALID_ACCESS_CODES.includes(normalizedCode) || normalizedCode.startsWith('RCAR-');
+
+      if (!isValid) {
+        return res.status(401).json({ error: "Código de acceso inválido." });
+      }
+
+      const accessToken = await new SignJWT({
+        holderName: sanitizeInput(name || 'Comprador Acreditado'),
+        org: sanitizeInput(org || 'Fideicomiso Patrimonial Privado'),
+        code: normalizedCode,
+        type: 'vip_code',
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('30d')
+        .sign(JWT_SECRET);
+
+      return res.status(200).json({ success: true, accessToken });
+    } catch (err) {
+      console.error("Error processing /api/verify-code:", err);
+      return res.status(500).json({ error: "Error interno al verificar código de acceso." });
+    }
+  });
+
   app.post("/api/leads", async (req, res) => {
     try {
+      const clientIpForRateLimit = (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+
+      // 0. Rate Limiting — max 5 leads per IP per minute
+      if (isLeadRateLimited(clientIpForRateLimit)) {
+        return res.status(429).json({
+          error: "Demasiadas solicitudes. Por favor espere un momento antes de intentar de nuevo."
+        });
+      }
+
       const { fullName, email, phone, countryCode, unitInterest, interestType, source, accreditationStatus, company_website } = req.body;
 
       // 1. Silent Honeypot Trap for automated bots
       if (company_website && String(company_website).trim().length > 0) {
-        console.warn(`[BOT BLOCKED] Detección de bot en /api/leads desde IP ${req.socket.remoteAddress}`);
+        console.warn(`[BOT BLOCKED] Detección de bot en /api/leads desde IP ${clientIpForRateLimit}`);
         return res.status(200).json({
           success: true,
           leadId: `LEAD-SIMULATED-${Date.now()}`,
-          accessToken: Buffer.from(JSON.stringify({ simulated: true })).toString('base64'),
+          accessToken: 'simulated',
           synced: { gsheets: false, crm: false }
         });
       }
@@ -293,7 +372,7 @@ async function startServer() {
       }
 
       // 2. Disposable Email Filter Server-Side
-      const normalizedEmail = String(email).trim().toLowerCase();
+      const normalizedEmail = sanitizeInput(email).toLowerCase();
       const emailDomain = normalizedEmail.split('@')[1];
       const DISPOSABLE_DOMAINS = [
         'mailinator.com', 'tempmail.com', 'temp-mail.org', 'guerrillamail.com',
@@ -314,21 +393,20 @@ async function startServer() {
         });
       }
 
-      const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
-      const formattedPhone = countryCode ? `${countryCode} ${phone}`.trim() : String(phone).trim();
+      const formattedPhone = countryCode ? `${sanitizeInput(countryCode)} ${sanitizeInput(phone)}`.trim() : sanitizeInput(phone);
       
       const leadEntry = {
         id: `LEAD-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
-        fullName: String(fullName).trim(),
-        email: String(email).trim().toLowerCase(),
+        fullName: sanitizeInput(fullName),
+        email: normalizedEmail,
         phone: formattedPhone,
-        countryCode: countryCode || '+58',
-        interestType: interestType || 'inversion',
-        unitInterest: unitInterest || 'General',
-        source: source || 'Hero Cinematic Funnel',
-        accreditationStatus: accreditationStatus || 'Accredited_Buyer',
+        countryCode: sanitizeInput(countryCode || '+58'),
+        interestType: sanitizeInput(interestType || 'inversion'),
+        unitInterest: sanitizeInput(unitInterest || 'General'),
+        source: sanitizeInput(source || 'Hero Cinematic Funnel'),
+        accreditationStatus: sanitizeInput(accreditationStatus || 'Accredited_Buyer'),
         timestamp: new Date().toISOString(),
-        ip: clientIp,
+        ip: clientIpForRateLimit,
       };
 
       // Persistir lead en el repositorio transaccional
@@ -390,10 +468,16 @@ async function startServer() {
         }
       }
 
-      // Generate a secure verification token for the client session
-      const verificationToken = Buffer.from(
-        JSON.stringify({ id: leadEntry.id, email: leadEntry.email, ts: Date.now() })
-      ).toString('base64');
+      // Generate a cryptographically signed JWT access token
+      const verificationToken = await new SignJWT({
+        id: leadEntry.id,
+        email: leadEntry.email,
+        type: 'lead_access',
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('30d')
+        .sign(JWT_SECRET);
 
       return res.status(200).json({
         success: true,
@@ -411,21 +495,16 @@ async function startServer() {
     }
   });
   app.post("/api/chat", async (req, res) => {
+    let isClientConnected = true;
+    req.on('close', () => { isClientConnected = false; });
+
     try {
       const { history, context } = req.body;
 
-      if (!process.env.GEMINI_API_KEY) {
+      const ai = getAIClient();
+      if (!ai) {
         return res.status(500).json({ error: "GEMINI_API_KEY no está configurada en el servidor." });
       }
-
-      const ai = new GoogleGenAI({ 
-        apiKey: process.env.GEMINI_API_KEY,
-        httpOptions: {
-          headers: {
-            'User-Agent': 'aistudio-build',
-          }
-        }
-      });
 
       const systemInstruction = AI_PROMPTS.getChatSystemInstruction(context);
 
@@ -457,11 +536,7 @@ async function startServer() {
         }
       }
 
-      // Track client disconnection to stop consuming Gemini generation stream immediately
-      let isClientConnected = true;
-      req.on('close', () => {
-        isClientConnected = false;
-      });
+      // isClientConnected is already tracked at the top of the handler
 
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');

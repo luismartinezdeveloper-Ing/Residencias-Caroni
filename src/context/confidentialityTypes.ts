@@ -14,7 +14,7 @@ export interface ConfidentialityContextType {
   isAccredited: boolean;
   credentials: InvestorCredentials | null;
   activeLead: LeadRecord | null;
-  authenticate: (name: string, code: string, org?: string) => boolean;
+  authenticate: (name: string, code: string, org?: string) => Promise<boolean>;
   unlockWithLead: (lead: LeadRecord) => void;
   revokeAccess: () => void;
   isAuthModalOpen: boolean;

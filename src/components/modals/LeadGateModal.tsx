@@ -134,7 +134,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
     }
   };
 
-  const handleVipCodeSubmit = (e: React.FormEvent) => {
+  const handleVipCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     if (!vipCode.trim()) {
@@ -142,7 +142,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
       return;
     }
 
-    const ok = authenticate(fullName || 'Inversor Acreditado', vipCode.trim());
+    const ok = await authenticate(fullName || 'Inversor Acreditado', vipCode.trim());
     if (ok) {
       setIsSuccess(true);
       setTimeout(() => {
@@ -151,7 +151,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
         onUnlocked();
       }, 700);
     } else {
-      setErrorMsg('Código no reconocido. Puede registrar sus datos en la pestaña principal o usar "ANIL-2026".');
+      setErrorMsg('Código no reconocido. Puede registrar sus datos en la pestaña principal para solicitar acceso.');
     }
   };
 

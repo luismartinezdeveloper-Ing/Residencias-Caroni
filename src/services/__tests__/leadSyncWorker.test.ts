@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { syncPendingLeads, startLeadSyncWorker } from '../leadSyncWorker';
+import { syncPendingLeads, startLeadSyncWorker, _resetDlqTrackerForTesting } from '../leadSyncWorker';
 import { ILeadRepository, LeadRecord } from '../leadRepository';
 
 describe('leadSyncWorker - Reintentos Autónomos y Recuperación', () => {
@@ -8,6 +8,7 @@ describe('leadSyncWorker - Reintentos Autónomos y Recuperación', () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
+    _resetDlqTrackerForTesting();
     process.env = {
       ...originalEnv,
       GOOGLE_SHEETS_WEBHOOK_URL: 'https://script.google.com/macros/s/test/exec',
@@ -60,6 +61,7 @@ describe('leadSyncWorker - Reintentos Autónomos y Recuperación', () => {
     expect(result.attempted).toBe(1);
     expect(result.gsheetsSuccess).toBe(1);
     expect(result.crmSuccess).toBe(1);
+    expect(result.dlqRescue).toBe(0);
     expect(mockRepo.markSynced).toHaveBeenCalledWith('LEAD-SYNC-1', 'gsheets');
     expect(mockRepo.markSynced).toHaveBeenCalledWith('LEAD-SYNC-1', 'crm');
   });
@@ -73,6 +75,28 @@ describe('leadSyncWorker - Reintentos Autónomos y Recuperación', () => {
     expect(result.gsheetsSuccess).toBe(0);
     expect(result.crmSuccess).toBe(0);
     expect(mockRepo.markSynced).not.toHaveBeenCalled();
+  });
+
+  it('debe activar DLQ rescue después de 5 intentos fallidos consecutivos', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Webhook down')));
+
+    // Keep the lead unsynced across cycles by re-stubbing getUnsyncedLeads
+    // The mock markSynced will set flags to true on DLQ, so we need to ensure
+    // getUnsyncedLeads always returns the lead until DLQ fires
+    let dlqResult: any = null;
+
+    // Run sync cycles — DLQ triggers at attempt > 5 (i.e., attempt 6)
+    for (let i = 0; i < 6; i++) {
+      // Before each cycle, ensure the lead appears as unsynced
+      mockLeads[0].syncedGSheets = false;
+      mockLeads[0].syncedCrm = false;
+      dlqResult = await syncPendingLeads(mockRepo);
+      if (dlqResult.dlqRescue > 0) break;
+    }
+
+    expect(dlqResult.dlqRescue).toBe(1);
+    expect(mockRepo.markSynced).toHaveBeenCalledWith('LEAD-SYNC-1', 'crm');
+    expect(mockRepo.markSynced).toHaveBeenCalledWith('LEAD-SYNC-1', 'gsheets');
   });
 
   it('debe permitir iniciar y detener el worker limpiamente', () => {

@@ -13,7 +13,7 @@ export const ConfidentialityModal: React.FC = () => {
 
   if (!isAuthModalOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -22,19 +22,19 @@ export const ConfidentialityModal: React.FC = () => {
       return;
     }
 
-    const success = authenticate(name, code, org);
+    const success = await authenticate(name, code, org);
     if (success) {
       setSuccessMode(true);
       setTimeout(() => {
         setSuccessMode(false);
       }, 1000);
     } else {
-      setError('Código no reconocido. Pruebe con "ANIL-2026", "CARONI-VIII" o ingrese su nombre para registrar su solicitud.');
+      setError('Código no reconocido. Verifique su código o registre sus datos para solicitar acceso.');
     }
   };
 
-  const handleQuickUnlock = () => {
-    authenticate('Comité de Inversión Institucional', 'ANIL-2026', 'Añil Arquitectura');
+  const handleQuickUnlock = async () => {
+    await authenticate('Comité de Inversión Institucional', 'ANIL-2026', 'Añil Arquitectura');
   };
 
   return (

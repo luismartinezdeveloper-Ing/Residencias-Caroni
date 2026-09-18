@@ -10,6 +10,14 @@ export interface SyncCycleResult {
   attempted: number;
   gsheetsSuccess: number;
   crmSuccess: number;
+  dlqRescue: number;
+}
+
+// Mapa en memoria para contar intentos por Lead y evitar loops infinitos (DLQ Tracker)
+const dlqAttemptsTracker = new Map<string, number>();
+
+export function _resetDlqTrackerForTesting(): void {
+  dlqAttemptsTracker.clear();
 }
 
 /**
@@ -20,6 +28,7 @@ export async function syncPendingLeads(repo: ILeadRepository): Promise<SyncCycle
     attempted: 0,
     gsheetsSuccess: 0,
     crmSuccess: 0,
+    dlqRescue: 0,
   };
 
   try {
@@ -31,8 +40,41 @@ export async function syncPendingLeads(repo: ILeadRepository): Promise<SyncCycle
     result.attempted = unsyncedLeads.length;
     const gsheetsWebhook = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
     const crmWebhook = process.env.CRM_WEBHOOK_URL;
+    const rescueWebhook = process.env.EMERGENCY_RESCUE_WEBHOOK_URL;
 
     for (const lead of unsyncedLeads) {
+      const attempts = (dlqAttemptsTracker.get(lead.id) || 0) + 1;
+      dlqAttemptsTracker.set(lead.id, attempts);
+
+      // Dead-Letter Queue Rescue: Si falla más de 5 veces, enviarlo a urgencias
+      if (attempts > 5) {
+        console.warn(`[LEAD-SYNC-RECOVERY] Lead ${lead.id} ha fallado 5 veces. Activando rescate DLQ...`);
+        if (rescueWebhook) {
+          try {
+            const rescueRes = await fetch(rescueWebhook, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              signal: AbortSignal.timeout(5000),
+              body: JSON.stringify({ reason: 'DLQ_MAX_RETRIES', lead }),
+            });
+            if (rescueRes.ok) {
+              console.log(`[LEAD-SYNC-RECOVERY] Rescate exitoso para Lead ${lead.id}`);
+            }
+          } catch (rescueErr) {
+            console.error(`[LEAD-SYNC-RECOVERY] CRÍTICO: Falló el rescate DLQ para Lead ${lead.id}`, rescueErr);
+          }
+        } else {
+          console.error(`[LEAD-SYNC-RECOVERY] CRÍTICO: No hay EMERGENCY_RESCUE_WEBHOOK_URL configurado. Volcado de Lead ${lead.id}:`, JSON.stringify(lead));
+        }
+
+        // Marcar como sincronizado para evitar un loop infinito destructivo
+        await repo.markSynced(lead.id, 'crm');
+        await repo.markSynced(lead.id, 'gsheets');
+        dlqAttemptsTracker.delete(lead.id);
+        result.dlqRescue++;
+        continue;
+      }
+
       // 1. Reintento Google Sheets Webhook
       if (
         lead.syncedGSheets === false &&
@@ -86,6 +128,11 @@ export async function syncPendingLeads(repo: ILeadRepository): Promise<SyncCycle
         } catch (err) {
           console.warn(`[LEAD-SYNC-RECOVERY] Reintento fallido para ${lead.id} hacia CRM:`, err);
         }
+      }
+
+      // Limpiar rastreador si ambos destinos fueron sincronizados exitosamente
+      if (lead.syncedGSheets !== false && lead.syncedCrm !== false) {
+        dlqAttemptsTracker.delete(lead.id);
       }
     }
   } catch (outerErr) {

@@ -4,8 +4,6 @@ import { ConfidentialityContext, InvestorCredentials } from './confidentialityTy
 
 export { type InvestorCredentials } from './confidentialityTypes';
 
-const VALID_ACCESS_CODES = ['ANIL-2026', 'CARONI-VIII', 'LANCARA', 'PATRIMONIAL', 'VIP-CARONI'];
-
 export const ConfidentialityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAccredited, setIsAccredited] = useState<boolean>(() => {
     return localStorage.getItem('caroni_accredited') === 'true';
@@ -59,15 +57,23 @@ export const ConfidentialityProvider: React.FC<{ children: React.ReactNode }> = 
     setIsAuthModalOpen(false);
   };
 
-  const authenticate = (name: string, code: string, org?: string): boolean => {
-    const normalizedCode = code.trim().toUpperCase();
-    const isValid = VALID_ACCESS_CODES.includes(normalizedCode) || normalizedCode.startsWith('RCAR-');
+  const authenticate = async (name: string, code: string, org?: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), code: code.trim(), org: org?.trim() }),
+      });
 
-    if (isValid) {
+      if (!response.ok) return false;
+
+      const data = await response.json();
+      if (!data.success) return false;
+
       const creds: InvestorCredentials = {
         holderName: name.trim() || 'Comprador Acreditado',
         representativeOrg: org?.trim() || 'Fideicomiso Patrimonial Privado',
-        accessCode: normalizedCode,
+        accessCode: code.trim().toUpperCase(),
         isAccredited: true,
         unlockedAt: new Date().toISOString(),
       };
@@ -75,10 +81,12 @@ export const ConfidentialityProvider: React.FC<{ children: React.ReactNode }> = 
       setCredentials(creds);
       localStorage.setItem('caroni_accredited', 'true');
       localStorage.setItem('caroni_credentials', JSON.stringify(creds));
+      localStorage.setItem('caroni_access_token', data.accessToken);
       setIsAuthModalOpen(false);
       return true;
+    } catch {
+      return false;
     }
-    return false;
   };
 
   const revokeAccess = () => {

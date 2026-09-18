@@ -629,9 +629,57 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
     };
     window.addEventListener('resize', handleResize);
 
-    // ANIMATION LOOP
+    // ANIMATION LOOP & GRACEFUL DEGRADATION WITH RECOVERY
+    let lastTime = performance.now();
+    let lowFpsFrames = 0;
+    let highFpsFrames = 0;
+    let isDegraded = false;
+
     const animate = () => {
       animationFrameRef.current = requestAnimationFrame(animate);
+
+      // FPS Monitor for Thermal Throttling & Graceful Degradation
+      const currentTime = performance.now();
+      const deltaTime = currentTime - lastTime;
+      lastTime = currentTime;
+
+      if (!isDegraded) {
+        // If frame took more than 66ms (<15 FPS)
+        if (deltaTime > 66) {
+          lowFpsFrames++;
+        } else {
+          lowFpsFrames = Math.max(0, lowFpsFrames - 1);
+        }
+
+        // If we sustain low FPS for approx 5 seconds (75 frames at 15fps)
+        if (lowFpsFrames > 75) {
+          console.warn('Graceful Degradation triggered: Low FPS detected, disabling shadows and lowering resolution.');
+          isDegraded = true;
+          highFpsFrames = 0;
+          if (renderer) {
+            renderer.shadowMap.enabled = false;
+            renderer.setPixelRatio(1);
+          }
+        }
+      } else {
+        // Recovery: if FPS sustains above 30 for ~10 seconds (300 frames at 30fps), restore quality
+        if (deltaTime < 33) {
+          highFpsFrames++;
+        } else {
+          highFpsFrames = Math.max(0, highFpsFrames - 2);
+        }
+
+        if (highFpsFrames > 300) {
+          console.info('Graceful Recovery: FPS stabilized, restoring shadow quality and resolution.');
+          isDegraded = false;
+          lowFpsFrames = 0;
+          highFpsFrames = 0;
+          if (renderer) {
+            renderer.shadowMap.enabled = true;
+            renderer.setPixelRatio(optimalPixelRatio);
+          }
+        }
+      }
 
       if (isRotatingRef.current) {
         controlsStateRef.current.targetRotationY += 0.0035;
