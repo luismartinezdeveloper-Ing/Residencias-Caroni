@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as THREE from 'three';
-import { Maximize2, Minimize2, Sun, Moon, Sparkles, Layers, Compass, RotateCw, ShieldCheck, DollarSign, FileDown, MessageSquare, CheckCircle, Unlock, Building2, Mic } from 'lucide-react';
+import { Maximize2, Minimize2, Sun, Moon, Sparkles, Layers, Compass, RotateCw, ShieldCheck, MessageSquare, CheckCircle, Mic } from 'lucide-react';
 import { UnitData } from '../../types/brand';
 import { AIChatbot } from './AIChatbot';
 import { VirtualTour360View } from './3d/VirtualTour360View';
@@ -25,8 +25,7 @@ interface Architectural3DModalProps {
   onClose: () => void;
   selectedUnit: UnitData;
   onSelectUnit: (unit: UnitData) => void;
-  onEmitLoi: (unit: UnitData) => void;
-  initialViewMode?: 'assembled' | 'exploded' | 'tour360' | 'floorplan' | 'pricing';
+  initialViewMode?: 'assembled' | 'exploded' | 'tour360' | 'floorplan';
 }
 
 export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
@@ -34,15 +33,14 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
   onClose,
   selectedUnit,
   onSelectUnit,
-  onEmitLoi,
   initialViewMode = 'assembled',
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const { isAccredited, activeLead, credentials } = useConfidentiality();
 
-  const VALID_VIEW_MODES = ['assembled', 'exploded', 'tour360', 'floorplan', 'pricing'];
+  const VALID_VIEW_MODES = ['assembled', 'exploded', 'tour360', 'floorplan'];
   const sanitizedInitial = typeof initialViewMode === 'string' && VALID_VIEW_MODES.includes(initialViewMode)
-    ? initialViewMode
+    ? (initialViewMode as 'assembled' | 'exploded' | 'tour360' | 'floorplan')
     : 'assembled';
 
   // States
@@ -977,14 +975,13 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                 </div>
               </div>
 
-              {/* 5 Main View Modes Tabs */}
+              {/* 4 Architectural View Modes Tabs */}
               <div className="flex items-center border border-white/10 bg-black/50 p-1 rounded-full overflow-x-auto no-scrollbar max-w-full order-3 sm:order-2 shrink-0 shadow-inner gap-1">
                 {[
                   { id: 'assembled', label: '01 · MONOLÍTICO' },
                   { id: 'exploded', label: '02 · DESPIECE VERTICAL' },
                   { id: 'tour360', label: '03 · TOUR 360° INTERIORES 🧭' },
                   { id: 'floorplan', label: '04 · PLANTA 2D' },
-                  { id: 'pricing', label: '05 · PRECIOS EXCLUSIVOS 🔓' },
                 ].map((mode) => (
                   <button
                     key={mode.id}
@@ -994,8 +991,6 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                         ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-md'
                         : mode.id === 'tour360'
                         ? 'text-emerald-300 bg-emerald-950/50 font-semibold hover:bg-emerald-900/60 border border-emerald-500/40'
-                        : mode.id === 'pricing'
-                        ? 'text-[#C9A86A] font-semibold hover:bg-white/10'
                         : 'text-[#C9C4B5] hover:text-white hover:bg-white/5'
                     }`}
                   >
@@ -1167,176 +1162,6 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                     </motion.div>
                   )}
 
-                  {/* UNLOCKED PRICING & FINANCIAL SCHEDULE OVERLAY */}
-                  {viewMode === 'pricing' && (
-                    <motion.div
-                      key="pricing-view"
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      transition={{ duration: 0.35 }}
-                      className="absolute inset-0 z-20 bg-[#FAF9F6] flex flex-col p-4 sm:p-8 md:p-10 overflow-y-auto"
-                    >
-                      {/* Header of Pricing Screen */}
-                      <div className="max-w-5xl mx-auto w-full space-y-6">
-                        
-                        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[#C9C4B5] pb-4 gap-3">
-                          <div>
-                            <div className="flex items-center space-x-2">
-                              <span className="w-2 h-2 rounded-full bg-[#8C7452]"></span>
-                              <span className="font-meta text-[9.5px] text-[#8C7452] tracking-[0.22em] uppercase font-semibold">
-                                LISTA OFICIAL DE PRECIOS DE PREVENTA
-                              </span>
-                            </div>
-                            <h2 className="font-display text-2xl sm:text-3xl text-[#1B1813] mt-1">
-                              Matriz Financiera & Valuación por Residencia
-                            </h2>
-                          </div>
-
-                          <div className="bg-[#1B1813] text-[#EFEBE0] px-4 py-2 rounded-full text-xs font-meta flex items-center space-x-2 self-start md:self-auto">
-                            <Unlock className="w-3.5 h-3.5 text-[#8C7452]" />
-                            <span>Acreditado: {credentials?.holderName || activeLead?.fullName || 'Comprador Registrado'}</span>
-                          </div>
-                        </div>
-
-                        {/* 8 Units Complete Pricing Table */}
-                        <div className="bg-white rounded-2xl border border-[#C9C4B5] overflow-hidden shadow-xs">
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs font-serif">
-                              <thead className="bg-[#1B1813] text-[#EFEBE0] font-meta text-[9px] uppercase tracking-wider">
-                                <tr>
-                                  <th className="p-3">Unidad</th>
-                                  <th className="p-3">Nivel</th>
-                                  <th className="p-3 text-right">Int. / Ext.</th>
-                                  <th className="p-3 text-right">Total m²</th>
-                                  <th className="p-3 text-right">USD / m²</th>
-                                  <th className="p-3 text-right">Precio Total USD</th>
-                                  <th className="p-3 text-right">Reserva (10%)</th>
-                                  <th className="p-3 text-center">Estado</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-[#C9C4B5]/40 font-mono text-[11px]">
-                                {UNITS_DATA.map((u) => {
-                                  const isCurrent = u.id === selectedUnit.id;
-                                  const extArea = (u.terraceArea || 0) + (u.gardenArea || 0);
-                                  const unitRate = u.typology === 'Mirador' ? 3600 : u.typology === 'Jardín' ? 2950 : 3300;
-                                  const unitTotal = Math.round(u.totalArea * unitRate);
-                                  return (
-                                    <tr
-                                      key={u.id}
-                                      onClick={() => onSelectUnit(u)}
-                                      className={`transition-colors cursor-pointer ${
-                                        isCurrent
-                                          ? 'bg-[#8C7452]/15 font-semibold text-[#1B1813]'
-                                          : 'hover:bg-[#FAF9F6] text-[#1B1813]'
-                                      }`}
-                                    >
-                                      <td className="p-3 font-display text-xs text-[#1B1813]">{u.name}</td>
-                                      <td className="p-3 font-meta text-[10px] text-[#8C8678]">{u.level}</td>
-                                      <td className="p-3 text-right text-[#8C8678]">
-                                        {u.interiorArea}m² / {extArea > 0 ? `${extArea}m²` : '—'}
-                                      </td>
-                                      <td className="p-3 text-right font-bold text-[#1B1813]">{u.totalArea} m²</td>
-                                      <td className="p-3 text-right text-[#8C7452]">
-                                        ${unitRate.toLocaleString('es-VE')}
-                                      </td>
-                                      <td className="p-3 text-right font-bold text-[#1B1813]">
-                                        ${unitTotal.toLocaleString('es-VE')}
-                                      </td>
-                                      <td className="p-3 text-right text-[#8C8678]">
-                                        ${Math.round(unitTotal * 0.1).toLocaleString('es-VE')}
-                                      </td>
-                                      <td className="p-3 text-center">
-                                        <span
-                                          className={`font-meta text-[8.5px] px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                                            u.status === 'disponible'
-                                              ? 'bg-[#2E7D32]/10 text-[#2E7D32] border border-[#2E7D32]/30 font-semibold'
-                                              : u.status === 'en_reserva'
-                                              ? 'bg-[#E65100]/10 text-[#E65100] border border-[#E65100]/30'
-                                              : 'bg-[#C9C4B5]/30 text-[#8C8678]'
-                                          }`}
-                                        >
-                                          {u.status === 'disponible' ? 'Disponible' : u.status === 'en_reserva' ? 'En Reserva' : 'Comprometida'}
-                                        </span>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-
-                        {/* Escrow Payment Milestones Schedule */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div className="bg-white p-5 rounded-2xl border border-[#C9C4B5] space-y-3">
-                            <span className="font-meta text-[9px] text-[#8C7452] uppercase tracking-wider block">
-                              ESTRUCTURA DE PAGO FIDUCIARIO
-                            </span>
-                            <h3 className="font-display text-lg text-[#1B1813]">
-                              7 Hitos Certificados en Cuenta Escrow
-                            </h3>
-                            <p className="font-serif text-xs text-[#8C8678] leading-relaxed">
-                              Los fondos permanecen protegidos bajo fideicomiso y únicamente son desembolsados contra certificación técnica de avance avalada por la dirección de obra de Añil Arquitectura.
-                            </p>
-                            
-                            <div className="space-y-2 pt-2 text-xs font-serif">
-                              {[
-                                { label: '01 · Señal de Reserva (Hold Privado)', pct: '10%' },
-                                { label: '02 · Firma de Opción a Compra y Registro', pct: '15%' },
-                                { label: '03 · Culminación de Estructura de Concreto', pct: '15%' },
-                                { label: '04 · Fachadas y Cerramientos de Travertino', pct: '15%' },
-                                { label: '05 · Instalaciones MEP y Respaldo Total', pct: '15%' },
-                                { label: '06 · Acabados Nobles e Interiores', pct: '15%' },
-                                { label: '07 · Protocolización y Entrega de Llaves', pct: '15%' },
-                              ].map((step, i) => (
-                                <div key={i} className="flex justify-between py-1 border-b border-[#C9C4B5]/40 text-[#1B1813]">
-                                  <span className="text-xs">{step.label}</span>
-                                  <span className="font-mono font-bold text-[#8C7452]">{step.pct}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Direct Advisory & WhatsApp Action Box */}
-                          <div className="bg-[#1B1813] text-[#EFEBE0] p-6 rounded-2xl border border-[#8C7452]/40 flex flex-col justify-between space-y-4">
-                            <div className="space-y-2">
-                              <span className="font-meta text-[9px] text-[#8C7452] uppercase tracking-widest block">
-                                ATENCIÓN DIRECTA A COMPRADORES
-                              </span>
-                              <h3 className="font-display text-xl text-[#FAF8F5]">
-                                Concertar Sesión con Añil Arquitectura
-                              </h3>
-                              <p className="font-serif text-xs text-[#C9C4B5] leading-relaxed">
-                                Consulte opciones de personalización espacial, visitas privadas al showroom o emita una carta de interés (LOI) sobre <strong>{selectedUnit.name}</strong>.
-                              </p>
-                            </div>
-
-                            <div className="space-y-2.5 pt-2">
-                              <a
-                                href={`https://wa.me/584140000000?text=Hola,%20me%20comunico%20desde%20el%20Visor%203D%20de%20Residencias%20Caron%C3%AD.%20Mi%20nombre%20es%20${encodeURIComponent(credentials?.holderName || activeLead?.fullName || 'Comprador')}%20y%20deseo%20consultar%20disponibilidad%20sobre%20${encodeURIComponent(selectedUnit.name)}.`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="w-full bg-[#8C7452] hover:bg-[#A38760] text-[#0C0B0A] font-meta font-bold text-xs py-3 px-5 rounded-full flex items-center justify-center space-x-2 transition-all cursor-pointer"
-                              >
-                                <MessageSquare className="w-4 h-4" />
-                                <span>CONSULTAR ASESOR VÍA WHATSAPP</span>
-                              </a>
-
-                              <button
-                                onClick={() => setViewMode('assembled')}
-                                className="w-full bg-white/10 hover:bg-white/20 text-[#EFEBE0] border border-white/20 font-meta text-xs py-3 px-5 rounded-full flex items-center justify-center space-x-2 transition-colors cursor-pointer"
-                              >
-                                <Building2 className="w-4 h-4 text-[#8C7452]" />
-                                <span>VOLVER A LA MAQUETA 3D</span>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                      </div>
-                    </motion.div>
-                  )}
                 </AnimatePresence>
 
                 {/* 3D ENGINE */}

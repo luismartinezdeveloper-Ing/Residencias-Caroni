@@ -35,7 +35,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
   onClose,
   onUnlocked,
   title = 'Desbloquear Visor 3D y Precios de Preventa',
-  subtitle = 'Complete el formulario para acceder de forma inmediata al modelo tridimensional interactivo, la lista de precios oficial por m² y el dossier técnico de Residencias Caroní.',
+  subtitle = 'Complete el formulario para acceder de forma inmediata al modelo tridimensional interactivo, la lista de precios oficial por m² y la información técnica de Residencias Caroní.',
   sourceTrigger = 'Hero Funnel',
 }) => {
   const { unlockWithLead, authenticate } = useConfidentiality();

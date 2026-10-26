@@ -25,6 +25,8 @@ export interface TourRoom {
   initialYaw: number;
   initialPitch: number;
   hotspots: TourHotspot[];
+  officialRenderUrl?: string;
+  officialRenderCaption?: string;
 }
 
 export interface UnitTourConfig {
@@ -47,6 +49,8 @@ export const TOUR_ROOMS_DATA: TourRoom[] = [
     radarPos: { x: 50, y: 65 },
     initialYaw: 0,
     initialPitch: 5,
+    officialRenderUrl: '/imagen/interior/pb-norte/02_PB_Norte_Salon.jpeg',
+    officialRenderCaption: 'Añil Arquitectura — Gran Salón Social con luz natural y visual diáfana al Ávila',
     hotspots: [
       {
         id: 'portal-to-cocina',
@@ -124,6 +128,8 @@ export const TOUR_ROOMS_DATA: TourRoom[] = [
     radarPos: { x: 80, y: 45 },
     initialYaw: -15,
     initialPitch: 0,
+    officialRenderUrl: '/imagen/interior/pb-norte/03_PB_Norte_Cocina.jpg.jpeg',
+    officialRenderCaption: 'Añil Arquitectura — Cocina de autor contemporánea con isla de cuarzo y acabados nobles',
     hotspots: [
       {
         id: 'portal-to-salon',
@@ -180,6 +186,8 @@ export const TOUR_ROOMS_DATA: TourRoom[] = [
     radarPos: { x: 50, y: 90 },
     initialYaw: 0,
     initialPitch: 10,
+    officialRenderUrl: '/imagen/interior/pb-norte/01_PB_Norte_Terraza.jpeg',
+    officialRenderCaption: 'Añil Arquitectura — Terraza Panorámica suspendida con visual directa a El Ávila',
     hotspots: [
       {
         id: 'portal-to-salon',
@@ -236,6 +244,8 @@ export const TOUR_ROOMS_DATA: TourRoom[] = [
     radarPos: { x: 20, y: 45 },
     initialYaw: 10,
     initialPitch: 2,
+    officialRenderUrl: '/imagen/exterior/RC.exterior.sala-ventanal-p1op2.jpeg',
+    officialRenderCaption: 'Añil Arquitectura — Ventanal continuo con vistas privilegiadas a El Ávila',
     hotspots: [
       {
         id: 'portal-to-salon',
@@ -292,6 +302,8 @@ export const TOUR_ROOMS_DATA: TourRoom[] = [
     radarPos: { x: 15, y: 20 },
     initialYaw: 0,
     initialPitch: 0,
+    officialRenderUrl: '/imagen/exterior/RC-exterior.ventanal-PH.jpeg',
+    officialRenderCaption: 'Añil Arquitectura — Integración de luz tamizada y privacidad arquitectónica',
     hotspots: [
       {
         id: 'portal-to-master',

@@ -6,14 +6,13 @@ import { UnitData } from '../../types/brand';
 import { useConfidentiality } from '../../context/ConfidentialityContext';
 import { ShieldCheck, Sparkles, LockKeyhole } from 'lucide-react';
 
-export type NavSection = 'obra' | 'elevacion' | 'inversion' | 'ledger' | 'contacto';
+export type NavSection = 'obra' | 'galeria' | 'elevacion' | 'contacto';
 
 interface ExperienceHeaderProps {
   activeSection: NavSection;
   onNavigate: (section: NavSection) => void;
   selectedUnit: UnitData;
   onSelectUnit: (unit: UnitData) => void;
-  onQuickLoi: () => void;
   onOpen3DModal: () => void;
 }
 
@@ -22,12 +21,11 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
   onNavigate,
   selectedUnit,
   onSelectUnit,
-  onQuickLoi,
   onOpen3DModal,
 }) => {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
-  const { isAccredited, openAuthModal, revokeAccess, credentials, isAdvisorMode, toggleAdvisorMode } = useConfidentiality();
+  const { isAccredited, openAuthModal, revokeAccess, credentials } = useConfidentiality();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -43,17 +41,11 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  
-  const navItems = isAdvisorMode ? [
-    { id: 'obra', code: '01', label: 'EL PROYECTO' },
-    { id: 'elevacion', code: '02', label: 'RESIDENCIAS' },
-    { id: 'inversion', code: '03', label: 'CONDICIONES & RESERVA' },
-    { id: 'ledger', code: '04', label: 'AVANCE DE OBRA' },
-    { id: 'contacto', code: '05', label: 'CONTACTO' },
-  ] : [
-    { id: 'obra', code: '01', label: 'EL PROYECTO' },
-    { id: 'elevacion', code: '02', label: 'RESIDENCIAS' },
-    { id: 'contacto', code: '03', label: 'CONTACTO' },
+  const navItems = [
+    { id: 'obra' as NavSection, code: '01', label: 'EL PROYECTO' },
+    { id: 'galeria' as NavSection, code: '02', label: 'GALERÍA' },
+    { id: 'elevacion' as NavSection, code: '03', label: 'RESIDENCIAS' },
+    { id: 'contacto' as NavSection, code: '04', label: 'CONTACTO' },
   ];
 
 
@@ -70,12 +62,8 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
         <div className="flex items-center space-x-2 sm:space-x-3">
           <span className="font-semibold text-[#1B1813] tracking-widest">RESIDENCIAS CARONÍ</span>
           <span className="text-[#8C7452]">·</span>
-          <span className="text-[#8C8678]">ALTAMIRA, CARACAS</span>
           <span className="text-[#C9C4B5]">|</span>
-          <button onClick={toggleAdvisorMode} className="text-[#8C8678] hover:text-[#1B1813] transition-colors flex items-center space-x-1 cursor-pointer rounded-full">
-            <LockKeyhole className="w-2.5 h-2.5" />
-            <span>{isAdvisorMode ? 'MODO GALERÍA' : 'PORTAL ASESOR'}</span>
-          </button>
+          <span className="text-[#8C8678]">AÑIL ARQUITECTURA</span>
         </div>
 
         <div className="hidden lg:flex items-center space-x-2 text-center font-display lowercase italic text-[11px] text-[#1B1813]/70">
@@ -100,13 +88,13 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
             </div>
           ) : (
             <button
-              onClick={() => openAuthModal('inversion')}
+              onClick={() => onNavigate('contacto')}
               className="flex items-center space-x-1.5 bg-white hover:bg-[#FAF9F6] border border-[#C9C4B5] px-2.5 py-0.5 text-[#1B1813] transition-colors cursor-pointer rounded-full"
               title="Solicitar información privada y disponibilidad"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#8C7452]"></span>
               <span className="font-meta text-[8.5px] uppercase tracking-wider text-[#1B1813]">
-                SOLICITAR INFORMACIÓN
+                VISITAS CON CITA
               </span>
             </button>
           )}
@@ -161,11 +149,19 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
           })}
         </nav>
 
-        {/* Context Actions: Quick Unit & LOI Trigger */}
+        {/* Context Actions: Visitas con Cita & 3D Model Trigger */}
         <div className="flex items-center space-x-1.5 sm:space-x-2 shrink-0">
           <button
+            onClick={() => onNavigate('contacto')}
+            className="flex font-meta text-[9px] sm:text-[10px] px-3 sm:px-3.5 py-1.5 transition-all items-center space-x-1.5 rounded-full cursor-pointer border border-[#C9C4B5]/70 hover:border-[#8C7452] bg-white/80 hover:bg-white text-[#1B1813] font-medium"
+            title="Concertar visita privada con Añil Arquitectura"
+          >
+            <span>VISITAS CON CITA</span>
+          </button>
+
+          <button
             onClick={onOpen3DModal}
-            className="flex font-meta text-[9px] sm:text-[10.5px] px-2.5 sm:px-3.5 py-1.5 bg-[#1B1813] text-[#FAF9F6] hover:bg-[#2A261E] hover:text-[#EFEBE0] transition-colors items-center space-x-1.5 shadow-xs cursor-pointer rounded-full active:scale-95"
+            className="flex font-meta text-[9px] sm:text-[10.5px] px-2.5 sm:px-3.5 py-1.5 bg-[#1B1813] text-[#FAF9F6] hover:bg-[#2A261E] hover:text-[#EFEBE0] transition-colors items-center space-x-1.5 shadow-xs cursor-pointer rounded-full active:scale-95 font-medium"
           >
             <span className="text-[#8C7452] animate-pulse">●</span>
             <span className="inline">MAQUETA 3D</span>

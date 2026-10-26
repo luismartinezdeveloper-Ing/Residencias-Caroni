@@ -10,7 +10,6 @@ interface InteractiveElevationViewerProps {
   selectedUnit: UnitData;
   onSelectUnit: (unit: UnitData) => void;
   onInspectUnitDetails: (unit: UnitData) => void;
-  onEmitLoi: (unit: UnitData) => void;
   onOpen3DModal?: (initialMode?: 'assembled' | 'tour360') => void;
 }
 
@@ -18,7 +17,6 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
   selectedUnit,
   onSelectUnit,
   onInspectUnitDetails,
-  onEmitLoi,
   onOpen3DModal,
 }) => {
   const { isAccredited, openAuthModal } = useConfidentiality();

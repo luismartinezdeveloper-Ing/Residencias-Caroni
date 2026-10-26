@@ -2,9 +2,8 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { motion } from 'motion/react';
 import { ExperienceHeader, NavSection } from './components/layout/ExperienceHeader';
 import { CinematicScrollNarrative } from './components/sections/CinematicScrollNarrative';
+import { HorizontalGallery } from './components/sections/HorizontalGallery';
 import { InteractiveElevationViewer } from './components/sections/InteractiveElevationViewer';
-import { InvestmentTermSheet } from './components/sections/InvestmentTermSheet';
-import { InstitutionalLedger } from './components/sections/InstitutionalLedger';
 import { PrivateAdvisoryCTA } from './components/sections/PrivateAdvisoryCTA';
 import { ConfidentialityModal } from './components/modals/ConfidentialityModal';
 import { LeadGateModal } from './components/modals/LeadGateModal';
@@ -31,7 +30,7 @@ function MainAppContent() {
   const [is3DModalOpen, setIs3DModalOpen] = useState<boolean>(false);
   const [isLeadGateOpen, setIsLeadGateOpen] = useState<boolean>(false);
   const [isVoiceAdvisorOpen, setIsVoiceAdvisorOpen] = useState<boolean>(false);
-  const [modalInitialViewMode, setModalInitialViewMode] = useState<'assembled' | 'exploded' | 'tour360' | 'floorplan' | 'pricing'>('assembled');
+  const [modalInitialViewMode, setModalInitialViewMode] = useState<'assembled' | 'exploded' | 'tour360' | 'floorplan'>('assembled');
 
   // Smooth Scroll Anchor Navigation
   const handleNavigate = (section: NavSection) => {
@@ -46,15 +45,14 @@ function MainAppContent() {
 
   // Lead Gate / 3D Access Funnel Trigger
   const handleOpen3DOrGate = (mode?: string | unknown) => {
-    const validModes: Array<'assembled' | 'exploded' | 'tour360' | 'floorplan' | 'pricing'> = [
+    const validModes: Array<'assembled' | 'exploded' | 'tour360' | 'floorplan'> = [
       'assembled',
       'exploded',
       'tour360',
       'floorplan',
-      'pricing',
     ];
     const safeMode = typeof mode === 'string' && (validModes as string[]).includes(mode)
-      ? (mode as 'assembled' | 'exploded' | 'tour360' | 'floorplan' | 'pricing')
+      ? (mode as 'assembled' | 'exploded' | 'tour360' | 'floorplan')
       : 'assembled';
 
     setModalInitialViewMode(safeMode);
@@ -65,19 +63,17 @@ function MainAppContent() {
     }
   };
 
-  // Quick Action: transfer selected unit straight to the LOI Term Sheet and scroll down
-  const handleQuickLoi = (unit?: UnitData) => {
+  // Quick Action: focus selected unit and navigate to private appointment contact
+  const handleRequestVisit = (unit?: UnitData) => {
     if (unit) {
       setSelectedUnit(unit);
     }
-    handleNavigate('inversion');
+    handleNavigate('contacto');
   };
 
   // High-precision viewport-based ScrollSpy
   useEffect(() => {
-    const sections: NavSection[] = isAdvisorMode
-      ? ['obra', 'elevacion', 'inversion', 'ledger', 'contacto']
-      : ['obra', 'elevacion', 'contacto'];
+    const sections: NavSection[] = ['obra', 'galeria', 'elevacion', 'contacto'];
 
     const handleScrollObserver = () => {
       // Trigger when section reaches top 35% of the viewport
@@ -100,7 +96,7 @@ function MainAppContent() {
     handleScrollObserver();
 
     return () => window.removeEventListener('scroll', handleScrollObserver);
-  }, [isAdvisorMode]);
+  }, []);
 
   const sectionVariants = {
     hidden: { opacity: 0, y: 32 },
@@ -142,7 +138,6 @@ function MainAppContent() {
         onNavigate={handleNavigate}
         selectedUnit={selectedUnit}
         onSelectUnit={setSelectedUnit}
-        onQuickLoi={() => handleQuickLoi(selectedUnit)}
         onOpen3DModal={handleOpen3DOrGate}
       />
 
@@ -154,7 +149,6 @@ function MainAppContent() {
             onClose={() => setIs3DModalOpen(false)}
             selectedUnit={selectedUnit}
             onSelectUnit={setSelectedUnit}
-            onEmitLoi={handleQuickLoi}
             initialViewMode={modalInitialViewMode}
           />
         </Suspense>
@@ -166,10 +160,12 @@ function MainAppContent() {
         <CinematicScrollNarrative
           onOpen3DModal={() => handleOpen3DOrGate('assembled')}
           onExploreElevation={() => handleNavigate('elevacion')}
-          onRequestDossier={() => handleOpen3DOrGate('pricing')}
         />
 
-        {/* 02. FACHADAS & COTAS (Interactive Elevation) */}
+        {/* 02. PERSPECTIVAS Y MATERIALIDAD (Galería Editorial Horizontal con Renders de Autor) */}
+        <HorizontalGallery />
+
+        {/* 03. FACHADAS & COTAS (Interactive Elevation) */}
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -183,35 +179,9 @@ function MainAppContent() {
               setSelectedUnit(unit);
               handleOpen3DOrGate('assembled');
             }}
-            onEmitLoi={handleQuickLoi}
             onOpen3DModal={(mode) => handleOpen3DOrGate(mode || 'assembled')}
           />
         </motion.div>
-
-{isAdvisorMode && (<>{/* 03. ESTRUCTURA FINANCIERA & LOI (Investment Grade Simulator & Binding LOI) */}
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-60px' }}
-          variants={sectionVariants}
-        >
-          <InvestmentTermSheet
-            selectedUnit={selectedUnit}
-            onSelectUnit={setSelectedUnit}
-          />
-        </motion.div>
-
-        {/* 06. ESTADO DEL PROYECTO & AVANCE (S-Curve & Portfolio Ledger) */}
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-60px' }}
-          variants={sectionVariants}
-        >
-          <InstitutionalLedger
-            onSelectUnitToEmitLoi={handleQuickLoi}
-          />
-        </motion.div></>)}
 
         {/* 07. ATENCIÓN PRIVADA & CONTACTO INSTITUCIONAL */}
         <motion.div
@@ -283,12 +253,18 @@ function MainAppContent() {
           </div>
 
           {/* Right: Quick Links & Back to Top */}
-          <div className="flex items-center space-x-5 text-[9.5px] uppercase tracking-wider">
+          <div className="flex items-center space-x-4 sm:space-x-5 text-[9.5px] uppercase tracking-wider">
             <button 
               onClick={() => handleNavigate('obra')} 
               className="text-[#C9C4B5] hover:text-[#8C7452] transition-colors cursor-pointer"
             >
               Inicio
+            </button>
+            <button 
+              onClick={() => handleNavigate('galeria')} 
+              className="text-[#C9C4B5] hover:text-[#8C7452] transition-colors cursor-pointer"
+            >
+              Galería
             </button>
             <button 
               onClick={() => handleNavigate('elevacion')} 

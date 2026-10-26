@@ -24,7 +24,9 @@ import {
   Mic,
   Play,
   Pause,
-  MessageSquare
+  MessageSquare,
+  Image as ImageIcon,
+  Maximize2
 } from 'lucide-react';
 import { UnitData } from '../../../types/brand';
 import { TOUR_ROOMS_DATA, TourHotspot } from '../../../data/virtualTourData';
@@ -70,6 +72,7 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
   const [isGyroActive, setIsGyroActive] = useState<boolean>(false);
   const [isGuidedTour, setIsGuidedTour] = useState<boolean>(false);
   const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
+  const [isOfficialRenderOpen, setIsOfficialRenderOpen] = useState<boolean>(false);
 
   // VR Immersion State Manager & Configuration
   const [vrState, setVrState] = useState<VrImmersionState>('idle');
@@ -230,6 +233,9 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
     }
     try {
       // 1. Apply Equirectangular IBL Environment Map for physical reflections on marble and bronze
+      if (sceneRef.current.environment) {
+        sceneRef.current.environment.dispose();
+      }
       const envMap = createArchitecturalEnvironmentMap(mode);
       envMap.mapping = THREE.EquirectangularReflectionMapping;
       sceneRef.current.environment = envMap;
@@ -1540,17 +1546,31 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
             })}
           </div>
 
-          {/* Right Side: Quick Advisor Trigger */}
-          {onOpenAdvisor && (
-            <button
-              onClick={onOpenAdvisor}
-              className="bg-[#14120E]/90 hover:bg-[#C9A86A] text-[#FAF8F5] hover:text-[#0A0908] border border-[#C9A86A]/40 font-meta font-bold text-xs px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 transition-all cursor-pointer pointer-events-auto shrink-0 hover:scale-105 active:scale-95"
-              title="Preguntar al Asesor IA sobre este ambiente"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-[#C9A86A] group-hover:text-[#0A0908]" />
-              <span className="hidden sm:inline">Consultar Asesor</span>
-            </button>
-          )}
+          {/* Right Side: Quick Action Controls */}
+          <div className="flex items-center gap-2 pointer-events-auto shrink-0">
+            {currentRoom.officialRenderUrl && (
+              <button
+                onClick={() => setIsOfficialRenderOpen(true)}
+                className="bg-[#14120E]/90 hover:bg-[#8C7452] text-[#FAF8F5] border border-[#8C7452]/50 font-meta font-bold text-xs px-3.5 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 transition-all cursor-pointer hover:scale-105 active:scale-95"
+                title="Ver render arquitectónico oficial de alta resolución de este espacio"
+              >
+                <ImageIcon className="w-3.5 h-3.5 text-[#F5C780]" />
+                <span className="hidden sm:inline">Render Oficial</span>
+              </button>
+            )}
+
+            {/* Quick Advisor Trigger */}
+            {onOpenAdvisor && (
+              <button
+                onClick={onOpenAdvisor}
+                className="bg-[#14120E]/90 hover:bg-[#C9A86A] text-[#FAF8F5] hover:text-[#0A0908] border border-[#C9A86A]/40 font-meta font-bold text-xs px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 transition-all cursor-pointer hover:scale-105 active:scale-95"
+                title="Preguntar al Asesor IA sobre este ambiente"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#C9A86A] group-hover:text-[#0A0908]" />
+                <span className="hidden sm:inline">Consultar Asesor</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -1943,6 +1963,92 @@ export const VirtualTour360View: React.FC<VirtualTour360ViewProps> = ({
                 >
                   <Glasses className="w-4 h-4" />
                   <span>Configurar Inmersión VR</span>
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ================= Official Architectural Render Lightbox Modal ================= */}
+      <AnimatePresence>
+        {isOfficialRenderOpen && currentRoom.officialRenderUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/92 backdrop-blur-2xl z-50 flex items-center justify-center p-3 sm:p-6"
+            onClick={() => setIsOfficialRenderOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#14120E] text-[#FAF9F6] border border-[#8C7452]/50 rounded-3xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden relative"
+            >
+              {/* Modal Header */}
+              <div className="p-4 sm:p-5 border-b border-[#8C7452]/25 flex items-center justify-between shrink-0 bg-[#1B1813]/80">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-[#8C7452]/20 text-[#F5C780] border border-[#8C7452]/30 flex items-center justify-center">
+                    <ImageIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="font-meta text-[9px] uppercase tracking-widest text-[#F5C780] font-semibold block">
+                      Perspectiva Arquitectónica Oficial de Autor
+                    </span>
+                    <h3 className="font-display font-bold text-base sm:text-lg text-[#FAF9F6]">
+                      {currentRoom.name} · {selectedUnit.name}
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <a
+                    href={currentRoom.officialRenderUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#C9C4B5] hover:text-white transition-colors cursor-pointer"
+                    title="Abrir imagen original en nueva pestaña"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </a>
+                  <button
+                    onClick={() => setIsOfficialRenderOpen(false)}
+                    className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#C9C4B5] hover:text-white transition-colors cursor-pointer"
+                    title="Cerrar vista"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Render Image Container */}
+              <div className="relative flex-1 overflow-auto bg-black flex items-center justify-center min-h-[300px] p-2">
+                <img
+                  src={currentRoom.officialRenderUrl}
+                  alt={`${currentRoom.name} - Residencias Caroní`}
+                  className="max-h-[68vh] w-auto max-w-full object-contain rounded-xl shadow-2xl transition-all"
+                  loading="eager"
+                />
+              </div>
+
+              {/* Caption & Authorship Footer */}
+              <div className="p-4 sm:p-5 border-t border-[#8C7452]/25 bg-[#1B1813]/90 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shrink-0">
+                <div className="text-center sm:text-left">
+                  <p className="text-[#C9C4B5] font-serif leading-relaxed text-[11px] sm:text-xs">
+                    {currentRoom.officialRenderCaption || 'Render arquitectónico de alta fidelidad con especificaciones exactas de carpintería y acabados.'}
+                  </p>
+                  <p className="font-meta text-[9px] text-[#8C8678] uppercase tracking-wider mt-1">
+                    Añil Arquitectura (Arq. Juan Carlos Láncara) · Ingeniería & Experiencia: Ing. Luis Martinez
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setIsOfficialRenderOpen(false)}
+                  className="bg-[#8C7452] hover:bg-[#A38860] text-[#FAF9F6] font-meta text-xs uppercase tracking-wider px-5 py-2.5 rounded-xl transition-all cursor-pointer font-semibold shrink-0"
+                >
+                  Volver al Recorrido 360°
                 </button>
               </div>
             </motion.div>

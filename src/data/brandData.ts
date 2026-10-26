@@ -467,7 +467,7 @@ export const CHECKLIST_ITEMS: ChecklistItem[] = [
   { id: 11, question: '¿La marca respeta 2x de área libre?', detail: 'Margen libre de 2x (dos alturas de la caja baja «a») por los 4 lados.', importance: 'Norma dura' },
   { id: 12, question: '¿Referencia y «Confidencial» en el pie?', detail: 'RCAR . TIPO . NNN a la derecha y CONFIDENCIAL en piezas con datos de unidad o precio.', importance: 'Norma dura' },
   { id: 13, question: '¿Cada cifra contrastada con su fuente?', detail: 'Toda superficie procede del keynote vigente. Nunca se inventa ni redondea para que quede mejor.', importance: 'Norma dura' },
-  { id: 14, question: '¿El editable acompaña al PDF?', detail: 'Los documentos contractuales se entregan en PDF + DOCX/PPTX editable.', importance: 'Comprobación' },
+  { id: 14, question: '¿El editable acompaña al documento final?', detail: 'Los documentos contractuales se entregan en formato formal cerrado + DOCX/PPTX editable.', importance: 'Comprobación' },
 ];
 
 export const BANNED_WORDS = [

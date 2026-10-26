@@ -13,7 +13,6 @@ import {
   Sparkles,
   Volume2,
   VolumeX,
-  FileDown,
   RefreshCw,
   Film,
 } from 'lucide-react';
@@ -56,13 +55,11 @@ const IDLE_DELAY_MS = 4000; // 4 segundos de inactividad de scroll para reactiva
 interface CinematicScrollNarrativeProps {
   onOpen3DModal?: () => void;
   onExploreElevation?: () => void;
-  onRequestDossier?: () => void;
 }
 
 export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> = ({
   onOpen3DModal,
   onExploreElevation,
-  onRequestDossier,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const video1Ref = useRef<HTMLVideoElement>(null);
@@ -529,17 +526,6 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
 
           {/* Quick Access CTAs */}
           <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-end">
-            {onRequestDossier && (
-              <button
-                onClick={onRequestDossier}
-                className="px-3.5 py-1.5 bg-white/10 hover:bg-white/20 text-white text-[9.5px] font-meta tracking-wider uppercase rounded-full transition-all backdrop-blur-md border border-white/15 flex items-center space-x-1.5 cursor-pointer"
-                title="Descargar Dossier Confidencial de Preventa"
-              >
-                <FileDown className="w-3 h-3 text-[#C9A86A]" />
-                <span className="hidden xs:inline">DOSSIER PDF</span>
-              </button>
-            )}
-
             {onOpen3DModal && (
               <button
                 onClick={onOpen3DModal}

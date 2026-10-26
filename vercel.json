@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "vite build",
+  "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
@@ -17,7 +17,11 @@
       "destination": "/api/tts"
     },
     {
-      "source": "/((?!api/|videos/|assets/|favicon.ico|icon.svg|manifest.webmanifest).*)",
+      "source": "/api/verify-code",
+      "destination": "/api/verify-code"
+    },
+    {
+      "source": "/((?!api/|videos/|imagen/|models/|renders/|assets/|favicon.ico|icon.svg|manifest.webmanifest).*)",
       "destination": "/index.html"
     }
   ],

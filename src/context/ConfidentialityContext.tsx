@@ -37,7 +37,11 @@ export const ConfidentialityProvider: React.FC<{ children: React.ReactNode }> = 
   });
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
-  const [isAdvisorMode, setIsAdvisorMode] = useState<boolean>(false);
+  const [isAdvisorMode, setIsAdvisorMode] = useState<boolean>(() => {
+    const savedMode = localStorage.getItem('caroni_advisor_mode');
+    if (savedMode !== null) return savedMode === 'true';
+    return localStorage.getItem('caroni_accredited') === 'true';
+  });
   const [targetAfterAuth, setTargetAfterAuth] = useState<string | undefined>(undefined);
 
   const unlockWithLead = (lead: LeadRecord) => {
@@ -52,7 +56,9 @@ export const ConfidentialityProvider: React.FC<{ children: React.ReactNode }> = 
     setIsAccredited(true);
     setActiveLead(lead);
     setCredentials(creds);
+    setIsAdvisorMode(true);
     localStorage.setItem('caroni_accredited', 'true');
+    localStorage.setItem('caroni_advisor_mode', 'true');
     localStorage.setItem('caroni_credentials', JSON.stringify(creds));
     setIsAuthModalOpen(false);
   };
@@ -79,7 +85,9 @@ export const ConfidentialityProvider: React.FC<{ children: React.ReactNode }> = 
       };
       setIsAccredited(true);
       setCredentials(creds);
+      setIsAdvisorMode(true);
       localStorage.setItem('caroni_accredited', 'true');
+      localStorage.setItem('caroni_advisor_mode', 'true');
       localStorage.setItem('caroni_credentials', JSON.stringify(creds));
       localStorage.setItem('caroni_access_token', data.accessToken);
       setIsAuthModalOpen(false);
@@ -91,9 +99,11 @@ export const ConfidentialityProvider: React.FC<{ children: React.ReactNode }> = 
 
   const revokeAccess = () => {
     setIsAccredited(false);
+    setIsAdvisorMode(false);
     setCredentials(null);
     setActiveLead(null);
     localStorage.removeItem('caroni_accredited');
+    localStorage.removeItem('caroni_advisor_mode');
     localStorage.removeItem('caroni_credentials');
     localStorage.removeItem('caroni_active_lead');
   };
@@ -103,7 +113,13 @@ export const ConfidentialityProvider: React.FC<{ children: React.ReactNode }> = 
     setIsAuthModalOpen(true);
   };
 
-  const toggleAdvisorMode = () => setIsAdvisorMode(prev => !prev);
+  const toggleAdvisorMode = () => {
+    setIsAdvisorMode(prev => {
+      const next = !prev;
+      localStorage.setItem('caroni_advisor_mode', String(next));
+      return next;
+    });
+  };
 
   const closeAuthModal = () => {
     setIsAuthModalOpen(false);
