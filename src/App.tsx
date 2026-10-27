@@ -30,7 +30,7 @@ function MainAppContent() {
   const [is3DModalOpen, setIs3DModalOpen] = useState<boolean>(false);
   const [isLeadGateOpen, setIsLeadGateOpen] = useState<boolean>(false);
   const [isVoiceAdvisorOpen, setIsVoiceAdvisorOpen] = useState<boolean>(false);
-  const [modalInitialViewMode, setModalInitialViewMode] = useState<'assembled' | 'exploded' | 'tour360' | 'floorplan'>('assembled');
+  const [modalInitialViewMode, setModalInitialViewMode] = useState<'assembled' | 'exploded' | 'floorplan'>('assembled');
 
   // Smooth Scroll Anchor Navigation
   const handleNavigate = (section: NavSection) => {
@@ -45,14 +45,13 @@ function MainAppContent() {
 
   // Lead Gate / 3D Access Funnel Trigger
   const handleOpen3DOrGate = (mode?: string | unknown) => {
-    const validModes: Array<'assembled' | 'exploded' | 'tour360' | 'floorplan'> = [
+    const validModes: Array<'assembled' | 'exploded' | 'floorplan'> = [
       'assembled',
       'exploded',
-      'tour360',
       'floorplan',
     ];
     const safeMode = typeof mode === 'string' && (validModes as string[]).includes(mode)
-      ? (mode as 'assembled' | 'exploded' | 'tour360' | 'floorplan')
+      ? (mode as 'assembled' | 'exploded' | 'floorplan')
       : 'assembled';
 
     setModalInitialViewMode(safeMode);

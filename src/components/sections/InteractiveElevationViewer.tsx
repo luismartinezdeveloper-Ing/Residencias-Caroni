@@ -4,13 +4,13 @@ import { ArchitecturalElevation, CaroniIsotype } from '../ui/ArchitecturalDrawin
 import { UNITS_DATA } from '../../data/brandData';
 import { UnitData } from '../../types/brand';
 import { useConfidentiality } from '../../context/ConfidentialityContext';
-import { LockKeyhole, Compass } from 'lucide-react';
+import { LockKeyhole } from 'lucide-react';
 
 interface InteractiveElevationViewerProps {
   selectedUnit: UnitData;
   onSelectUnit: (unit: UnitData) => void;
   onInspectUnitDetails: (unit: UnitData) => void;
-  onOpen3DModal?: (initialMode?: 'assembled' | 'tour360') => void;
+  onOpen3DModal?: (initialMode?: 'assembled' | 'exploded' | 'floorplan') => void;
 }
 
 export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProps> = ({
@@ -266,20 +266,11 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
 
               <div className="flex flex-wrap items-center gap-2.5">
                 <button
-                  onClick={() => onOpen3DModal?.('tour360')}
-                  className="font-meta text-[10px] sm:text-[11px] px-5 py-3 bg-[#8C7452] text-[#FAF9F6] hover:bg-[#735D3F] hover:shadow-md transition-all rounded-full font-medium flex items-center justify-center space-x-2 cursor-pointer shrink-0 uppercase tracking-wider shadow-sm"
-                  title="Recorrer interiores en 360° panorámico"
-                >
-                  <Compass className="w-3.5 h-3.5 text-[#F5C780] animate-spin" style={{ animationDuration: '8s' }} />
-                  <span>Tour 360° Interiores</span>
-                </button>
-
-                <button
                   onClick={() => onOpen3DModal?.('assembled')}
-                  className="font-meta text-[10px] sm:text-[11px] px-5 py-3 bg-[#1B1813] text-[#EFEBE0] hover:bg-[#2A261E] hover:shadow-md transition-all rounded-full font-medium flex items-center justify-center space-x-2 cursor-pointer shrink-0 uppercase tracking-wider"
+                  className="font-meta text-[10px] sm:text-[11px] px-6 py-3 bg-[#1B1813] text-[#FAF9F6] hover:bg-[#8C7452] hover:shadow-md transition-all rounded-full font-medium flex items-center justify-center space-x-2 cursor-pointer shrink-0 uppercase tracking-wider shadow-sm"
                 >
-                  <span className="text-[#8C7452] animate-pulse">●</span>
-                  <span>Maqueta 3D</span>
+                  <span className="text-[#C9A86A] animate-pulse">●</span>
+                  <span>Explorar Maqueta 3D</span>
                   <span>→</span>
                 </button>
               </div>

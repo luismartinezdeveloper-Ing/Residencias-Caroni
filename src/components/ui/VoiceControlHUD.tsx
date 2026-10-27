@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Mic, MicOff, Sparkles, Volume2, HelpCircle, X, Check, Compass } from 'lucide-react';
+import { Mic, MicOff, Sparkles, Volume2, HelpCircle, X, Check } from 'lucide-react';
 import { VoiceFeedback, VoiceNavigationCommand } from '../../utils/voiceNavigationController';
 
 interface VoiceControlHUDProps {
@@ -10,7 +10,7 @@ interface VoiceControlHUDProps {
   lastCommand: VoiceNavigationCommand | null;
   onToggleListening: () => void;
   className?: string;
-  contextMode?: 'building' | 'tour360';
+  contextMode?: 'building';
 }
 
 export const VoiceControlHUD: React.FC<VoiceControlHUDProps> = ({
@@ -28,27 +28,16 @@ export const VoiceControlHUD: React.FC<VoiceControlHUDProps> = ({
     return null;
   }
 
-  const suggestedCommands = contextMode === 'tour360'
-    ? [
-        { label: 'Ir a la cocina', desc: 'Navega a la cocina gourmet' },
-        { label: 'Ir al salón', desc: 'Regresa al gran salón social' },
-        { label: 'Salir a la terraza', desc: 'Mirador panorámico al Ávila' },
-        { label: 'Ir a la master suite', desc: 'Habitación principal' },
-        { label: 'Hora dorada / Modo noche', desc: 'Cambia la simulación solar' },
-        { label: 'Activar realidad virtual', desc: 'Lanza inmersión VR' },
-        { label: 'Monolito / Despiece', desc: 'Regresa al estudio 3D' },
-      ]
-    : [
-        { label: 'Monolito / Ensamblado', desc: 'Edificio ensamblado completo' },
-        { label: 'Modo explosión / Despiece', desc: 'Despiece vertical de estratos' },
-        { label: 'Tour 360 interiores', desc: 'Entrar a las residencias' },
-        { label: 'Ir a la cocina / salón', desc: 'Abre el tour en esa estancia' },
-        { label: 'Ver el Ávila / Norte', desc: 'Orienta la cámara hacia la montaña' },
-        { label: 'Fachada Sur / Valle', desc: 'Perspectiva urbana' },
-        { label: 'Hora dorada / Noche', desc: 'Simulación de luz bioclimática' },
-        { label: 'Auto rotar / Parar', desc: 'Giro continuo de maqueta' },
-        { label: 'Acercar / Alejar', desc: 'Control de zoom' },
-      ];
+  const suggestedCommands = [
+    { label: 'Monolito / Ensamblado', desc: 'Edificio ensamblado completo' },
+    { label: 'Modo explosión / Despiece', desc: 'Despiece vertical de estratos' },
+    { label: 'Planta 2D / Planos', desc: 'Esquema de distribución' },
+    { label: 'Ver el Ávila / Norte', desc: 'Orienta la cámara hacia la montaña' },
+    { label: 'Fachada Sur / Valle', desc: 'Perspectiva urbana' },
+    { label: 'Hora dorada / Noche', desc: 'Simulación de luz bioclimática' },
+    { label: 'Auto rotar / Parar', desc: 'Giro continuo de maqueta' },
+    { label: 'Acercar / Alejar', desc: 'Control de zoom' },
+  ];
 
   return (
     <div className={`relative ${className}`}>
@@ -166,7 +155,7 @@ export const VoiceControlHUD: React.FC<VoiceControlHUDProps> = ({
               </div>
 
               <p className="text-xs text-[#C9C4B5] font-serif leading-relaxed mb-4">
-                Presiona el botón de micrófono y di cualquiera de los siguientes comandos para controlar la maqueta 3D y el tour 360° con manos libres:
+                Presiona el botón de micrófono y di cualquiera de los siguientes comandos para controlar la maqueta 3D con manos libres:
               </p>
 
               <div className="space-y-2 max-h-72 overflow-y-auto pr-1 no-scrollbar">

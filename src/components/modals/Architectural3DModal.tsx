@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { Maximize2, Minimize2, Sun, Moon, Sparkles, Layers, Compass, RotateCw, ShieldCheck, MessageSquare, CheckCircle, Mic } from 'lucide-react';
 import { UnitData } from '../../types/brand';
 import { AIChatbot } from './AIChatbot';
-import { VirtualTour360View } from './3d/VirtualTour360View';
+
 import { UNITS_DATA, BRAND_INFO, MILESTONES_DATA } from '../../data/brandData';
 import { CaroniIsotype, ArchitecturalElevation, FloorPlanSchema } from '../ui/ArchitecturalDrawings';
 import { useConfidentiality } from '../../context/ConfidentialityContext';
@@ -25,7 +25,7 @@ interface Architectural3DModalProps {
   onClose: () => void;
   selectedUnit: UnitData;
   onSelectUnit: (unit: UnitData) => void;
-  initialViewMode?: 'assembled' | 'exploded' | 'tour360' | 'floorplan';
+  initialViewMode?: 'assembled' | 'exploded' | 'floorplan';
 }
 
 export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
@@ -38,13 +38,13 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
   const mountRef = useRef<HTMLDivElement>(null);
   const { isAccredited, activeLead, credentials } = useConfidentiality();
 
-  const VALID_VIEW_MODES = ['assembled', 'exploded', 'tour360', 'floorplan'];
+  const VALID_VIEW_MODES = ['assembled', 'exploded', 'floorplan'];
   const sanitizedInitial = typeof initialViewMode === 'string' && VALID_VIEW_MODES.includes(initialViewMode)
-    ? (initialViewMode as 'assembled' | 'exploded' | 'tour360' | 'floorplan')
+    ? (initialViewMode as 'assembled' | 'exploded' | 'floorplan')
     : 'assembled';
 
   // States
-  const [viewMode, setViewMode] = useState<'assembled' | 'exploded' | 'tour360' | 'floorplan' | 'pricing'>(sanitizedInitial);
+  const [viewMode, setViewMode] = useState<'assembled' | 'exploded' | 'floorplan' | 'pricing'>(sanitizedInitial);
 
   useEffect(() => {
     if (isOpen && typeof initialViewMode === 'string' && VALID_VIEW_MODES.includes(initialViewMode)) {
@@ -887,9 +887,6 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
         if (cmd.type === 'SET_VIEW_MODE') {
           setViewMode(cmd.mode);
-        } else if (cmd.type === 'GO_TO_ROOM') {
-          // Switch to 360 tour
-          setViewMode('tour360');
         } else if (cmd.type === 'SET_SOLAR_MODE') {
           setSolarTimeMode(cmd.mode);
         } else if (cmd.type === 'SET_CAMERA_VIEW') {
@@ -980,8 +977,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                 {[
                   { id: 'assembled', label: '01 · MONOLÍTICO' },
                   { id: 'exploded', label: '02 · DESPIECE VERTICAL' },
-                  { id: 'tour360', label: '03 · TOUR 360° INTERIORES 🧭' },
-                  { id: 'floorplan', label: '04 · PLANTA 2D' },
+                  { id: 'floorplan', label: '03 · PLANTA 2D' },
                 ].map((mode) => (
                   <button
                     key={mode.id}
@@ -989,8 +985,6 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                     className={`font-meta text-[8.5px] sm:text-[9.5px] px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer min-h-[28px] flex items-center justify-center ${
                       viewMode === mode.id
                         ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-md'
-                        : mode.id === 'tour360'
-                        ? 'text-emerald-300 bg-emerald-950/50 font-semibold hover:bg-emerald-900/60 border border-emerald-500/40'
                         : 'text-[#C9C4B5] hover:text-white hover:bg-white/5'
                     }`}
                   >
@@ -1008,7 +1002,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                   feedback={voiceFeedback}
                   lastCommand={lastVoiceCommand}
                   onToggleListening={handleToggleVoiceControl}
-                  contextMode={viewMode === 'tour360' ? 'tour360' : 'building'}
+                  contextMode="building"
                 />
 
                 {/* 3-State Solar Time Simulation Toggle */}
@@ -1090,25 +1084,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                 
                 {/* 2D Floor Plan Overlay View */}
                 <AnimatePresence>
-                  {/* 360 INTERIOR VIRTUAL TOUR OVERLAY */}
-                  {viewMode === 'tour360' && (
-                    <motion.div
-                      key="tour360-view"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="absolute inset-0 z-20 bg-[#14120E]"
-                    >
-                      <VirtualTour360View
-                        selectedUnit={selectedUnit}
-                        solarTimeMode={solarTimeMode}
-                        onSolarTimeChange={setSolarTimeMode}
-                        onOpenAdvisor={() => setIsChatOpen(true)}
-                        onRequestViewModeChange={(mode) => setViewMode(mode)}
-                      />
-                    </motion.div>
-                  )}
+                  
 
                   {viewMode === 'floorplan' && (
                     <motion.div
@@ -1297,7 +1273,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                           }`}
                         >
                           <span>{isRotating ? '■' : '▶'}</span>
-                          <span>{isRotating ? 'PAUSA' : '360°'}</span>
+                          <span>{isRotating ? 'PAUSA' : 'ROTAR'}</span>
                         </button>
                       </div>
                     </div>

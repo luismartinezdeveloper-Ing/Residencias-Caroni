@@ -1,10 +1,8 @@
-// Speech Recognition and Voice Navigation Controller for 3D & 360 Tour Viewers
+// Speech Recognition and Voice Navigation Controller for 3D Architectural Viewer
 
 export type VoiceNavigationCommand =
   // 3D Building Views
-  | { type: 'SET_VIEW_MODE'; mode: 'assembled' | 'exploded' | 'tour360' | 'floorplan' | 'pricing'; label: string }
-  // Tour 360 Rooms
-  | { type: 'GO_TO_ROOM'; roomId: string; roomName: string }
+  | { type: 'SET_VIEW_MODE'; mode: 'assembled' | 'exploded' | 'floorplan' | 'pricing'; label: string }
   // Solar / Lighting Simulation
   | { type: 'SET_SOLAR_MODE'; mode: 'morning' | 'golden' | 'night'; label: string }
   // Camera Views
@@ -163,52 +161,7 @@ export class VoiceNavigationController {
       .replace(/[\u0300-\u036f]/g, "") // remove accents for robust matching
       .trim();
 
-    // 1. Navigation to Tour 360 Rooms
-    if (
-      clean.includes('cocina') ||
-      clean.includes('ir a la cocina') ||
-      clean.includes('ver cocina') ||
-      clean.includes('gourmet') ||
-      clean.includes('cava')
-    ) {
-      return { type: 'GO_TO_ROOM', roomId: 'cocina', roomName: 'Cocina Gourmet & Cava' };
-    }
-
-    if (
-      clean.includes('salon') ||
-      clean.includes('sala') ||
-      clean.includes('living') ||
-      clean.includes('comedor') ||
-      clean.includes('gran salon') ||
-      clean.includes('ir al salon')
-    ) {
-      return { type: 'GO_TO_ROOM', roomId: 'salon', roomName: 'Gran Salón & Comedor' };
-    }
-
-    if (
-      clean.includes('terraza') ||
-      clean.includes('balcon') ||
-      clean.includes('mirador') ||
-      clean.includes('deck') ||
-      clean.includes('asador') ||
-      clean.includes('salir a la terraza') ||
-      clean.includes('ir a la terraza')
-    ) {
-      return { type: 'GO_TO_ROOM', roomId: 'terraza', roomName: 'Terraza Panorámica' };
-    }
-
-    if (
-      clean.includes('master') ||
-      clean.includes('habitacion') ||
-      clean.includes('suite') ||
-      clean.includes('dormitorio') ||
-      clean.includes('cuarto principal') ||
-      clean.includes('recamara')
-    ) {
-      return { type: 'GO_TO_ROOM', roomId: 'master', roomName: 'Master Suite & Balcón' };
-    }
-
-    // 2. View Modes: Exploded / Assembled / 360 / Floorplan / Pricing
+    // View Modes: Exploded / Assembled / 360 / Floorplan / Pricing
     if (
       clean.includes('explosion') ||
       clean.includes('modo explosion') ||
@@ -237,17 +190,6 @@ export class VoiceNavigationController {
       (clean.includes('fachada') && !clean.includes('sur') && !clean.includes('norte') && !clean.includes('avila'))
     ) {
       return { type: 'SET_VIEW_MODE', mode: 'assembled', label: 'Modo Monolítico' };
-    }
-
-    if (
-      clean.includes('tour') ||
-      clean.includes('tour 360') ||
-      clean.includes('360') ||
-      clean.includes('interiores') ||
-      clean.includes('entrar al apartamento') ||
-      clean.includes('vista interior')
-    ) {
-      return { type: 'SET_VIEW_MODE', mode: 'tour360', label: 'Tour 360° Interiores' };
     }
 
     if (
