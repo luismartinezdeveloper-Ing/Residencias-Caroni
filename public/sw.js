@@ -1,5 +1,5 @@
 /* Residencias Caroní - Service Worker for Offline Consultation */
-const CACHE_NAME = 'caroni-pwa-v3';
+const CACHE_NAME = 'caroni-pwa-v5';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
@@ -7,8 +7,18 @@ const PRECACHE_ASSETS = [
   '/icon.svg',
 ];
 
+// In local development, bypass caching entirely and purge all caches
+const isLocalhost =
+  self.location.hostname === 'localhost' ||
+  self.location.hostname === '127.0.0.1' ||
+  self.location.hostname === '[::1]';
+
 // Install Event: Pre-cache app shell core assets
 self.addEventListener('install', (event) => {
+  if (isLocalhost) {
+    self.skipWaiting();
+    return;
+  }
   event.waitUntil(
     caches
       .open(CACHE_NAME)
@@ -32,7 +42,7 @@ self.addEventListener('activate', (event) => {
       .then((cacheNames) => {
         return Promise.all(
           cacheNames
-            .filter((name) => name !== CACHE_NAME)
+            .filter((name) => isLocalhost || name !== CACHE_NAME)
             .map((name) => caches.delete(name))
         );
       })
@@ -44,6 +54,11 @@ self.addEventListener('activate', (event) => {
 
 // Fetch Event: Cache Strategy Router
 self.addEventListener('fetch', (event) => {
+  // Always bypass in local dev
+  if (isLocalhost) {
+    return;
+  }
+
   const { request } = event;
   const url = new URL(request.url);
 

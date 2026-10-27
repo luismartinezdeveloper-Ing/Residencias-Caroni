@@ -139,3 +139,4 @@ export function getDomainFallbackReply(userMessage: string, contextUnit?: string
 
   return 'Residencias Caroní: ocho residencias de autor concebidas como un solo volumen escultórico al pie del Ávila en Altamira, Caracas. Puede consultar disponibilidad, planos y especificaciones técnicas. Visitas con cita.';
 }
+

@@ -13,7 +13,7 @@ import { UNITS_DATA, BRAND_INFO } from './data/brandData';
 import { CaroniIsotype } from './components/ui/ArchitecturalDrawings';
 import { OfflineNotification } from './components/ui/OfflineNotification';
 import { CinematicIntroLoader } from './components/ui/CinematicIntroLoader';
-import { Sparkles, PhoneCall, Bot } from 'lucide-react';
+import { PhoneCall } from 'lucide-react';
 
 // Automated Heavy Code Splitting (Lazy-loaded Three.js 3D Model & Gemini Live Voice Assistant)
 const Architectural3DModal = lazy(() =>

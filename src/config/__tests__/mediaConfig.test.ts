@@ -13,8 +13,8 @@ describe('mediaConfig - getMediaAssetUrl', () => {
   });
 
   it('debe retornar la ruta local inalterada cuando no hay CDN configurado', () => {
-    const url = getMediaAssetUrl('/videos/Camera_rotating_around_building.mp4');
-    expect(url).toBe('/videos/Camera_rotating_around_building.mp4');
+    const url = getMediaAssetUrl('/videos/residencias_caroni_master_film.mp4');
+    expect(url).toBe('/videos/residencias_caroni_master_film.mp4');
   });
 
   it('debe respetar URLs absolutas existentes sin modificarlas', () => {

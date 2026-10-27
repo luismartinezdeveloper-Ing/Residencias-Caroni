@@ -1,284 +1,506 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArchitecturalElevation, CaroniIsotype } from '../ui/ArchitecturalDrawings';
-import { UNITS_DATA } from '../../data/brandData';
 import { UnitData } from '../../types/brand';
-import { useConfidentiality } from '../../context/ConfidentialityContext';
-import { LockKeyhole } from 'lucide-react';
+
+/**
+ * Explorador Monográfico de Planos & Estratigrafía 2K — Rail Flotante Apple Glass
+ * Residencias Caroní · Altamira, Caracas
+ * 
+ * Arquitectura: Añil Arquitectura — Arq. Juan Carlos Láncara
+ * Ingeniería de Software & Experiencia Interactiva: Ing. Luis Martinez
+ */
 
 interface InteractiveElevationViewerProps {
-  selectedUnit: UnitData;
-  onSelectUnit: (unit: UnitData) => void;
-  onInspectUnitDetails: (unit: UnitData) => void;
+  selectedUnit?: UnitData;
+  onSelectUnit?: (unit: UnitData) => void;
+  onInspectUnitDetails?: (unit: UnitData) => void;
   onOpen3DModal?: (initialMode?: 'assembled' | 'exploded' | 'floorplan') => void;
 }
 
-export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProps> = ({
-  selectedUnit,
-  onSelectUnit,
-  onInspectUnitDetails,
-  onOpen3DModal,
-}) => {
-  const { isAccredited, openAuthModal } = useConfidentiality();
-  const [hoveredLevel, setHoveredLevel] = useState<string | null>(null);
+type ViewCategoryId = 'elevacion' | 'corte' | 'explotado' | 'perspectiva';
 
-  // Structural Cotas Hierarchy
-  const levels = [
-    {
-      cota: 'Nivel +25.5 m',
-      label: 'PENTHOUSES · MIRADORES SUPERIORES',
-      height: 'Piso Superior',
-      levelKey: 'superior',
-      units: UNITS_DATA.filter((u) => u.typology === 'Mirador'),
-      desc: 'Terrazas panorámicas de 180 m² con piscina privada y vistas directas de 180° al Parque Nacional El Ávila.',
-    },
-    {
-      cota: 'Nivel +17.0 m',
-      label: 'NIVEL 3 · RESIDENCIAS 3ER PISO',
-      height: 'Piso 3',
-      levelKey: 'p3',
-      units: UNITS_DATA.filter((u) => u.level === 'P3'),
-      desc: 'Residencias de 415 m² con terrazas continuas de 92 m² sobre el entorno arbolado de Altamira.',
-    },
-    {
-      cota: 'Nivel +12.7 m',
-      label: 'NIVEL 2 · RESIDENCIAS 2DO PISO',
-      height: 'Piso 2',
-      levelKey: 'p2',
-      units: UNITS_DATA.filter((u) => u.level === 'P2'),
-      desc: 'Distribución de 3 a 4 suites con ascensor privado directo y ventilación cruzada natural.',
-    },
-    {
-      cota: 'Planta Baja',
-      label: 'PLANTA BAJA · DÚPLEX CON JARDÍN PRIVADO',
-      height: 'Planta Baja',
-      levelKey: 'pb',
-      units: UNITS_DATA.filter((u) => u.typology === 'Jardín'),
-      desc: 'Residencias dúplex de gran formato con hasta 350 m² de jardín privado y piscina.',
-    },
-    {
-      cota: 'Subsuelo',
-      label: 'SÓTANO PRIVADO Y SERVICIOS',
-      height: 'Estacionamiento',
-      levelKey: 'sotano',
-      units: [],
-      desc: '36 puestos de estacionamiento techados, maleteros, seguridad 24/7 y planta eléctrica 100%.',
-    },
-  ];
+interface ViewVariant {
+  id: string;
+  number: string;
+  pillTitle: string;
+  tag: string;
+  subtitle: string;
+  image: string;
+}
 
-  const handleSelectUnitById = (unitId: string) => {
-    const unit = UNITS_DATA.find((u) => u.id === unitId);
-    if (unit) {
-      onSelectUnit(unit);
-    }
+interface ArchitecturalCategory {
+  id: ViewCategoryId;
+  label: string;
+  code: string;
+  badge: string;
+  variants: ViewVariant[];
+}
+
+const ARCHITECTURAL_CATEGORIES: ArchitecturalCategory[] = [
+  {
+    id: 'elevacion',
+    label: 'Elevación Frontal',
+    code: '01',
+    badge: 'PROYECCIÓN ORTOGRÁFICA 2K',
+    variants: [
+      {
+        id: 'elev-1',
+        number: '01',
+        pillTitle: 'Fachada Principal',
+        tag: 'Fachada Norte · Altimetría Principal',
+        subtitle: 'Proyección ortográfica en obra limpia con cotas de nivel y modulación de celosías.',
+        image: '/planos/Professional_architectural_orthographic_front_elevation_2K_20261027141757.jpg',
+      },
+      {
+        id: 'elev-2',
+        number: '02',
+        pillTitle: 'Modulación de Vanos',
+        tag: 'Modulación de Ventanales',
+        subtitle: 'Estudio de llenos y vacíos con protección solar pasiva y ritmo arquitectónico continuo.',
+        image: '/planos/Professional_architectural_orthographic_front_elevation_2K_20261027142134.jpg',
+      },
+      {
+        id: 'elev-3',
+        number: '03',
+        pillTitle: 'Coronamiento & Aleros',
+        tag: 'Cotas y Coronamiento',
+        subtitle: 'Alzado técnico completo con detalle de aleros y remate mirador de penthouse.',
+        image: '/planos/Professional_architectural_orthographic_front_elevation_2K_20261027142540.jpg',
+      },
+    ],
+  },
+  {
+    id: 'corte',
+    label: 'Corte Seccional 3D',
+    code: '02',
+    badge: 'SECCIÓN ARQUITECTÓNICA 2K',
+    variants: [
+      {
+        id: 'corte-1',
+        number: '01',
+        pillTitle: 'Sección Transversal',
+        tag: 'Corte Transversal Norte-Sur',
+        subtitle: 'Sección espacial que expone el dúplex jardín, salones centrales y doble altura.',
+        image: '/planos/Architectural_sectional_cutaway_perspective_3D_2K_20261027141845.jpg',
+      },
+      {
+        id: 'corte-2',
+        number: '02',
+        pillTitle: 'Espacialidad PB',
+        tag: 'Espacialidad Interior PB',
+        subtitle: 'Relación directa entre las terrazas privadas de planta baja y los salones diáfanos.',
+        image: '/planos/Architectural_sectional_cutaway_perspective_3D_2K_20261027142150.jpg',
+      },
+      {
+        id: 'corte-3',
+        number: '03',
+        pillTitle: 'Estructura de Losas',
+        tag: 'Transición Estructural de Losas',
+        subtitle: 'Detalle de losas de concreto armado sin columnas intermedias y alturas de 3.20 m.',
+        image: '/planos/Architectural_sectional_cutaway_perspective_3D_2K_20261027142408.jpg',
+      },
+      {
+        id: 'corte-4',
+        number: '04',
+        pillTitle: 'Mirador Penthouse',
+        tag: 'Mirador Superior Penthouse',
+        subtitle: 'Remate cenital y terrazas panorámicas con vistas abiertas de 180° a El Ávila.',
+        image: '/planos/Architectural_sectional_cutaway_perspective_3D_2K_20261027142554.jpg',
+      },
+    ],
+  },
+  {
+    id: 'explotado',
+    label: 'Diagrama Explotado',
+    code: '03',
+    badge: 'ESTRUCTURA AXONOMÉTRICA 2K',
+    variants: [
+      {
+        id: 'expl-1',
+        number: '01',
+        pillTitle: 'Despiece Integral',
+        tag: 'Despiece Axonométrico Integral',
+        subtitle: 'Separación vertical de losas que revela la independencia acústica y estructural por nivel.',
+        image: '/planos/Axonometric_exploded_architectural_diagram_of_2K_20261027141100.jpg',
+      },
+      {
+        id: 'expl-2',
+        number: '02',
+        pillTitle: 'Estratigrafía de Niveles',
+        tag: 'Estratigrafía de Niveles',
+        subtitle: 'Lectura secuencial desde el subsuelo de estacionamientos hasta la cubierta mirador.',
+        image: '/planos/Axonometric_exploded_architectural_diagram_of_2K_20261027141958.jpg',
+      },
+      {
+        id: 'expl-3',
+        number: '03',
+        pillTitle: 'Terrazas en Voladizo',
+        tag: 'Capas y Terrazas en Volado',
+        subtitle: 'Articulación de los balcones en voladizo continuo y jardineras perimetrales.',
+        image: '/planos/Axonometric_exploded_architectural_diagram_of_2K_20261027142207.jpg',
+      },
+      {
+        id: 'expl-4',
+        number: '04',
+        pillTitle: 'Núcleo & Circulaciones',
+        tag: 'Núcleo Central y Circulaciones',
+        subtitle: 'Ubicación de los ascensores privados directos y cajas de escaleras presurizadas.',
+        image: '/planos/Axonometric_exploded_architectural_diagram_of_2K_20261027142625.jpg',
+      },
+    ],
+  },
+  {
+    id: 'perspectiva',
+    label: 'Perspectiva Real 2K',
+    code: '04',
+    badge: 'RENDER FOTORREALISTA 2K',
+    variants: [
+      {
+        id: 'persp-1',
+        number: '01',
+        pillTitle: 'Fachada Frontal',
+        tag: 'Fachada Frontal 2K',
+        subtitle: 'Renderizado en alta definición bajo la atmósfera lumínica matutina de Altamira.',
+        image: '/planos/RC-exterior.frontal.jpeg_2K_20261027140555.jpg',
+      },
+      {
+        id: 'persp-2',
+        number: '02',
+        pillTitle: 'Encuadre de Autor',
+        tag: 'Encuadre Arquitectónico',
+        subtitle: 'Perspectiva con ángulo medio destacando la horizontalidad monolítica de la obra.',
+        image: '/planos/RC-exterior.frontal.jpeg_2K_20261027141020.jpg',
+      },
+      {
+        id: 'persp-3',
+        number: '03',
+        pillTitle: 'Pórtico & Acceso',
+        tag: 'Pórtico y Acceso Peatonal',
+        subtitle: 'Detalle de la llegada peatonal, muros vegetales y control biométrico discreto.',
+        image: '/planos/RC-exterior.entrada-costado.jpeg_2K_20261027142428.jpg',
+      },
+    ],
+  },
+];
+
+export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProps> = () => {
+  const [activeCategory, setActiveCategory] = useState<ViewCategoryId>('elevacion');
+  const [activeVariantIndex, setActiveVariantIndex] = useState<number>(0);
+  const [isLoupeActive, setIsLoupeActive] = useState<boolean>(false);
+  const [isMobileRailOpen, setIsMobileRailOpen] = useState<boolean>(false);
+  const [loupeCoords, setLoupeCoords] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [isHoveringImage, setIsHoveringImage] = useState<boolean>(false);
+
+  const canvasRef = useRef<HTMLDivElement>(null);
+
+  const currentCategoryConfig = ARCHITECTURAL_CATEGORIES.find((c) => c.id === activeCategory)!;
+  const currentVariant = currentCategoryConfig.variants[activeVariantIndex] || currentCategoryConfig.variants[0];
+
+  const handleSelectCategory = (categoryId: ViewCategoryId) => {
+    setActiveCategory(categoryId);
+    setActiveVariantIndex(0);
   };
 
+  const handleNextVariant = () => {
+    setActiveVariantIndex((prev) => (prev + 1) % currentCategoryConfig.variants.length);
+  };
+
+  const handlePrevVariant = () => {
+    setActiveVariantIndex((prev) => (prev - 1 + currentCategoryConfig.variants.length) % currentCategoryConfig.variants.length);
+  };
+
+  // Loupe Mouse Tracking
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
+    const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+    setLoupeCoords({ x, y });
+  };
+
+  const handleMouseEnter = () => {
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    setImageDimensions({ width: rect.width, height: rect.height });
+    setIsHoveringImage(true);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHoveringImage(false);
+  };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') {
+        handleNextVariant();
+      } else if (e.key === 'ArrowLeft') {
+        handlePrevVariant();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentCategoryConfig.variants.length]);
+
+  // Dimensiones Lupa
+  const LENS_DIAMETER = 210;
+  const LENS_RADIUS = LENS_DIAMETER / 2;
+  const ZOOM_FACTOR = 2.5;
+
   return (
-    <section id="elevacion" className="w-full bg-white pt-12 sm:pt-16 pb-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
-        {/* Section Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-[#1B1813] pb-4 gap-4">
-          <div>
-            <div className="font-meta text-[10px] sm:text-[11px] text-[#8C8678] tracking-[0.24em] mb-1">
-              02 · RESIDENCIAS Y PLANOS DE DISTRIBUCIÓN
-            </div>
-            <h2 className="font-display text-3xl sm:text-4xl text-[#1B1813]">
-              <span className="text-[#8C7452]">.</span>Explorador de Pisos y Tipologías.
-            </h2>
-            <p className="font-serif italic text-xs sm:text-sm text-[#8C8678] mt-1">
-              Seleccione un nivel en la fachada interactiva para ver los detalles, planos de distribución y metraje de cada residencia en tiempo real.
-            </p>
+    <section
+      id="elevacion"
+      className="relative w-full h-[calc(100vh-4.5rem)] min-h-[580px] max-h-[960px] bg-[#FAF9F6] border-t border-[#1B1813]/10 flex items-center justify-center p-2 sm:p-4 lg:p-6 select-none scroll-mt-20 overflow-hidden"
+    >
+      {/* Resplandor ambiental marfil cálido */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(201,168,106,0.06)_0%,transparent_70%)] pointer-events-none" />
+
+      {/* LIENZO DE LA MESA DE DIBUJO CON RAIL FLOTANTE */}
+      <div
+        ref={canvasRef}
+        onMouseMove={handleMouseMove}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="relative w-full h-full max-w-7xl mx-auto rounded-3xl overflow-hidden border border-[#1B1813]/12 shadow-[0_25px_70px_rgba(27,24,19,0.08)] bg-[#F5F2EA]/60 flex items-center justify-center group"
+      >
+        {/* Marcas de Registro Técnico CAD en las 4 Esquinas */}
+        <div className="absolute top-3 left-4 font-mono text-[11px] text-[#1B1813]/20 select-none pointer-events-none">＋</div>
+        <div className="absolute top-3 right-4 font-mono text-[11px] text-[#1B1813]/20 select-none pointer-events-none">＋</div>
+        <div className="absolute bottom-3 left-4 font-mono text-[11px] text-[#1B1813]/20 select-none pointer-events-none">＋</div>
+        <div className="absolute bottom-3 right-4 font-mono text-[11px] text-[#1B1813]/20 select-none pointer-events-none">＋</div>
+
+          {/* ── ESCENARIO DE LA LÁMINA 2K (DESPEJADO CON PADDING ADAPTATIVO) ── */}
+          <div className="w-full h-full flex items-center justify-center p-3 sm:p-6 lg:pl-[330px] lg:pr-8 lg:py-6 overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentVariant.id}
+                initial={{ opacity: 0, scale: 0.993 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+                className="relative w-full h-full flex items-center justify-center"
+              >
+                <img
+                  src={currentVariant.image}
+                  alt={currentVariant.tag}
+                  className="max-w-full max-h-full object-contain pointer-events-none select-none drop-shadow-xl"
+                  loading="eager"
+                />
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Flechas de Avance Rápido */}
+            <button
+              onClick={handlePrevVariant}
+              className="absolute left-4 lg:left-[325px] top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/70 hover:bg-white backdrop-blur-2xl border border-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.08)] text-[#1B1813] flex items-center justify-center text-lg hover:scale-105 active:scale-95 transition-all cursor-pointer z-20 opacity-70 group-hover:opacity-100"
+              title="Lámina anterior (← Flecha Izquierda)"
+            >
+              ‹
+            </button>
+
+            <button
+              onClick={handleNextVariant}
+              className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/70 hover:bg-white backdrop-blur-2xl border border-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.08)] text-[#1B1813] flex items-center justify-center text-lg hover:scale-105 active:scale-95 transition-all cursor-pointer z-20 opacity-70 group-hover:opacity-100"
+              title="Siguiente lámina (→ Flecha Derecha)"
+            >
+              ›
+            </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <div className="font-meta text-[9px] sm:text-[10px] text-[#8C7452] border border-[#8C7452]/40 rounded-full px-3 sm:px-4 py-1.5 bg-[#FAF9F6] shrink-0 shadow-sm">
-              FACHADA PRINCIPAL · 8 RESIDENCIAS EXCLUSIVAS
-            </div>
-          </div>
-        </div>
+              {/* ── BOTÓN TOGGLE PARA MÓVIL ── */}
+              <div className="absolute top-4 left-4 z-40 lg:hidden">
+                <button
+                  onClick={() => setIsMobileRailOpen(!isMobileRailOpen)}
+                  className="px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-2xl border border-white/90 shadow-md text-[#1B1813] font-mono text-[10px] tracking-wider uppercase font-semibold flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#8C7452]" />
+                  <span>{isMobileRailOpen ? '✕ CERRAR MENÚ' : '☰ PLANOS & VISTAS'}</span>
+                </button>
+              </div>
 
-        {/* Interactive Elevation Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Left Canvas: Vectorial Drawing with Hover and Active Highlighting */}
-          <div className="lg:col-span-8 bg-[#FAF9F6] border border-[#C9C4B5] p-4 sm:p-6 space-y-4">
-            <div className="flex justify-between items-center text-[9.5px] font-meta text-[#8C8678] border-b border-[#C9C4B5] pb-2">
-              <span>VISTA FRONTAL · ALTAMIRA, CARACAS</span>
-              <span className="text-[#8C7452] font-semibold">
-                RESIDENCIA SELECCIONADA: {selectedUnit.name.toUpperCase()} ({selectedUnit.level.toUpperCase()})
-              </span>
-            </div>
-
-            <div className="relative">
-              <ArchitecturalElevation
-                highlightLevel={hoveredLevel || selectedUnit.level}
-                selectedUnitId={selectedUnit.id}
-                onSelectUnitId={handleSelectUnitById}
-                showCotas={true}
-                theme="crema"
-              />
-            </div>
-
-            <div className="font-serif italic text-[11px] text-[#8C8678] text-center border-t border-[#C9C4B5]/60 pt-2">
-              Haga clic sobre cualquier piso o nivel en el plano para consultar la residencia y sus características.
-            </div>
-          </div>
-
-          {/* Right Selector: Vertical Interactive Level Navigator */}
-          <div className="lg:col-span-4 space-y-3">
-            <div className="font-meta text-[10px] text-[#8C8678] tracking-widest uppercase border-b border-[#1B1813] pb-1.5">
-              DISTRIBUCIÓN POR NIVELES
-            </div>
-
-            <div className="bg-white rounded-2xl border border-[#1B1813]/10 overflow-hidden shadow-sm">
-              {levels.map((lvl, idx) => {
-                const isSelectedLevel = lvl.units.some((u) => u.id === selectedUnit.id);
-                return (
-                  <div
-                    key={idx}
-                    onMouseEnter={() => setHoveredLevel(lvl.levelKey)}
-                    onMouseLeave={() => setHoveredLevel(null)}
-                    onClick={() => {
-                      if (lvl.units.length > 0 && !isSelectedLevel) {
-                        onSelectUnit(lvl.units[0]);
-                      }
-                    }}
-                    className={`px-4 py-3 border-b border-[#1B1813]/5 last:border-b-0 transition-all cursor-pointer ${
-                      isSelectedLevel
-                        ? 'bg-[#FAF9F6] relative'
-                        : 'hover:bg-[#FAF9F6]/50'
-                    }`}
-                  >
-                    {isSelectedLevel && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#8C7452]" />
-                    )}
-                    <div className="flex justify-between items-center">
-                      <span className={`font-mono text-[11px] sm:text-xs font-bold ${isSelectedLevel ? 'text-[#8C7452]' : 'text-[#8C7452]/70'}`}>
-                        {lvl.cota}
-                      </span>
-                      <span className="font-meta text-[9px] text-[#8C8678]">
-                        {lvl.height}
+              {/* ── RAIL FLOTANTE APPLE GLASS (LADO IZQUIERDO DENTRO DEL CANVAS) ── */}
+              <div
+                className={`absolute left-3 sm:left-5 top-3 sm:top-5 bottom-3 sm:bottom-5 w-[280px] sm:w-[300px] z-30 flex flex-col justify-between p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-white/75 backdrop-blur-3xl border border-white/90 shadow-[0_20px_50px_rgba(27,24,19,0.12),0_4px_16px_rgba(0,0,0,0.04),inset_0_1px_1.5px_rgba(255,255,255,0.95)] ring-1 ring-black/[0.04] transition-all duration-300 ${isMobileRailOpen ? 'translate-x-0 opacity-100' : '-translate-x-[115%] lg:translate-x-0 opacity-0 lg:opacity-100'
+                  }`}
+              >
+                {/* Header del Rail */}
+                <div className="space-y-2 border-b border-[#1B1813]/10 pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="w-2 h-2 rounded-full bg-[#8C7452] shadow-[0_0_8px_rgba(140,116,82,0.4)]" />
+                      <span className="font-mono text-[9.5px] text-[#8C7452] tracking-[0.22em] uppercase font-bold">
+                        AÑIL ARQUITECTURA
                       </span>
                     </div>
-                    <div className={`font-display text-sm mt-0.5 flex items-center justify-between ${isSelectedLevel ? 'text-[#1B1813] font-semibold' : 'text-[#1B1813]/80'}`}>
-                      <span>{lvl.label}</span>
-                      {isSelectedLevel && (
-                        <span className="font-meta text-[8px] bg-[#8C7452] text-[#EFEBE0] px-1.5 py-0.5 font-bold uppercase tracking-wider rounded-sm">
-                          Sel.
-                        </span>
-                      )}
+                    <span className="font-mono text-[8.5px] px-2 py-0.5 rounded-full bg-[#1B1813]/5 text-[#5A554A] uppercase font-semibold">
+                      ARCHIVO 2K
+                    </span>
+                  </div>
+                  <div className="font-display text-sm text-[#1B1813] font-semibold tracking-tight">
+                    Estratigrafía & Láminas Técnicas
+                  </div>
+                </div>
+
+                    {/* Menú Interactivo Acordeón de Familias y Tomas */ }
+                    <div className="flex-1 overflow-y-auto no-scrollbar py-2.5 space-y-1.5 my-1">
+                      {ARCHITECTURAL_CATEGORIES.map((cat) => {
+                        const isCatActive = activeCategory === cat.id;
+
+                        return (
+                                  < div key={cat.id} className="space-y-1">
+                              {/* Botón de Categoría */}
+                              <button
+                                onClick={() => {
+                                  handleSelectCategory(cat.id);
+                                  setIsMobileRailOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 rounded-xl text-[10px] sm:text-[10.5px] font-mono tracking-wider transition-all duration-200 uppercase flex items-center justify-between cursor-pointer ${isCatActive
+                                    ? 'bg-[#1B1813] text-[#FAF9F6] shadow-sm font-semibold'
+                                    : 'text-[#5A554A] hover:text-[#1B1813] hover:bg-black/[0.03]'
+                                  }`}
+                          >
+                    <div className="flex items-center space-x-2">
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                          isCatActive ? 'bg-[#C9A86A]' : 'bg-[#1B1813]/25'
+                        }`}
+                      />
+                      <span>{cat.code} · {cat.label}</span>
                     </div>
-                    
+                    <span className={`text-[8px] px-1.5 py-0.2 rounded-full ${isCatActive ? 'bg-white/20 text-[#FAF9F6]' : 'text-[#8C8678]'}`}>
+                      {cat.variants.length}
+                    </span>
+                  </button>
+
+                    {/* Tomas de la Categoría Activa */ }
                     <AnimatePresence>
-                      {isSelectedLevel && (
+                      {isCatActive && (
                         <motion.div
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: 'auto', opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          className="overflow-hidden"
+                          transition={{ duration: 0.22 }}
+                          className="overflow-hidden pl-3 pr-1 py-1 space-y-1 border-l-2 border-[#8C7452]/30 ml-2.5 my-1"
                         >
-                          <p className="font-serif text-[11px] text-[#8C8678] mt-2 leading-snug">
-                            {lvl.desc}
-                          </p>
-                          {/* Associated Units Quick Select */}
-                          {lvl.units.length > 0 && (
-                            <div className="mt-3 pt-2 border-t border-[#C9C4B5]/60 flex gap-2 pb-1">
-                              {lvl.units.map((u) => {
-                                const isActive = u.id === selectedUnit.id;
-                                return (
-                                  <button
-                                    key={u.id}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onSelectUnit(u);
-                                    }}
-                                    className={`font-meta text-[9px] px-2.5 py-1.5 rounded-full transition-all flex-1 text-center border cursor-pointer ${
-                                      isActive
-                                        ? 'bg-[#1B1813] text-[#EFEBE0] border-[#1B1813] font-semibold shadow-md'
-                                        : 'bg-white text-[#1B1813] border-[#1B1813]/10 hover:shadow-sm hover:bg-[#FAF9F6]'
-                                    }`}
-                                  >
-                                    {u.name}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
+                          {cat.variants.map((variant, idx) => {
+                            const isVarActive = activeVariantIndex === idx;
+
+                            return (
+                              <button
+                                key={variant.id}
+                                onClick={() => {
+                                  setActiveVariantIndex(idx);
+                                  setIsMobileRailOpen(false);
+                                }}
+                                className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[9px] sm:text-[9.5px] font-mono tracking-wider uppercase transition-all duration-150 flex items-center justify-between cursor-pointer ${isVarActive
+                                    ? 'bg-[#8C7452]/15 text-[#1B1813] font-bold border-l-2 border-[#8C7452] shadow-2xs'
+                                    : 'text-[#5A554A] hover:text-[#1B1813] hover:bg-black/[0.03]'
+                                  }`}
+                              >
+                                <div className="flex items-center space-x-1.5 truncate">
+                                  <span className={isVarActive ? 'text-[#8C7452]' : 'text-[#1B1813]/25'}>▪</span>
+                                  <span className="truncate">{variant.pillTitle}</span>
+                                </div>
+                                <span className="text-[8px] font-serif text-[#8C8678] shrink-0 ml-1">
+                                  {variant.number}
+                                </span>
+                              </button>
+                            );
+                          })}
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </div>
+                </div>
                 );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Focused Unit Highlight Strip */}
-        <div className="bg-[#FAF9F6] border border-[#1B1813]/15 p-5 sm:p-6 rounded-2xl shadow-xs">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-            {/* Unit Info */}
-            <div className="space-y-1 max-w-md">
-              <div className="flex items-center space-x-2">
-                <span className="font-meta text-[9px] text-[#8C7452] font-semibold tracking-wider">
-                  UNIDAD ACTIVA EN CORTE
-                </span>
-                <span className="text-[#C9C4B5]">·</span>
-                <span className="font-meta text-[9px] text-[#8C8678]">
-                  {selectedUnit.rooms} HABITACIONES EN SUITE
-                </span>
-              </div>
-              <div className="font-display text-xl sm:text-2xl text-[#1B1813]">
-                {selectedUnit.name} — Nivel {selectedUnit.level}
-              </div>
-              <div className="font-serif text-xs text-[#8C8678] line-clamp-2">
-                «{selectedUnit.distinctiveAttribute}»
-              </div>
-            </div>
-
-            {/* Metrics & Action Button */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-6 pt-3 lg:pt-0 border-t lg:border-t-0 border-[#C9C4B5]/60">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
-                <div>
-                  <div className="font-meta text-[8.5px] text-[#8C8678] tracking-wider uppercase">Techada</div>
-                  <div className="font-mono text-sm sm:text-base font-semibold text-[#1B1813]">
-                    {selectedUnit.interiorArea.toLocaleString('es-VE')} m²
-                  </div>
-                </div>
-                <div>
-                  <div className="font-meta text-[8.5px] text-[#8C8678] tracking-wider uppercase">Abierta</div>
-                  <div className="font-mono text-sm sm:text-base font-semibold text-[#1B1813]">
-                    {(selectedUnit.terraceArea + (selectedUnit.gardenArea || 0)).toLocaleString('es-VE')} m²
-                  </div>
-                </div>
-                <div>
-                  <div className="font-meta text-[8.5px] text-[#8C7452] tracking-wider uppercase">Total</div>
-                  <div className="font-mono text-sm sm:text-base font-bold text-[#8C7452]">
-                    {selectedUnit.totalArea.toLocaleString('es-VE')} m²
-                  </div>
-                </div>
-                <div>
-                  <div className="font-meta text-[8.5px] text-[#8C8678] tracking-wider uppercase">Estacionamiento</div>
-                  <div className="font-mono text-sm sm:text-base font-semibold text-[#1B1813]">
-                    {selectedUnit.parkingSpots} Puestos
-                  </div>
-                </div>
+            })}
               </div>
 
-              <div className="flex flex-wrap items-center gap-2.5">
+              {/* Footer del Rail: Lupa 2.5x & Cédula de Lámina */}
+              <div className="space-y-2.5 border-t border-[#1B1813]/10 pt-3">
+                {/* Botón Lupa de Precisión */}
                 <button
-                  onClick={() => onOpen3DModal?.('assembled')}
-                  className="font-meta text-[10px] sm:text-[11px] px-6 py-3 bg-[#1B1813] text-[#FAF9F6] hover:bg-[#8C7452] hover:shadow-md transition-all rounded-full font-medium flex items-center justify-center space-x-2 cursor-pointer shrink-0 uppercase tracking-wider shadow-sm"
+                  onClick={() => setIsLoupeActive(!isLoupeActive)}
+                  className={`w-full py-2 px-3 rounded-xl text-[9px] sm:text-[9.5px] font-mono tracking-wider uppercase transition-all duration-200 flex items-center justify-center space-x-2 cursor-pointer border ${isLoupeActive
+                      ? 'bg-[#1B1813] text-[#FAF9F6] border-[#1B1813] shadow-sm font-semibold'
+                      : 'bg-white/80 text-[#5A554A] border-white/80 hover:text-[#1B1813] hover:bg-white shadow-xs'
+                    }`}
                 >
-                  <span className="text-[#C9A86A] animate-pulse">●</span>
-                  <span>Explorar Maqueta 3D</span>
-                  <span>→</span>
+                  <span className={isLoupeActive ? 'text-[#C9A86A]' : 'text-[#8C7452]'}>⌕</span>
+                  <span>LUPA 2.5×: {isLoupeActive ? 'ACTIVA' : 'INACTIVA'}</span>
                 </button>
+
+                {/* Ficha Resumida de la Lámina */}
+                <div className="bg-white/50 backdrop-blur-md rounded-xl p-2.5 border border-white/80 shadow-2xs space-y-1">
+                  <div className="flex items-center justify-between text-[8px] font-mono text-[#8C7452] uppercase font-bold tracking-wider">
+                    <span>LÁMINA {currentVariant.number}</span>
+                    <span>{currentCategoryConfig.badge.split(' ')[0]}</span>
+                  </div>
+                  <div className="font-display text-[11px] text-[#1B1813] font-semibold leading-tight truncate">
+                    {currentVariant.tag}
+                  </div>
+                  <div className="font-serif text-[10px] text-[#5A554A] font-light leading-snug line-clamp-2 italic">
+                    «{currentVariant.subtitle}»
+                  </div>
+                </div>
+
+                {/* Autoría Oficial */}
+                <div className="text-[7.5px] font-mono text-[#8C8678] uppercase tracking-wider text-center pt-0.5">
+                  Arq. Juan Carlos Láncara · Ing. Luis Martinez
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </section>
 
-  );
+            {/* ── LUPA CIRCULAR APPLE 2.5X (CUANDO ESTÁ ACTIVA) ── */}
+            {isLoupeActive && isHoveringImage && (
+              <div
+                className="pointer-events-none absolute z-40 rounded-full overflow-hidden transition-opacity duration-150 ease-out"
+                style={{
+                  width: `${LENS_DIAMETER}px`,
+                  height: `${LENS_DIAMETER}px`,
+                  left: `${loupeCoords.x}px`,
+                  top: `${loupeCoords.y}px`,
+                  transform: 'translate(-50%, -50%)',
+                  boxShadow:
+                    '0 25px 60px -10px rgba(27,24,19,0.45), 0 10px 20px -5px rgba(27,24,19,0.25), inset 0 0 15px rgba(255,255,255,0.45)',
+                  border: '2.5px solid rgba(255, 255, 255, 0.95)',
+                }}
+              >
+                {imageDimensions.width > 0 && (
+                  <img
+                    src={currentVariant.image}
+                    alt="Aumento de plano"
+                    className="absolute pointer-events-none max-w-none select-none"
+                    style={{
+                      width: `${imageDimensions.width * ZOOM_FACTOR}px`,
+                      height: `${imageDimensions.height * ZOOM_FACTOR}px`,
+                      left: `${LENS_RADIUS - loupeCoords.x * ZOOM_FACTOR}px`,
+                      top: `${LENS_RADIUS - loupeCoords.y * ZOOM_FACTOR}px`,
+                      objectFit: 'contain',
+                    }}
+                  />
+                )}
+
+                {/* Reflejo Especular Diagonal Apple */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/[0.1] to-white/[0.35] pointer-events-none" />
+
+                {/* Anillo Perimetral Oro Cálido */}
+                <div className="absolute inset-0 rounded-full border border-[#8C7452]/40 pointer-events-none" />
+
+                {/* Retícula de Precisión */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-5 h-[1px] bg-white/80 absolute shadow-[0_0_2px_rgba(0,0,0,0.6)]" />
+                  <div className="h-5 w-[1px] bg-white/80 absolute shadow-[0_0_2px_rgba(0,0,0,0.6)]" />
+                  <div className="w-2 h-2 rounded-full bg-[#C9A86A] shadow-[0_0_8px_#C9A86A] z-10 border border-black/40" />
+                </div>
+
+                {/* Micro-Píldora Flotante Superior */}
+                <div className="absolute top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-[#1B1813]/85 backdrop-blur-md border border-white/25 text-[8px] font-mono tracking-widest text-[#FAF9F6] uppercase whitespace-nowrap shadow-md">
+                  2.5× DETALLE
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+        );
 };

@@ -1,282 +1,67 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { motion, useScroll, useTransform, AnimatePresence } from 'motion/react';
-import { CaroniIsotype } from '../ui/ArchitecturalDrawings';
-import {
-  calculateSegmentTargetTime,
-  VideoScrubberController,
-} from '../../utils/videoScrubEngine';
+import React, { useRef, useState, useEffect } from 'react';
 import { getMediaAssetUrl } from '../../config/mediaConfig';
 import {
   Play,
   Pause,
   ChevronDown,
-  Sparkles,
   Volume2,
   VolumeX,
-  RefreshCw,
-  Film,
 } from 'lucide-react';
 
 /**
- * 3 TOMAS CINEMÁTICAS PURAS Y SUS METADATOS TÉCNICOS
+ * Residencias Caroní · Altamira, Caracas
+ * Hero Cinemático Principal (Ancho Total de Borde a Borde · Proporción 16:9 Natural sin Zoom)
+ * Arquitectura: Añil Arquitectura — Arq. Juan Carlos Láncara
+ * Desarrollo & Experiencia Interactiva: Ing. Luis Martinez (luismartinez.developer@gmail.com)
  */
-const CINEMATIC_VIDEOS = [
-  {
-    id: 1,
-    src: getMediaAssetUrl('/videos/Camera_rotating_around_building.mp4?v=8b960e32'),
-    poster: getMediaAssetUrl('/videos/Camera_rotating_around_building_poster.jpg?v=8b960e32'),
-    name: 'Órbita Volumétrica',
-    durationSec: 10,
-    cotaTag: 'COTA BASE: +920.00 M.S.N.M. · VISTA NORTE EL ÁVILA',
-    aspectTag: 'IMPLANTACIÓN MONOLÍTICA · 8VA TRANSVERSAL',
-  },
-  {
-    id: 2,
-    src: getMediaAssetUrl('/videos/Building_transforms_into_luxury.mp4?v=f366899e'),
-    poster: getMediaAssetUrl('/videos/Building_transforms_into_luxury_poster.jpg?v=f366899e'),
-    name: 'Materia & Construcción',
-    durationSec: 10,
-    cotaTag: 'SISTEMA ESTRUCTURAL: CONCRETO LIMPIO & MÁRMOL',
-    aspectTag: 'ESTRATOS EN 4 NIVELES · PROPORCIÓN ÁUREA',
-  },
-  {
-    id: 3,
-    src: getMediaAssetUrl('/videos/vFirst_person_wide_angle_archi.mp4?v=d790875c'),
-    poster: getMediaAssetUrl('/videos/vFirst_person_wide_angle_archi_poster.jpg?v=d790875c'),
-    name: 'Recorrido Interior',
-    durationSec: 20,
-    cotaTag: 'ALTURA LIBRE: 3.20 M · PENTHOUSES HASTA 450 M²',
-    aspectTag: 'LUZ NATURAL CENITAL · PRIVACIDAD ABSOLUTA',
-  },
-];
 
-const IDLE_DELAY_MS = 4000; // 4 segundos de inactividad de scroll para reactivar reel continuo
+const MASTER_FILM_SRC = getMediaAssetUrl('/videos/residencias_caroni_master_film.mp4');
+const MASTER_FILM_POSTER = getMediaAssetUrl('/videos/residencias_caroni_master_film_poster.jpg');
 
 interface CinematicScrollNarrativeProps {
   onOpen3DModal?: () => void;
   onExploreElevation?: () => void;
 }
 
-export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> = ({
-  onOpen3DModal,
-  onExploreElevation,
-}) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const video1Ref = useRef<HTMLVideoElement>(null);
-  const video2Ref = useRef<HTMLVideoElement>(null);
-  const video3Ref = useRef<HTMLVideoElement>(null);
-  const videoRefs = [video1Ref, video2Ref, video3Ref];
+export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> = () => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isPlaying, setIsPlaying] = useState<boolean>(true);
+  const [isAudioActive, setIsAudioActive] = useState<boolean>(false);
 
-  // Precarga preventiva en memoria de GPU (Zero-Lag Pre-buffering)
-  useEffect(() => {
-    videoRefs.forEach((ref) => {
-      const vid = ref.current;
-      if (vid) {
-        vid.load();
-      }
-    });
-  }, []);
-  const [activeShot, setActiveShot] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isAudioActive, setIsAudioActive] = useState(false);
-
-  // Flow State: 'scroll' (user driving) vs 'auto' (idle reel active)
-  const [flowMode, setFlowMode] = useState<'scroll' | 'auto'>('auto');
-  const [autoplayProgress, setAutoplayProgress] = useState(0);
-
-  // Audio Context Ref
+  // Audio Context Ref (ambient fallback)
   const audioCtxRef = useRef<AudioContext | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
 
-  // Inactivity tracking refs & jump guard
-  const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const progressAnimationRef = useRef<number | null>(null);
-  const isJumpingRef = useRef(false);
-  const jumpTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // 480vh de recorrido vertical para visualización fluida y extendida sin prisas
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ['start start', 'end end'],
-  });
-
-  // Transiciones cinematográficas limpias con "dip to black"
-  const outroFadeOpacity = useTransform(scrollYProgress, [0.94, 1], [0, 1]);
-
-  // Sutil indicación inicial que desaparece al iniciar el recorrido
-  const scrollHintOpacity = useTransform(scrollYProgress, [0, 0.05], [1, 0]);
-
-  // Interacción del usuario: reactiva de inmediato el control por scroll
-  const handleUserInteraction = useCallback(() => {
-    setFlowMode('scroll');
-
-    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    if (progressAnimationRef.current) cancelAnimationFrame(progressAnimationRef.current);
-
-    // Retoma el modo reel automático tras 4s de inactividad
-    idleTimerRef.current = setTimeout(() => {
-      setFlowMode('auto');
-    }, IDLE_DELAY_MS);
+  // Precarga preventiva en memoria de GPU
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (vid) {
+      vid.load();
+    }
   }, []);
 
-  // Sincronización del scroll manual: conmuta la toma según el progreso de scroll
-  useEffect(() => {
-    let lastProgress = scrollYProgress.get();
+  // Audio Toggle: activa el audio nativo del video o la atmósfera ambiental
+  const toggleAudio = () => {
+    const vid = videoRef.current;
+    const nextAudioState = !isAudioActive;
+    setIsAudioActive(nextAudioState);
 
-    const unsub = scrollYProgress.on('change', (v) => {
-      if (isJumpingRef.current) return;
-
-      if (Math.abs(v - lastProgress) > 0.002) {
-        lastProgress = v;
-        handleUserInteraction();
+    if (vid) {
+      vid.muted = !nextAudioState;
+      if (nextAudioState) {
+        vid.volume = 0.9;
       }
-
-      if (v < 0.34) {
-        setActiveShot(0);
-      } else if (v < 0.67) {
-        setActiveShot(1);
-      } else {
-        setActiveShot(2);
-      }
-    });
-
-    return () => unsub();
-  }, [scrollYProgress, handleUserInteraction]);
-
-  // Telemetría topográfica dinámica: desciende desde +948.50 m (vista aérea Ávila) hasta +918.00 m (acceso peatonal calle)
-  const currentAltitude = useTransform(scrollYProgress, [0, 1], [948.5, 918.0]);
-  const [displayedAltitude, setDisplayedAltitude] = useState('948.50');
-
-  useEffect(() => {
-    return currentAltitude.on('change', (v) => {
-      setDisplayedAltitude(v.toFixed(2));
-    });
-  }, [currentAltitude]);
-
-  // Detección de eventos de interacción física explícita (rueda o toque)
-  useEffect(() => {
-    const handlePhysicalInteraction = () => handleUserInteraction();
-
-    window.addEventListener('wheel', handlePhysicalInteraction, { passive: true });
-    window.addEventListener('touchmove', handlePhysicalInteraction, { passive: true });
-
-    return () => {
-      window.removeEventListener('wheel', handlePhysicalInteraction);
-      window.removeEventListener('touchmove', handlePhysicalInteraction);
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-      if (progressAnimationRef.current) cancelAnimationFrame(progressAnimationRef.current);
-    };
-  }, [handleUserInteraction]);
-
-  // Instancias del controlador de scrubbing inercial para cada una de las 3 tomas (respuesta ágil e inmediata)
-  const scrubbersRef = useRef<VideoScrubberController[]>([
-    new VideoScrubberController({ lerpFactor: 0.28, seekThreshold: 0.04 }),
-    new VideoScrubberController({ lerpFactor: 0.28, seekThreshold: 0.04 }),
-    new VideoScrubberController({ lerpFactor: 0.28, seekThreshold: 0.04 }),
-  ]);
-
-  // Manejo de avance al finalizar un video en modo auto
-  const handleVideoEnded = useCallback((endedIndex: number) => {
-    if (flowMode === 'auto') {
-      setActiveShot((prev) => (prev + 1) % 3);
     }
-  }, [flowMode]);
 
-  // Loop principal sincronizado en RAF:
-  // En modo 'scroll': el scroll conduce la aguja de tiempo del video con inercia suave
-  // En modo 'auto': el video avanza a velocidad natural
-  useEffect(() => {
-    let animFrame: number;
-
-    const tick = () => {
-      const activeVideo = videoRefs[activeShot]?.current;
-      const scrubber = scrubbersRef.current[activeShot];
-
-      if (activeVideo && activeVideo.duration > 0) {
-        if (flowMode === 'scroll') {
-          // Si el usuario está scrolleando, pausar la reproducción continua y conducir por lerp
-          if (!activeVideo.paused) {
-            activeVideo.pause();
-          }
-
-          // Rangos de las tomas: Toma 1 [0, 0.33], Toma 2 [0.33, 0.66], Toma 3 [0.66, 1.0]
-          const segments = [
-            { start: 0.0, end: 0.33 },
-            { start: 0.33, end: 0.66 },
-            { start: 0.66, end: 1.0 },
-          ];
-          const seg = segments[activeShot];
-          const targetTime = calculateSegmentTargetTime(
-            scrollYProgress.get(),
-            seg.start,
-            seg.end,
-            activeVideo.duration
-          );
-
-          scrubber.setTargetTime(targetTime);
-          scrubber.update(activeVideo);
-
-          const pct = (activeVideo.currentTime / activeVideo.duration) * 100;
-          setAutoplayProgress(Math.min(100, Math.max(0, pct)));
-        } else {
-          // Modo auto: reproducir suavemente si no está pausado
-          if (isPlaying && activeVideo.paused) {
-            const playPromise = activeVideo.play();
-            if (playPromise !== undefined) playPromise.catch(() => {});
-          }
-          const pct = (activeVideo.currentTime / activeVideo.duration) * 100;
-          setAutoplayProgress(Math.min(100, Math.max(0, pct)));
-        }
-      }
-
-      animFrame = requestAnimationFrame(tick);
-    };
-
-    animFrame = requestAnimationFrame(tick);
-
-    return () => {
-      cancelAnimationFrame(animFrame);
-    };
-  }, [activeShot, flowMode, isPlaying, scrollYProgress]);
-
-  // Sincronizar cambios de toma activa
-  const prevShotRef = useRef<number>(activeShot);
-
-  useEffect(() => {
-    const isShotChanged = prevShotRef.current !== activeShot;
-    prevShotRef.current = activeShot;
-
-    videoRefs.forEach((ref, idx) => {
-      const vid = ref.current;
-      if (!vid) return;
-
-      if (idx === activeShot) {
-        if (flowMode === 'auto') {
-          if (isShotChanged) {
-            vid.currentTime = 0;
-          }
-          if (isPlaying) {
-            const playPromise = vid.play();
-            if (playPromise !== undefined) playPromise.catch(() => {});
-          }
-        }
-      } else {
-        vid.pause();
-      }
-    });
-  }, [activeShot, flowMode, isPlaying]);
-
-  // Procedural Web Audio Ambient Soundscape
-  const toggleAudioAmbient = () => {
     try {
-      if (!isAudioActive) {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (nextAudioState) {
         if (!audioCtxRef.current) {
           const ctx = new AudioContextClass();
           audioCtxRef.current = ctx;
 
           const masterGain = ctx.createGain();
-          masterGain.gain.setValueAtTime(0.08, ctx.currentTime);
+          masterGain.gain.setValueAtTime(0.06, ctx.currentTime);
           masterGain.connect(ctx.destination);
           gainNodeRef.current = masterGain;
 
@@ -303,255 +88,110 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
         }
 
         if (gainNodeRef.current && audioCtxRef.current) {
-          gainNodeRef.current.gain.linearRampToValueAtTime(0.12, audioCtxRef.current.currentTime + 1);
+          gainNodeRef.current.gain.linearRampToValueAtTime(0.08, audioCtxRef.current.currentTime + 1);
         }
-        setIsAudioActive(true);
       } else {
         if (gainNodeRef.current && audioCtxRef.current) {
-          gainNodeRef.current.gain.linearRampToValueAtTime(0.001, audioCtxRef.current.currentTime + 0.5);
+          gainNodeRef.current.gain.linearRampToValueAtTime(0.001, audioCtxRef.current.currentTime + 0.4);
           setTimeout(() => {
             if (audioCtxRef.current?.state === 'running') {
               audioCtxRef.current.suspend();
             }
-          }, 500);
+          }, 450);
         }
-        setIsAudioActive(false);
       }
     } catch (e) {
-      console.warn('Web Audio notice:', e);
-      setIsAudioActive(!isAudioActive);
+      console.warn('Web Audio note:', e);
     }
   };
 
-  const togglePlayAll = () => {
-    videoRefs.forEach((ref) => {
-      if (ref.current) {
-        if (ref.current.paused) {
-          ref.current.play().catch(() => {});
-        } else {
-          ref.current.pause();
-        }
+  const togglePlay = () => {
+    const vid = videoRef.current;
+    if (vid) {
+      if (vid.paused) {
+        vid.play().catch(() => {});
+        setIsPlaying(true);
+      } else {
+        vid.pause();
+        setIsPlaying(false);
       }
-    });
-    setIsPlaying(!isPlaying);
+    } else {
+      setIsPlaying(!isPlaying);
+    }
   };
 
-  // Direct Jump to a specific shot
-  const jumpToShot = (index: number) => {
-    isJumpingRef.current = true;
-    if (jumpTimeoutRef.current) clearTimeout(jumpTimeoutRef.current);
-    jumpTimeoutRef.current = setTimeout(() => {
-      isJumpingRef.current = false;
-    }, 1200);
-
-    setActiveShot(index);
-
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const totalHeight = containerRef.current.offsetHeight - window.innerHeight;
-      const targets = [0.05, 0.50, 0.88];
-      const targetScroll = scrollTop + rect.top + targets[index] * totalHeight;
-
-      window.scrollTo({
-        top: targetScroll,
-        behavior: 'smooth',
-      });
+  const handleScrollToNext = () => {
+    const galeriaElem = document.getElementById('galeria');
+    if (galeriaElem) {
+      const yOffset = -72;
+      const y = galeriaElem.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
     }
   };
 
   return (
-    <section
-      ref={containerRef}
-      id="obra"
-      className="relative h-[480vh] bg-[#070706] text-[#FAF8F5] select-none"
-    >
-      {/* STICKY FULLSCREEN CINEMA */}
-      <div className="sticky top-0 h-screen w-full overflow-hidden bg-[#070706] flex flex-col justify-between">
-        {/* 1. CINEMA VIDEO VIEWPORT (PURE FULLSCREEN - HYBRID TRANSITION ENGINE) */}
-        <div className="absolute inset-0 w-full h-full bg-[#070706] pointer-events-none">
-          {CINEMATIC_VIDEOS.map((video, idx) => {
-            const isShotActive = activeShot === idx;
-
-            return (
-              <motion.video
-                key={video.id}
-                ref={videoRefs[idx]}
-                style={{
-                  zIndex: isShotActive ? 10 : 1,
-                  pointerEvents: 'none',
-                }}
-                animate={{
-                  opacity: isShotActive ? 1 : 0,
-                }}
-                transition={{
-                  duration: 0.5,
-                  ease: 'easeInOut',
-                }}
-                src={video.src}
-                poster={video.poster}
-                autoPlay
-                muted
-                playsInline
-                preload="auto"
-                onEnded={() => handleVideoEnded(idx)}
-                className="absolute inset-0 w-full h-full object-cover object-center will-change-opacity"
-              />
-            );
-          })}
-
-          {/* Sutil viñeta perimetral de 90px solo para controles */}
-          <div className="absolute top-0 inset-x-0 h-28 bg-gradient-to-b from-[#070706]/75 to-transparent pointer-events-none" />
-          <div className="absolute bottom-0 inset-x-0 h-28 bg-gradient-to-t from-[#070706]/75 to-transparent pointer-events-none" />
-        </div>
-
-        {/* 2. TOP MINIMALIST BRANDING & HUD CONTROLS */}
-        <div className="relative z-30 max-w-7xl mx-auto px-6 w-full pt-20 sm:pt-24 flex items-center justify-between pointer-events-auto">
-          {/* Brand & Location */}
-          <div className="flex items-center space-x-3 text-white/90">
-            <CaroniIsotype size={18} color="#C9A86A" />
-            <div className="flex items-center space-x-2 text-[10px] font-mono tracking-[0.25em] text-[#C9A86A] uppercase font-semibold">
-              <span>RESIDENCIAS CARONÍ</span>
-              <span className="text-white/30">·</span>
-              <span className="text-white/60">ALTAMIRA</span>
-            </div>
-          </div>
-
-          {/* Controls: Mode Indicator + Audio + Shot Selector + Play/Pause */}
-          <div className="flex items-center space-x-2.5 sm:space-x-4">
-            {/* Auto Reel Status Indicator / Mode Switch */}
-            <button
-              onClick={() => {
-                if (flowMode === 'auto') {
-                  setFlowMode('scroll');
-                } else {
-                  setFlowMode('auto');
-                }
-              }}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-white/10 bg-black/40 backdrop-blur-md text-[9px] font-mono tracking-wider uppercase text-white/80 hover:text-white cursor-pointer"
-              title="Cambiar entre modo continuo automático y control por scroll"
-            >
-              <RefreshCw className={`w-2.5 h-2.5 text-[#C9A86A] ${flowMode === 'auto' ? 'animate-spin' : ''}`} style={{ animationDuration: '6s' }} />
-              <span className="hidden md:inline font-bold">
-                {flowMode === 'auto' ? 'REEL AUTOMÁTICO' : 'CONTROL SCROLL'}
-              </span>
-            </button>
-
-            {/* Ambient Soundscape Toggle */}
-            <button
-              onClick={toggleAudioAmbient}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full border backdrop-blur-md text-[9px] font-mono tracking-wider uppercase transition-all cursor-pointer ${
-                isAudioActive
-                  ? 'bg-[#C9A86A] text-[#070706] border-[#C9A86A] font-bold shadow-lg'
-                  : 'bg-black/40 text-white/70 border-white/10 hover:text-white hover:bg-black/60'
-              }`}
-              title={isAudioActive ? 'Silenciar atmósfera' : 'Activar atmósfera inmersiva'}
-            >
-              {isAudioActive ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
-              <span className="hidden sm:inline">{isAudioActive ? 'AUDIO: ON' : 'AUDIO: OFF'}</span>
-            </button>
-
-            {/* Direct 3-Scene Selector with Autoplay Progress Bar */}
-            <div className="flex items-center space-x-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-              {[0, 1, 2].map((idx) => {
-                const isActive = activeShot === idx;
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => jumpToShot(idx)}
-                    className="relative cursor-pointer py-1"
-                    title={`Saltar a Toma 0${idx + 1}`}
-                    aria-label={`Toma 0${idx + 1}`}
-                  >
-                    <div
-                      className={`relative overflow-hidden rounded-full transition-all ${
-                        isActive
-                          ? 'w-7 h-1.5 bg-white/20'
-                          : 'w-1.5 h-1.5 bg-white/40 hover:bg-white/80'
-                      }`}
-                    >
-                      {isActive && (
-                        <div
-                          className="absolute inset-0 bg-[#C9A86A] transition-all"
-                          style={{
-                            width: flowMode === 'auto' ? `${autoplayProgress}%` : '100%',
-                          }}
-                        />
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Play/Pause Button */}
-            <button
-              onClick={togglePlayAll}
-              className="bg-black/40 hover:bg-black/60 backdrop-blur-md text-white/80 hover:text-white p-2 rounded-full border border-white/10 transition-colors cursor-pointer"
-              title={isPlaying ? 'Pausar video' : 'Reproducir video'}
-            >
-              {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-            </button>
-          </div>
-        </div>
-
-        {/* 3. INITIAL SCROLL HINT */}
-        <motion.div
-          style={{ opacity: scrollHintOpacity }}
-          className="relative z-20 flex flex-col items-center justify-center text-center pointer-events-none pb-4"
-        >
-          <div className="font-meta text-[10px] tracking-[0.3em] uppercase text-white/70 font-semibold mb-2">
-            DESLIZA PARA NAVEGAR O ESPERA PARA REPRODUCCIÓN CONTINUA
-          </div>
-          <ChevronDown className="w-4 h-4 text-[#C9A86A] animate-bounce" />
-        </motion.div>
-
-        {/* 4. BOTTOM MINIMALIST FOOTER: TECHNICAL TELEMETRY & STRATEGIC CTAS */}
-        <div className="relative z-30 max-w-7xl mx-auto px-6 w-full pb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pointer-events-auto">
-          {/* Micro Blueprint Technical Crosshair con Telemetría Dinámica */}
-          <div className="flex flex-col text-[8.5px] sm:text-[9px] font-mono tracking-wider text-white/60">
-            <div className="flex items-center space-x-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#C9A86A] animate-pulse" />
-              <span className="text-white/40">TOMA 0{activeShot + 1}/03 ·</span>
-              <span className="text-[#C9A86A] font-semibold">
-                COTA DINÁMICA: +{displayedAltitude} M.S.N.M.
-              </span>
-              <span className="text-white/30">|</span>
-              <span className="text-white/70 hidden sm:inline">{CINEMATIC_VIDEOS[activeShot].name}</span>
-            </div>
-            <div className="text-white/40 pl-3.5 hidden md:block">
-              {CINEMATIC_VIDEOS[activeShot].aspectTag}
-            </div>
-          </div>
-
-          {/* Quick Access CTAs */}
-          <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-end">
-            {onOpen3DModal && (
-              <button
-                onClick={onOpen3DModal}
-                className="px-4 py-1.5 bg-[#8C7452]/90 hover:bg-[#8C7452] text-white text-[9.5px] font-meta tracking-wider uppercase rounded-full transition-all backdrop-blur-md border border-white/20 flex items-center space-x-1.5 cursor-pointer shadow-lg font-semibold"
-              >
-                <Sparkles className="w-3 h-3 text-amber-200" />
-                <span>MAQUETA 3D</span>
-              </button>
-            )}
-
-            {onExploreElevation && (
-              <button
-                onClick={onExploreElevation}
-                className="px-3.5 py-1.5 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white text-[9.5px] font-meta tracking-wider uppercase rounded-full transition-all backdrop-blur-md border border-white/10 cursor-pointer"
-              >
-                COTAS
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* 5. CINEMATIC OUTRO FADE TO RESIDENCIAS SECTION (Seamless transition from #070706 to #EFEBE0) */}
-        <motion.div
-          style={{ opacity: outroFadeOpacity }}
-          className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-[#EFEBE0] via-[#EFEBE0]/20 to-transparent pointer-events-none z-40"
+    <section id="obra" className="relative w-full bg-[#070706] text-[#FAF8F5]">
+      {/* ========================================================================= */}
+      {/* HERO CINEMÁTICO — ANCHO TOTAL DE BORDE A BORDE · PROPORCIÓN 16:9 NATURAL   */}
+      {/* CERO ZOOM · CERO RECORTE · 100% NITIDEZ FULL HD NATIVA · SIN INFORMACIÓN  */}
+      {/* ========================================================================= */}
+      <div className="relative w-full aspect-video bg-[#070706] overflow-hidden select-none">
+        {/* Master Film 1920x1080 a Ancho Completo */}
+        <video
+          ref={videoRef}
+          src={MASTER_FILM_SRC}
+          poster={MASTER_FILM_POSTER}
+          autoPlay
+          muted={!isAudioActive}
+          playsInline
+          preload="auto"
+          loop
+          className="w-full h-full object-cover object-center will-change-transform block"
         />
+
+        {/* Sutil viñeta inferior para fundir de forma elegante con la sección siguiente */}
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#070706] to-transparent pointer-events-none" />
+
+        {/* Controles Flotantes Discretos de Cine (Esquina Superior Derecha) */}
+        <div className="absolute top-4 sm:top-6 right-4 sm:right-6 z-30 flex items-center space-x-2 pointer-events-auto">
+          {/* Audio Toggle */}
+          <button
+            onClick={toggleAudio}
+            className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full border backdrop-blur-md text-[9.5px] font-mono tracking-wider uppercase transition-all cursor-pointer shadow-lg ${
+              isAudioActive
+                ? 'bg-[#C9A86A] text-[#070706] border-[#C9A86A] font-bold shadow-[#C9A86A]/20'
+                : 'bg-black/60 text-white/90 border-white/20 hover:text-white hover:bg-black/80 hover:border-white/40'
+            }`}
+            title={isAudioActive ? 'Silenciar audio' : 'Activar audio del film'}
+          >
+            {isAudioActive ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{isAudioActive ? 'AUDIO: ON' : 'AUDIO: OFF'}</span>
+          </button>
+
+          {/* Play/Pause Button */}
+          <button
+            onClick={togglePlay}
+            className="bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/90 hover:text-white p-2 rounded-full border border-white/20 hover:border-white/40 transition-all cursor-pointer shadow-lg"
+            title={isPlaying ? 'Pausar video' : 'Reproducir video'}
+            aria-label={isPlaying ? 'Pausar video' : 'Reproducir video'}
+          >
+            {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+
+        {/* Indicador Inferior de Desplazamiento Suave hacia la Galería */}
+        <div className="absolute bottom-4 inset-x-0 z-20 flex justify-center pointer-events-auto">
+          <button
+            onClick={handleScrollToNext}
+            className="flex flex-col items-center space-y-1 text-white/70 hover:text-[#C9A86A] transition-colors cursor-pointer group py-2 px-4 backdrop-blur-[2px] rounded-full"
+            title="Desplazarse a la Galería de Perspectivas"
+          >
+            <span className="font-meta text-[9px] tracking-[0.28em] uppercase font-semibold">
+              EXPLORAR GALERÍA
+            </span>
+            <ChevronDown className="w-4 h-4 text-[#C9A86A] animate-bounce" />
+          </button>
+        </div>
       </div>
     </section>
   );
