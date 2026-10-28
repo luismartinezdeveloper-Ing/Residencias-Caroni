@@ -13,7 +13,7 @@ import { UNITS_DATA, BRAND_INFO } from './data/brandData';
 import { CaroniIsotype } from './components/ui/ArchitecturalDrawings';
 import { OfflineNotification } from './components/ui/OfflineNotification';
 import { CinematicIntroLoader } from './components/ui/CinematicIntroLoader';
-import { PhoneCall } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 
 // Automated Heavy Code Splitting (Lazy-loaded Three.js 3D Model & Gemini Live Voice Assistant)
 const Architectural3DModal = lazy(() =>
@@ -31,6 +31,7 @@ function MainAppContent() {
   const [isLeadGateOpen, setIsLeadGateOpen] = useState<boolean>(false);
   const [isVoiceAdvisorOpen, setIsVoiceAdvisorOpen] = useState<boolean>(false);
   const [modalInitialViewMode, setModalInitialViewMode] = useState<'assembled' | 'exploded' | 'floorplan'>('assembled');
+  const [isVideoEnded, setIsVideoEnded] = useState<boolean>(false);
 
   // Smooth Scroll Anchor Navigation
   const handleNavigate = (section: NavSection) => {
@@ -138,6 +139,7 @@ function MainAppContent() {
         selectedUnit={selectedUnit}
         onSelectUnit={setSelectedUnit}
         onOpen3DModal={handleOpen3DOrGate}
+        isVideoEnded={isVideoEnded}
       />
 
       {/* 3D Maqueta Modal strictly following architectural standards (Lazy loaded) */}
@@ -159,6 +161,8 @@ function MainAppContent() {
         <CinematicScrollNarrative
           onOpen3DModal={() => handleOpen3DOrGate('assembled')}
           onExploreElevation={() => handleNavigate('elevacion')}
+          onVideoEnded={() => setIsVideoEnded(true)}
+          onVideoPlay={() => setIsVideoEnded(false)}
         />
 
         {/* 02. PERSPECTIVAS Y MATERIALIDAD (Galería Editorial Horizontal con Renders de Autor) */}
@@ -198,29 +202,25 @@ function MainAppContent() {
       {/* Floating Executive Action Hub (Phase 1 Conversion Engine) */}
       
 
-      {/* Floating Concierge / Gemini Live Voice Advisor Orb */}
+      {/* Floating Concierge / Luxury AI Chatbot Button */}
       <div className="fixed bottom-5 right-5 z-40 flex items-center">
         <button
           onClick={() => setIsVoiceAdvisorOpen(true)}
-          className="group relative flex items-center space-x-2.5 bg-gradient-to-r from-[#1B1813] to-[#2A241C] text-[#FAF8F5] pl-3.5 pr-4 py-2.5 rounded-full border border-[#C9A86A]/50 shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:border-[#C9A86A] transition-all cursor-pointer select-none active:scale-95"
-          title="Hablar en Vivo con el Asesor IA de Residencias Caroní"
+          className="group relative w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#1B1813]/95 hover:bg-[#2A241C] text-[#FAF8F5] border border-[#C9A86A]/60 hover:border-[#C9A86A] shadow-[0_12px_36px_rgba(27,24,19,0.45),0_2px_10px_rgba(201,168,106,0.25)] hover:shadow-[0_16px_45px_rgba(201,168,106,0.35)] backdrop-blur-xl flex items-center justify-center transition-all duration-300 hover:scale-108 active:scale-95 cursor-pointer select-none"
+          title="Asistente Virtual · Residencias Caroní"
+          aria-label="Abrir Asistente Virtual"
         >
-          {/* Glowing Aura Ring */}
-          <span className="absolute -inset-0.5 rounded-full bg-[#C9A86A]/30 blur-sm group-hover:bg-[#C9A86A]/50 animate-pulse pointer-events-none" />
+          {/* Subtle Ambient Golden Glow */}
+          <span className="absolute -inset-0.5 rounded-full bg-[#C9A86A]/20 blur-sm group-hover:bg-[#C9A86A]/40 transition-all pointer-events-none" />
 
-          {/* Golden Orb Icon */}
-          <div className="relative w-7 h-7 rounded-full bg-[#8C7452] flex items-center justify-center shadow-inner">
-            <PhoneCall className="w-3.5 h-3.5 text-[#FAF8F5] animate-bounce" />
-          </div>
+          {/* Chat Icon */}
+          <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-[#C9A86A] group-hover:text-white transition-colors relative z-10" />
 
-          <div className="relative flex flex-col items-start leading-none pr-1">
-            <span className="text-[10.5px] font-display font-semibold tracking-wide text-[#FAF8F5]">
-              Asesor de Voz IA
-            </span>
-            <span className="text-[8px] font-mono tracking-widest text-[#C9A86A] uppercase mt-0.5">
-              Gemini Live · En Línea
-            </span>
-          </div>
+          {/* Micro Pulsing Online Beacon */}
+          <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5 pointer-events-none z-20">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C9A86A] opacity-75" />
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#C9A86A]" />
+          </span>
         </button>
       </div>
 

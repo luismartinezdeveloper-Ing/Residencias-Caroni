@@ -1200,112 +1200,123 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                     </div>
                   )}
 
-                  {/* Top Overlay: Stratum Filter Bar */}
-                  <div className={`absolute top-2 left-2 right-2 sm:left-4 sm:right-auto flex flex-wrap items-center justify-between sm:justify-start gap-2 pointer-events-none z-30 transition-opacity duration-300 ${(viewMode === 'assembled' || viewMode === 'exploded') ? 'opacity-100' : 'opacity-0'}`}>
-                    <div className="bg-[#14120E]/90 backdrop-blur-md border border-[#C9A86A]/30 rounded-2xl p-1.5 sm:p-2 flex flex-col gap-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.6)] pointer-events-auto max-w-full overflow-hidden">
-                      <div className="flex items-center justify-between px-1">
-                        <span className="font-meta text-[8px] sm:text-[9px] text-[#C9C4B5] tracking-wider uppercase">
-                          Estratos en corte
-                        </span>
-                        <span className="font-meta text-[8.5px] sm:text-[9.5px] text-[#C9A86A] font-semibold">
-                          {activeFloorFilter}
-                        </span>
+                  {/* Interactive Left Floating Rail Navbar (Apple Glass Style) */}
+                  <div className={`absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-30 pointer-events-auto flex flex-col gap-3 max-h-[88vh] overflow-y-auto no-scrollbar transition-all duration-300 ${(viewMode === 'assembled' || viewMode === 'exploded') ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-6 pointer-events-none'}`}>
+                    <div className="bg-[#14120E]/85 backdrop-blur-xl border border-[#C9A86A]/35 rounded-2xl p-2 sm:p-2.5 flex flex-col gap-3 shadow-[0_20px_50px_rgba(0,0,0,0.7)] w-[148px] sm:w-[165px]">
+                      
+                      {/* Section 1: Estratos en Corte */}
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between px-1">
+                          <span className="font-meta text-[7.5px] sm:text-[8.5px] text-[#C9A86A] tracking-[0.15em] uppercase font-bold flex items-center gap-1">
+                            <Layers className="w-2.5 h-2.5 text-[#C9A86A]" />
+                            Estratos
+                          </span>
+                          <span className="font-mono text-[8px] text-[#FAF8F5]/60">
+                            {activeFloorFilter}
+                          </span>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          {[
+                            { id: 'ALL', label: 'TODOS' },
+                            { id: 'PB', label: 'PB DÚPLEX' },
+                            { id: 'P2', label: 'P2 TIPO' },
+                            { id: 'P3', label: 'P3 TIPO' },
+                            { id: 'MIRADOR', label: 'MIRADORES' },
+                          ].map((f) => (
+                            <button
+                              key={f.id}
+                              onClick={() => setActiveFloorFilter(f.id as any)}
+                              className={`font-meta text-[8px] sm:text-[9px] px-2.5 py-1 rounded-xl text-left transition-all cursor-pointer min-h-[25px] flex items-center justify-between ${
+                                activeFloorFilter === f.id
+                                  ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
+                                  : 'bg-black/30 text-[#C9C4B5] border border-white/5 hover:border-[#C9A86A]/40 hover:text-white'
+                              }`}
+                            >
+                              <span>{f.label}</span>
+                              {activeFloorFilter === f.id && <span className="w-1.5 h-1.5 rounded-full bg-[#0A0908]" />}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 px-0.5">
-                        {[
-                          { id: 'ALL', label: 'TODOS' },
-                          { id: 'PB', label: 'PB DÚPLEX' },
-                          { id: 'P2', label: 'P2' },
-                          { id: 'P3', label: 'P3' },
-                          { id: 'MIRADOR', label: 'MIRADORES' },
-                        ].map((f) => (
-                          <button
-                            key={f.id}
-                            onClick={() => setActiveFloorFilter(f.id as any)}
-                            className={`font-meta text-[8.5px] sm:text-[9.5px] px-2.5 sm:px-3 py-1 border rounded-full whitespace-nowrap transition-all cursor-pointer min-h-[26px] flex items-center justify-center ${
-                              activeFloorFilter === f.id
-                                ? 'bg-[#C9A86A] text-[#0A0908] border-[#C9A86A] font-bold shadow-xs'
-                                : 'bg-black/40 text-[#C9C4B5] border-white/10 hover:border-[#C9A86A]/50 hover:text-white'
-                            }`}
-                          >
-                            {f.label}
-                          </button>
-                        ))}
+
+                      {/* Thin Institutional Divider */}
+                      <div className="h-px bg-[#C9A86A]/20" />
+
+                      {/* Section 2: Perspectivas de Cámara */}
+                      <div className="flex flex-col gap-1.5">
+                        <span className="font-meta text-[7.5px] sm:text-[8.5px] text-[#C9A86A] tracking-[0.15em] uppercase font-bold px-1 flex items-center gap-1">
+                          <Compass className="w-2.5 h-2.5 text-[#C9A86A]" />
+                          Perspectiva
+                        </span>
+                        <div className="grid grid-cols-2 gap-1">
+                          {[
+                            { id: 'iso', label: 'ISOM.' },
+                            { id: 'north', label: 'ÁVILA' },
+                            { id: 'south', label: 'FRONTAL' },
+                            { id: 'top', label: 'PLANTA' },
+                          ].map((cam) => (
+                            <button
+                              key={cam.id}
+                              onClick={() => setCameraPreset(cam.id as any)}
+                              className={`font-meta text-[8px] sm:text-[8.5px] py-1 rounded-lg text-center transition-all cursor-pointer min-h-[25px] flex items-center justify-center ${
+                                cameraView === cam.id
+                                  ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
+                                  : 'bg-black/30 text-[#C9C4B5] border border-white/5 hover:border-[#C9A86A]/40 hover:text-white'
+                              }`}
+                            >
+                              {cam.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Bottom Consolidated Dock: Camera Views + Rotate 360 + Zoom Controls */}
-                  <div className={`absolute bottom-3 left-3 right-3 flex flex-wrap items-center justify-between gap-2 pointer-events-none z-30 transition-opacity duration-300 ${(viewMode === 'assembled' || viewMode === 'exploded') ? 'opacity-100' : 'opacity-0'}`}>
-                    
-                    {/* Left Group: Camera Presets & Orbit Toggle */}
-                    <div className="bg-[#14120E]/90 backdrop-blur-md border border-[#C9A86A]/30 rounded-full px-2.5 sm:px-3 py-1 sm:py-1.5 flex items-center gap-1.5 sm:gap-2 shadow-[0_10px_30px_rgba(0,0,0,0.6)] pointer-events-auto max-w-full overflow-x-auto no-scrollbar">
-                      <span className="font-meta text-[8px] sm:text-[9px] text-[#C9C4B5] tracking-wider uppercase shrink-0 hidden md:inline">
-                        Perspectiva:
-                      </span>
-                      <div className="flex items-center gap-1">
-                        {[
-                          { id: 'iso', label: 'ISOMÉTRICA' },
-                          { id: 'north', label: 'NORTE (ÁVILA)' },
-                          { id: 'south', label: 'SUR' },
-                          { id: 'top', label: 'PLANTA' },
-                        ].map((cam) => (
-                          <button
-                            key={cam.id}
-                            onClick={() => setCameraPreset(cam.id as any)}
-                            className={`font-meta text-[8px] sm:text-[9px] px-2 sm:px-2.5 py-1 border rounded-full whitespace-nowrap transition-all cursor-pointer min-h-[26px] flex items-center justify-center ${
-                              cameraView === cam.id
-                                ? 'bg-[#C9A86A] text-[#0A0908] border-[#C9A86A] font-bold shadow-xs'
-                                : 'bg-black/40 text-[#C9C4B5] border-white/10 hover:border-[#C9A86A]/50 hover:text-white'
-                            }`}
-                          >
-                            {cam.label}
-                          </button>
-                        ))}
+                      {/* Thin Institutional Divider */}
+                      <div className="h-px bg-[#C9A86A]/20" />
 
-                        {/* 360 Rotate Button */}
+                      {/* Section 3: Turntable 360° & Zoom Controls */}
+                      <div className="flex flex-col gap-1.5">
                         <button
                           onClick={() => setIsRotating(!isRotating)}
-                          className={`font-meta text-[8px] sm:text-[9px] px-2.5 py-1 border rounded-full whitespace-nowrap transition-all flex items-center space-x-1 cursor-pointer min-h-[26px] ${
+                          className={`font-meta text-[8px] sm:text-[8.5px] px-2 py-1.5 rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer min-h-[28px] ${
                             isRotating
-                              ? 'bg-[#C9A86A] text-[#0A0908] border-[#C9A86A] font-bold shadow-xs'
-                              : 'bg-black/40 text-[#C9C4B5] border-white/10 hover:border-[#C9A86A]/50 hover:text-white'
+                              ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
+                              : 'bg-black/30 text-[#C9C4B5] border border-white/5 hover:border-[#C9A86A]/40 hover:text-white'
                           }`}
                         >
-                          <span>{isRotating ? '■' : '▶'}</span>
-                          <span>{isRotating ? 'PAUSA' : 'ROTAR'}</span>
+                          <RotateCw className={`w-3 h-3 ${isRotating ? 'animate-spin' : ''}`} />
+                          <span>{isRotating ? 'PAUSAR 360°' : 'ROTAR 360°'}</span>
                         </button>
-                      </div>
-                    </div>
 
-                    {/* Right Group: Zoom In / Zoom Out / Reset View */}
-                    <div className="bg-[#14120E]/90 backdrop-blur-md border border-[#C9A86A]/30 rounded-full px-2 py-1 flex flex-row items-center gap-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.6)] pointer-events-auto">
-                      <button
-                        onClick={() => handleZoomChange(10)}
-                        title="Alejar modelo"
-                        className="font-mono text-sm w-7 h-7 flex items-center justify-center rounded-full border border-white/10 bg-black/40 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all cursor-pointer active:scale-95"
-                      >
-                        −
-                      </button>
-                      <button
-                        onClick={handleResetView}
-                        title="Encuadre inicial estándar"
-                        className="font-meta text-[8px] sm:text-[9px] px-2.5 h-7 flex items-center justify-center rounded-full border border-white/10 bg-black/40 hover:border-[#C9A86A] hover:text-[#C9A86A] text-[#C9C4B5] transition-all cursor-pointer active:scale-95 whitespace-nowrap"
-                      >
-                        REAJUSTAR
-                      </button>
-                      <button
-                        onClick={() => handleZoomChange(-10)}
-                        title="Acercar modelo"
-                        className="font-mono text-sm w-7 h-7 flex items-center justify-center rounded-full border border-white/10 bg-black/40 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all cursor-pointer active:scale-95"
-                      >
-                        +
-                      </button>
+                        <div className="grid grid-cols-3 gap-1 pt-0.5">
+                          <button
+                            onClick={() => handleZoomChange(10)}
+                            title="Alejar modelo"
+                            className="font-mono text-xs h-7 flex items-center justify-center rounded-lg border border-white/5 bg-black/30 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all cursor-pointer active:scale-95"
+                          >
+                            −
+                          </button>
+                          <button
+                            onClick={handleResetView}
+                            title="Reajustar encuadre"
+                            className="font-meta text-[7.5px] h-7 flex items-center justify-center rounded-lg border border-white/5 bg-black/30 hover:border-[#C9A86A] hover:text-[#C9A86A] text-[#C9C4B5] transition-all cursor-pointer active:scale-95"
+                          >
+                            RESET
+                          </button>
+                          <button
+                            onClick={() => handleZoomChange(-10)}
+                            title="Acercar modelo"
+                            className="font-mono text-xs h-7 flex items-center justify-center rounded-lg border border-white/5 bg-black/30 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all cursor-pointer active:scale-95"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
                   
                   {/* Floating AI Advisor Button */}
-                  <div className={`absolute bottom-16 sm:bottom-20 right-3 z-40 pointer-events-auto transition-opacity duration-300 ${(viewMode !== 'assembled' && viewMode !== 'exploded') || isChatOpen ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
+                  <div className={`absolute bottom-4 right-4 z-40 pointer-events-auto transition-opacity duration-300 ${(viewMode !== 'assembled' && viewMode !== 'exploded') || isChatOpen ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
                     <button
                       onClick={() => setIsChatOpen(true)}
                       className="bg-[#1B1813] hover:bg-[#8C7452] text-[#EFEBE0] shadow-[0_10px_30px_rgba(27,24,19,0.3)] border border-[#8C7452]/50 rounded-2xl px-3 sm:px-4 py-2.5 flex items-center gap-2 sm:gap-3 transition-all cursor-pointer group hover:scale-105 active:scale-95"

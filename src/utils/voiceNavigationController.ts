@@ -264,9 +264,16 @@ export class VoiceNavigationController {
       clean.includes('sur') ||
       clean.includes('valle') ||
       clean.includes('ciudad') ||
-      clean.includes('fachada sur')
+      clean.includes('fachada sur') ||
+      clean.includes('frontal') ||
+      clean.includes('frente') ||
+      clean.includes('fachada principal') ||
+      clean.includes('calle') ||
+      clean.includes('balcon') ||
+      clean.includes('balcones') ||
+      clean.includes('jardinera')
     ) {
-      return { type: 'SET_CAMERA_VIEW', view: 'south', label: 'Fachada Sur · Valle de Caracas' };
+      return { type: 'SET_CAMERA_VIEW', view: 'south', label: 'Fachada Frontal · Calle Transversal 8' };
     }
 
     if (

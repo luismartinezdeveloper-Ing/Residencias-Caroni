@@ -186,13 +186,14 @@ const ARCHITECTURAL_CATEGORIES: ArchitecturalCategory[] = [
 export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProps> = () => {
   const [activeCategory, setActiveCategory] = useState<ViewCategoryId>('elevacion');
   const [activeVariantIndex, setActiveVariantIndex] = useState<number>(0);
-  const [isLoupeActive, setIsLoupeActive] = useState<boolean>(false);
   const [isMobileRailOpen, setIsMobileRailOpen] = useState<boolean>(false);
   const [loupeCoords, setLoupeCoords] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [loupeImageCoords, setLoupeImageCoords] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [isHoveringImage, setIsHoveringImage] = useState<boolean>(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   const currentCategoryConfig = ARCHITECTURAL_CATEGORIES.find((c) => c.id === activeCategory)!;
   const currentVariant = currentCategoryConfig.variants[activeVariantIndex] || currentCategoryConfig.variants[0];
@@ -210,23 +211,39 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
     setActiveVariantIndex((prev) => (prev - 1 + currentCategoryConfig.variants.length) % currentCategoryConfig.variants.length);
   };
 
-  // Loupe Mouse Tracking
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!canvasRef.current) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(e.clientX - rect.left, rect.width));
-    const y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
-    setLoupeCoords({ x, y });
-  };
+  // Loupe Mouse Tracking — Activa y alinea con precisión exclusivamente al posar el cursor sobre la lámina
+  const handleImageMouseMove = (e: React.MouseEvent<HTMLImageElement>) => {
+    if (!imgRef.current || !canvasRef.current) return;
+    const iRect = imgRef.current.getBoundingClientRect();
+    const cRect = canvasRef.current.getBoundingClientRect();
 
-  const handleMouseEnter = () => {
-    if (!canvasRef.current) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    setImageDimensions({ width: rect.width, height: rect.height });
+    const imgX = Math.max(0, Math.min(e.clientX - iRect.left, iRect.width));
+    const imgY = Math.max(0, Math.min(e.clientY - iRect.top, iRect.height));
+
+    const canvasX = e.clientX - cRect.left;
+    const canvasY = e.clientY - cRect.top;
+
+    setLoupeCoords({ x: canvasX, y: canvasY });
+    setLoupeImageCoords({ x: imgX, y: imgY });
+    setImageDimensions({ width: iRect.width, height: iRect.height });
     setIsHoveringImage(true);
   };
 
-  const handleMouseLeave = () => {
+  const handleImageMouseEnter = (e: React.MouseEvent<HTMLImageElement>) => {
+    if (!imgRef.current || !canvasRef.current) return;
+    const iRect = imgRef.current.getBoundingClientRect();
+    const cRect = canvasRef.current.getBoundingClientRect();
+
+    const imgX = Math.max(0, Math.min(e.clientX - iRect.left, iRect.width));
+    const imgY = Math.max(0, Math.min(e.clientY - iRect.top, iRect.height));
+
+    setLoupeCoords({ x: e.clientX - cRect.left, y: e.clientY - cRect.top });
+    setLoupeImageCoords({ x: imgX, y: imgY });
+    setImageDimensions({ width: iRect.width, height: iRect.height });
+    setIsHoveringImage(true);
+  };
+
+  const handleImageMouseLeave = () => {
     setIsHoveringImage(false);
   };
 
@@ -259,9 +276,6 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
       {/* LIENZO DE LA MESA DE DIBUJO CON RAIL FLOTANTE */}
       <div
         ref={canvasRef}
-        onMouseMove={handleMouseMove}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
         className="relative w-full h-full max-w-7xl mx-auto rounded-3xl overflow-hidden border border-[#1B1813]/12 shadow-[0_25px_70px_rgba(27,24,19,0.08)] bg-[#F5F2EA]/60 flex items-center justify-center group"
       >
         {/* Marcas de Registro Técnico CAD en las 4 Esquinas */}
@@ -282,9 +296,13 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                 className="relative w-full h-full flex items-center justify-center"
               >
                 <img
+                  ref={imgRef}
                   src={currentVariant.image}
                   alt={currentVariant.tag}
-                  className="max-w-full max-h-full object-contain pointer-events-none select-none drop-shadow-xl"
+                  onMouseMove={handleImageMouseMove}
+                  onMouseEnter={handleImageMouseEnter}
+                  onMouseLeave={handleImageMouseLeave}
+                  className="max-w-full max-h-full object-contain pointer-events-auto select-none drop-shadow-xl cursor-crosshair"
                   loading="eager"
                 />
               </motion.div>
@@ -325,18 +343,7 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                   }`}
               >
                 {/* Header del Rail */}
-                <div className="space-y-2 border-b border-[#1B1813]/10 pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="w-2 h-2 rounded-full bg-[#8C7452] shadow-[0_0_8px_rgba(140,116,82,0.4)]" />
-                      <span className="font-mono text-[9.5px] text-[#8C7452] tracking-[0.22em] uppercase font-bold">
-                        AÑIL ARQUITECTURA
-                      </span>
-                    </div>
-                    <span className="font-mono text-[8.5px] px-2 py-0.5 rounded-full bg-[#1B1813]/5 text-[#5A554A] uppercase font-semibold">
-                      ARCHIVO 2K
-                    </span>
-                  </div>
+                <div className="border-b border-[#1B1813]/10 pb-2.5">
                   <div className="font-display text-sm text-[#1B1813] font-semibold tracking-tight">
                     Estratigrafía & Láminas Técnicas
                   </div>
@@ -366,11 +373,8 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                           isCatActive ? 'bg-[#C9A86A]' : 'bg-[#1B1813]/25'
                         }`}
                       />
-                      <span>{cat.code} · {cat.label}</span>
+                      <span>{cat.label}</span>
                     </div>
-                    <span className={`text-[8px] px-1.5 py-0.2 rounded-full ${isCatActive ? 'bg-white/20 text-[#FAF9F6]' : 'text-[#8C8678]'}`}>
-                      {cat.variants.length}
-                    </span>
                   </button>
 
                     {/* Tomas de la Categoría Activa */ }
@@ -402,9 +406,6 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                                   <span className={isVarActive ? 'text-[#8C7452]' : 'text-[#1B1813]/25'}>▪</span>
                                   <span className="truncate">{variant.pillTitle}</span>
                                 </div>
-                                <span className="text-[8px] font-serif text-[#8C8678] shrink-0 ml-1">
-                                  {variant.number}
-                                </span>
                               </button>
                             );
                           })}
@@ -416,26 +417,10 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
             })}
               </div>
 
-              {/* Footer del Rail: Lupa 2.5x & Cédula de Lámina */}
-              <div className="space-y-2.5 border-t border-[#1B1813]/10 pt-3">
-                {/* Botón Lupa de Precisión */}
-                <button
-                  onClick={() => setIsLoupeActive(!isLoupeActive)}
-                  className={`w-full py-2 px-3 rounded-xl text-[9px] sm:text-[9.5px] font-mono tracking-wider uppercase transition-all duration-200 flex items-center justify-center space-x-2 cursor-pointer border ${isLoupeActive
-                      ? 'bg-[#1B1813] text-[#FAF9F6] border-[#1B1813] shadow-sm font-semibold'
-                      : 'bg-white/80 text-[#5A554A] border-white/80 hover:text-[#1B1813] hover:bg-white shadow-xs'
-                    }`}
-                >
-                  <span className={isLoupeActive ? 'text-[#C9A86A]' : 'text-[#8C7452]'}>⌕</span>
-                  <span>LUPA 2.5×: {isLoupeActive ? 'ACTIVA' : 'INACTIVA'}</span>
-                </button>
-
+              {/* Footer del Rail: Cédula de Lámina */}
+              <div className="border-t border-[#1B1813]/10 pt-2.5">
                 {/* Ficha Resumida de la Lámina */}
                 <div className="bg-white/50 backdrop-blur-md rounded-xl p-2.5 border border-white/80 shadow-2xs space-y-1">
-                  <div className="flex items-center justify-between text-[8px] font-mono text-[#8C7452] uppercase font-bold tracking-wider">
-                    <span>LÁMINA {currentVariant.number}</span>
-                    <span>{currentCategoryConfig.badge.split(' ')[0]}</span>
-                  </div>
                   <div className="font-display text-[11px] text-[#1B1813] font-semibold leading-tight truncate">
                     {currentVariant.tag}
                   </div>
@@ -443,16 +428,11 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                     «{currentVariant.subtitle}»
                   </div>
                 </div>
-
-                {/* Autoría Oficial */}
-                <div className="text-[7.5px] font-mono text-[#8C8678] uppercase tracking-wider text-center pt-0.5">
-                  Arq. Juan Carlos Láncara · Ing. Luis Martinez
-                </div>
               </div>
             </div>
 
-            {/* ── LUPA CIRCULAR APPLE 2.5X (CUANDO ESTÁ ACTIVA) ── */}
-            {isLoupeActive && isHoveringImage && (
+            {/* ── LUPA CIRCULAR APPLE 2.5X (ACTIVA EXCLUSIVAMENTE AL POSAR EL CURSOR SOBRE LA IMAGEN) ── */}
+            {isHoveringImage && imageDimensions.width > 0 && (
               <div
                 className="pointer-events-none absolute z-40 rounded-full overflow-hidden transition-opacity duration-150 ease-out"
                 style={{
@@ -466,20 +446,18 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                   border: '2.5px solid rgba(255, 255, 255, 0.95)',
                 }}
               >
-                {imageDimensions.width > 0 && (
-                  <img
-                    src={currentVariant.image}
-                    alt="Aumento de plano"
-                    className="absolute pointer-events-none max-w-none select-none"
-                    style={{
-                      width: `${imageDimensions.width * ZOOM_FACTOR}px`,
-                      height: `${imageDimensions.height * ZOOM_FACTOR}px`,
-                      left: `${LENS_RADIUS - loupeCoords.x * ZOOM_FACTOR}px`,
-                      top: `${LENS_RADIUS - loupeCoords.y * ZOOM_FACTOR}px`,
-                      objectFit: 'contain',
-                    }}
-                  />
-                )}
+                <img
+                  src={currentVariant.image}
+                  alt="Aumento de plano"
+                  className="absolute pointer-events-none max-w-none select-none"
+                  style={{
+                    width: `${imageDimensions.width * ZOOM_FACTOR}px`,
+                    height: `${imageDimensions.height * ZOOM_FACTOR}px`,
+                    left: `${LENS_RADIUS - loupeImageCoords.x * ZOOM_FACTOR}px`,
+                    top: `${LENS_RADIUS - loupeImageCoords.y * ZOOM_FACTOR}px`,
+                    objectFit: 'contain',
+                  }}
+                />
 
                 {/* Reflejo Especular Diagonal Apple */}
                 <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/[0.1] to-white/[0.35] pointer-events-none" />
