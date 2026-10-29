@@ -27,8 +27,8 @@ export interface SceneMaterials {
   travertineDark: THREE.MeshStandardMaterial; // Concreto visto para buñas, molduras y cielorrasos
   concreteSlab: THREE.MeshStandardMaterial; // Losa estructural esculpida
   aluminumFrame: THREE.MeshStandardMaterial; // Aluminio grafito carbón / bronce anodizado
-  architecturalGlass: THREE.MeshPhysicalMaterial; // Vidrio obsidiana diurno / linterna nocturna 2700K
-  glassBalustrade: THREE.MeshPhysicalMaterial; // Barandilla de vidrio laminado ahumado
+  architecturalGlass: THREE.MeshStandardMaterial; // Vidrio obsidiana diurno / linterna nocturna 2700K
+  glassBalustrade: THREE.MeshStandardMaterial; // Barandilla de vidrio laminado ahumado
   interiorGlow: THREE.MeshStandardMaterial; // Resplandor cálido interior 2700K
   coveLed: THREE.MeshStandardMaterial; // Tira LED arquitectónica lineal
   interiorWood: THREE.MeshStandardMaterial; // Panelado de madera nogal / teca
@@ -40,7 +40,7 @@ export interface SceneMaterials {
   woodPergola: THREE.MeshStandardMaterial; // Celosías en terracota / madera cálida de autor
   woodDeck: THREE.MeshStandardMaterial; // Deck y cielorraso en madera Teca / Ipe
   bronzeAccent: THREE.MeshStandardMaterial; // Bronce satinado arquitectónico
-  waterMirror: THREE.MeshPhysicalMaterial; // Espejo de agua / carril de nado
+  waterMirror: THREE.MeshStandardMaterial; // Espejo de agua / carril de nado
   sotanoMat: THREE.MeshStandardMaterial; // Sótano y rampa antracita
   inkLine: THREE.LineBasicMaterial; // Trazado técnico arquitectónico
   highlightMat: THREE.MeshStandardMaterial; // Material de selección activa
@@ -386,36 +386,22 @@ export function createArchitecturalMaterials(maxAnisotropy: number = 16): SceneM
       roughness: 0.20,
       metalness: 0.90,
     }),
-    architecturalGlass: new THREE.MeshPhysicalMaterial({
+    architecturalGlass: new THREE.MeshStandardMaterial({
       color: 0x0E1318, // Vidrio obsidiana diurno
       transparent: true,
-      opacity: 0.95,
-      roughness: 0.03,
-      metalness: 0.16,
-      transmission: 0.0,
-      ior: 1.54,
-      reflectivity: 0.90,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.02,
-      specularIntensity: 1.0,
-      specularColor: new THREE.Color(0xFFFFFF),
+      opacity: 0.90,
+      roughness: 0.05,
+      metalness: 0.35,
       envMapIntensity: 1.05,
       side: THREE.DoubleSide,
       depthWrite: false,
     }),
-    glassBalustrade: new THREE.MeshPhysicalMaterial({
+    glassBalustrade: new THREE.MeshStandardMaterial({
       color: 0x13181D,
       transparent: true,
-      opacity: 0.78,
-      roughness: 0.02,
-      metalness: 0.12,
-      transmission: 0.0,
-      ior: 1.52,
-      reflectivity: 0.85,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.01,
-      specularIntensity: 0.95,
-      specularColor: new THREE.Color(0xFFFFFF),
+      opacity: 0.75,
+      roughness: 0.04,
+      metalness: 0.25,
       envMapIntensity: 0.95,
       side: THREE.DoubleSide,
       depthWrite: false,
@@ -477,16 +463,13 @@ export function createArchitecturalMaterials(maxAnisotropy: number = 16): SceneM
       roughness: 0.35,
       metalness: 0.75,
     }),
-    waterMirror: new THREE.MeshPhysicalMaterial({
+    waterMirror: new THREE.MeshStandardMaterial({
       color: 0x253B42,
       transparent: true,
-      opacity: 0.88,
-      roughness: 0.06,
-      metalness: 0.2,
-      transmission: 0.65,
-      ior: 1.333,
-      reflectivity: 0.95,
-      clearcoat: 1.0,
+      opacity: 0.82,
+      roughness: 0.08,
+      metalness: 0.80,
+      envMapIntensity: 1.15,
     }),
     sotanoMat: new THREE.MeshStandardMaterial({
       color: 0x201D18,
@@ -2604,8 +2587,8 @@ export function buildCompleteBuildingScene(
   const sunLight = new THREE.DirectionalLight(0xFFFAF2, 1.5);
   sunLight.position.set(40, 65, 35);
   sunLight.castShadow = true;
-  sunLight.shadow.mapSize.width = 2048;
-  sunLight.shadow.mapSize.height = 2048;
+  sunLight.shadow.mapSize.width = 1024;
+  sunLight.shadow.mapSize.height = 1024;
   sunLight.shadow.camera.near = 0.5;
   sunLight.shadow.camera.far = 180;
   const shadowDim = 36;

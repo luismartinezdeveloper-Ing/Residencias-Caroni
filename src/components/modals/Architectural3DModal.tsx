@@ -267,8 +267,8 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       !('ontouchstart' in window || navigator.maxTouchPoints > 0) &&
       window.innerWidth >= 768;
     const optimalPixelRatio = isDesktopDevice
-      ? Math.min(Math.max(window.devicePixelRatio || 1, 1.75), 2.0)
-      : Math.min(window.devicePixelRatio || 1, 2.0);
+      ? Math.min(window.devicePixelRatio || 1, 1.35)
+      : Math.min(window.devicePixelRatio || 1, 1.0);
 
     try {
       renderer = new THREE.WebGLRenderer({
@@ -285,6 +285,8 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       renderer.setPixelRatio(optimalPixelRatio);
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFShadowMap;
+      renderer.shadowMap.autoUpdate = false;
+      renderer.shadowMap.needsUpdate = true;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.15;
       rendererRef.current = renderer;
@@ -617,8 +619,8 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
         !('ontouchstart' in window || navigator.maxTouchPoints > 0) &&
         window.innerWidth >= 768;
       const currentPixelRatio = currentIsDesktop
-        ? Math.min(Math.max(window.devicePixelRatio || 1, 1.75), 2.0)
-        : Math.min(window.devicePixelRatio || 1, 1.75); // Cap mobile DPI to 1.75 for thermal and battery efficiency
+        ? Math.min(window.devicePixelRatio || 1, 1.35)
+        : Math.min(window.devicePixelRatio || 1, 1.0);
 
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
@@ -681,6 +683,21 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
       if (isRotatingRef.current) {
         controlsStateRef.current.targetRotationY += 0.0035;
+      }
+
+      // High-performance shadow updates: Only recompute shadow maps when scene elements or camera move
+      if (renderer && renderer.shadowMap.enabled) {
+        const isSceneMoving =
+          controlsStateRef.current.isDragging ||
+          isRotatingRef.current ||
+          Math.abs(controlsStateRef.current.targetRotationX - controlsStateRef.current.rotationX) > 0.0005 ||
+          Math.abs(controlsStateRef.current.targetRotationY - controlsStateRef.current.rotationY) > 0.0005 ||
+          Math.abs(controlsStateRef.current.targetZoom - controlsStateRef.current.zoom) > 0.005 ||
+          Math.abs(controlsStateRef.current.targetExplosion - controlsStateRef.current.currentExplosion) > 0.001;
+
+        if (isSceneMoving) {
+          renderer.shadowMap.needsUpdate = true;
+        }
       }
 
       // Smooth damping
