@@ -658,6 +658,17 @@ export const ArchitecturalElevation: React.FC<{
           fill="none"
           pointerEvents="none"
         />
+        {/* Intermediate slab inside Penthouse Duplex (Doble Piso PH Baja + PH Alta) */}
+        <line
+          x1="180"
+          y1="130"
+          x2="620"
+          y2="130"
+          stroke={isLevelActive('superior') ? accentColor : lineColor}
+          strokeWidth="0.8"
+          strokeDasharray="3 3"
+          pointerEvents="none"
+        />
 
         {/* Mirador Rooftop Terrace & Pergola (Coronación) */}
         <g className={isLevelActive('superior') ? 'opacity-100' : 'opacity-85'}>

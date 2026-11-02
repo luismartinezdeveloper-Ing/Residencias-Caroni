@@ -16,7 +16,8 @@ dotenv.config();
 async function startServer() {
   const app = express();
   const server = http.createServer(app);
-  const PORT = Number(process.env.PORT) || 3000;
+  // Dev server and backend must run on port 3000 (port 8080 is reserved by Nginx reverse proxy)
+  const PORT = 3000;
 
   // Trust proxy for secure HTTPS detection in Cloud Run / Reverse Proxies
   app.set('trust proxy', 1);

@@ -19,6 +19,7 @@ import {
   UnitAnchor,
   SolarTimeMode,
 } from './3d/ArchitecturalScene';
+import { createAltamiraUrbanMapAndAvilaBackdrop } from './3d/AltamiraContextMap';
 
 interface Architectural3DModalProps {
   isOpen: boolean;
@@ -53,7 +54,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
   }, [isOpen, initialViewMode]);
   const [isRotating, setIsRotating] = useState<boolean>(false);
   const [activeFloorFilter, setActiveFloorFilter] = useState<'ALL' | 'PB' | 'P2' | 'P3' | 'MIRADOR'>('ALL');
-  const [cameraView, setCameraView] = useState<'iso' | 'north' | 'south' | 'top'>('iso');
+  const [cameraView, setCameraView] = useState<'iso' | 'north' | 'south' | 'east' | 'west' | 'top'>('iso');
   const [solarTimeMode, setSolarTimeMode] = useState<SolarTimeMode>('morning');
   const [hoveredUnitId, setHoveredUnitId] = useState<string | null>(null);
   const [hoverTooltip, setHoverTooltip] = useState<{
@@ -66,6 +67,11 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [planType, setPlanType] = useState<'Social' | 'Privada'>('Social');
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
+  const [isAvilaDebug, setIsAvilaDebug] = useState<boolean>(false);
+  const isAvilaDebugRef = useRef<boolean>(false);
+  useEffect(() => {
+    isAvilaDebugRef.current = isAvilaDebug;
+  }, [isAvilaDebug]);
 
   // Voice Navigation State
   const voiceControllerRef = useRef<VoiceNavigationController | null>(null);
@@ -94,8 +100,11 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
   const materialsRef = useRef<SceneMaterials | null>(null);
   const groundMatRef = useRef<THREE.MeshStandardMaterial | null>(null);
   const updateLightingModeRef = useRef<((mode: SolarTimeMode, immediate?: boolean) => void) | null>(null);
-  const transitionStepRef = useRef<((mode: SolarTimeMode, deltaFactor?: number) => void) | null>(null);
+  const transitionStepRef = useRef<((mode: SolarTimeMode, deltaFactor?: number) => boolean) | null>(null);
   const updateEnvMapRef = useRef<((mode: SolarTimeMode) => void) | null>(null);
+  const updateContextSolarModeRef = useRef<((mode: SolarTimeMode, deltaFactor?: number, cameraPosition?: THREE.Vector3) => void) | null>(null);
+  const setAvilaDebugModeRef = useRef<((enabled: boolean) => void) | null>(null);
+  const getAvilaFurthestDistanceRef = useRef<((cameraPosition: THREE.Vector3) => number) | null>(null);
 
   // References to 3D elements
   const unitMeshesRef = useRef<UnitMeshRegistry>({});
@@ -103,6 +112,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
   const unitAnchorsRef = useRef<UnitAnchor[]>([]);
   const connectionLinesGroupRef = useRef<THREE.Group | null>(null);
   const buildingRootRef = useRef<THREE.Group | null>(null);
+  const altamiraContextGroupRef = useRef<THREE.Group | null>(null);
 
   // Interaction controls state
   const DEFAULT_ZOOM = 90; // Decreased initial zoom (larger distance)
@@ -112,14 +122,14 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
     isDragging: false,
     prevMouseX: 0,
     prevMouseY: 0,
-    rotationX: 0.45, // Starts slightly elevated for dramatic cinematic glide-in
-    rotationY: -1.15, // Starts with a slight yaw offset
-    targetRotationX: 0.32, // Calibrated target isometric angle
-    targetRotationY: -0.78,
-    zoom: 118, // Starts further back for smooth camera descent
-    targetZoom: DEFAULT_ZOOM,
-    targetLookAtY: 10.5,
-    currentLookAtY: 10.5,
+    rotationX: 0.35, // Starts slightly elevated for dramatic cinematic glide-in
+    rotationY: -0.85, // Starts with a slight yaw offset
+    targetRotationX: 0.20, // Calibrated target isometric angle framing El Ávila
+    targetRotationY: -0.34,
+    zoom: 110, // Starts further back for smooth camera descent
+    targetZoom: 92,
+    targetLookAtY: 11.5,
+    currentLookAtY: 11.5,
     currentExplosion: 0,
     targetExplosion: 0,
     initialPinchDist: 0,
@@ -152,21 +162,21 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
     }
     if (sceneRef.current) {
       if (solarTimeMode === 'morning') {
-        sceneRef.current.background = new THREE.Color('#141311'); // Dark Studio Gallery Matutino (tonalidad sobria contemporánea)
+        const bgCol = new THREE.Color('#141311');
+        sceneRef.current.background = bgCol;
+        sceneRef.current.fog = new THREE.FogExp2(bgCol.getHex(), 0.0038);
       } else if (solarTimeMode === 'golden') {
-        sceneRef.current.background = new THREE.Color('#1A140F'); // Dark Amber Crepuscular
+        const bgCol = new THREE.Color('#1A140F');
+        sceneRef.current.background = bgCol;
+        sceneRef.current.fog = new THREE.FogExp2(bgCol.getHex(), 0.0040);
       } else {
-        sceneRef.current.background = new THREE.Color('#0A0A0E'); // Midnight Obsidian Puro
+        const bgCol = new THREE.Color('#0A0A0E');
+        sceneRef.current.background = bgCol;
+        sceneRef.current.fog = new THREE.FogExp2(bgCol.getHex(), 0.0042);
       }
     }
-    if (groundMatRef.current) {
-      if (solarTimeMode === 'night') {
-        groundMatRef.current.color.setHex(0x12141A);
-      } else if (solarTimeMode === 'golden') {
-        groundMatRef.current.color.setHex(0x221B14);
-      } else {
-        groundMatRef.current.color.setHex(0x1A1815);
-      }
+    if (rendererRef.current) {
+      rendererRef.current.shadowMap.needsUpdate = true;
     }
   }, [solarTimeMode]);
 
@@ -215,9 +225,9 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
   const focusCameraOnUnit = (unit: UnitData) => {
     setIsRotating(false);
     if (unit.orientation === 'Norte') {
-      controlsStateRef.current.targetRotationY = Math.PI * 0.95;
+      controlsStateRef.current.targetRotationY = -0.28;
     } else {
-      controlsStateRef.current.targetRotationY = -0.05;
+      controlsStateRef.current.targetRotationY = 0.28;
     }
 
     if (unit.typology === 'Jardín') {
@@ -233,9 +243,9 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       controlsStateRef.current.targetZoom = 50;
       controlsStateRef.current.targetLookAtY = 13.8;
     } else if (unit.typology === 'Mirador') {
-      controlsStateRef.current.targetRotationX = 0.25;
-      controlsStateRef.current.targetZoom = 52;
-      controlsStateRef.current.targetLookAtY = 18.5;
+      controlsStateRef.current.targetRotationX = 0.22;
+      controlsStateRef.current.targetZoom = 54;
+      controlsStateRef.current.targetLookAtY = 19.2;
     }
   };
 
@@ -253,11 +263,19 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
     // 1. SCENE
     scene = new THREE.Scene();
-    scene.background = null;
+    const initialBgHex =
+      solarModeRef.current === 'morning'
+        ? '#141311'
+        : solarModeRef.current === 'golden'
+        ? '#1A140F'
+        : '#0A0A0E';
+    const initialBgCol = new THREE.Color(initialBgHex);
+    scene.background = initialBgCol;
+    scene.fog = new THREE.FogExp2(initialBgCol.getHex(), 0.0038);
     sceneRef.current = scene;
 
-    // 2. CAMERA (Calibrated wide architectural FOV)
-    camera = new THREE.PerspectiveCamera(38, width / height, 0.1, 1000);
+    // 2. CAMERA (Calibrated wide architectural FOV with extended frustum depth for El Ávila)
+    camera = new THREE.PerspectiveCamera(38, width / height, 0.5, 5000);
     camera.position.set(0, 20, DEFAULT_ZOOM);
     cameraRef.current = camera;
 
@@ -284,7 +302,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       renderer.setSize(width, height);
       renderer.setPixelRatio(optimalPixelRatio);
       renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFShadowMap;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.shadowMap.autoUpdate = false;
       renderer.shadowMap.needsUpdate = true;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -324,6 +342,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       const cached = envMapCache.get(mode);
       if (cached) {
         scene.environment = cached;
+        scene.environmentIntensity = mode === 'morning' ? 1.35 : mode === 'golden' ? 1.55 : 0.95;
       }
     };
     updateEnvMapRef.current = updateEnvMap;
@@ -361,6 +380,19 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       transitionStep,
     } = buildCompleteBuildingScene(materials);
 
+    // Orden de renderizado superior (renderOrder >= 10) para el modelo del edificio
+    // para garantizar la oclusión exacta y correcta sobre la geometría del Ávila (renderOrder = 0)
+    buildingRoot.renderOrder = 10;
+    buildingRoot.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh || (child as THREE.Line).isLine) {
+        if (child instanceof THREE.Mesh && child.material && (child.material as THREE.Material).transparent) {
+          child.renderOrder = 12;
+        } else {
+          child.renderOrder = 10;
+        }
+      }
+    });
+
     scene.add(buildingRoot);
     scene.add(lightsGroup);
     buildingRootRef.current = buildingRoot;
@@ -372,49 +404,28 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
     updateLightingMode(solarModeRef.current, true);
 
-    // 5. PEDESTAL & GROUND
-    const groundGeo = new THREE.CylinderGeometry(36, 36, 0.6, 64);
-    const initialGroundColor =
-      solarModeRef.current === 'night'
-        ? 0x12141A
-        : solarModeRef.current === 'golden'
-        ? 0x221B14
-        : 0x1A1815;
-    const groundMat = new THREE.MeshStandardMaterial({
-      color: initialGroundColor,
-      roughness: 0.92,
-      metalness: 0.08,
-    });
-    groundMatRef.current = groundMat;
-    const groundMesh = new THREE.Mesh(groundGeo, groundMat);
-    groundMesh.position.y = -4.5;
-    groundMesh.receiveShadow = true;
-    scene.add(groundMesh);
+    // 5. MAQUETA CARTOGRÁFICA URBANA 3D DE ALTAMIRA & CORDILLERA VOLUMÉTRICA DE EL ÁVILA
+    const {
+      rootGroup: altamiraContextGroup,
+      updateContextSolarMode,
+      setAvilaDebugMode,
+      getAvilaFurthestPointDistance,
+    } = createAltamiraUrbanMapAndAvilaBackdrop(maxAnisotropy);
+    scene.add(altamiraContextGroup);
+    altamiraContextGroupRef.current = altamiraContextGroup;
+    updateContextSolarModeRef.current = updateContextSolarMode;
+    setAvilaDebugModeRef.current = setAvilaDebugMode;
+    getAvilaFurthestDistanceRef.current = getAvilaFurthestPointDistance;
 
-    // Retícula arquitectónica refinada en bronce satinado
-    const gridHelper = new THREE.GridHelper(52, 26, 0xC9A86A, 0x3A342B);
-    gridHelper.position.y = -4.19;
-    scene.add(gridHelper);
+    // Cálculo dinámico del plano lejano ('far'): distancia al punto más alejado del Ávila * 1.5 para prevenir recorte (clipping)
+    const initialMaxDist = getAvilaFurthestPointDistance(camera.position);
+    camera.far = initialMaxDist * 1.5;
+    camera.updateProjectionMatrix();
 
-    // Ávila Mountain Background Silhouette (con trazo nítido arquitectónico)
-    const mountainPoints = [
-      new THREE.Vector3(-65, -4.0, -42),
-      new THREE.Vector3(-45, 11, -42),
-      new THREE.Vector3(-22, 19, -42),
-      new THREE.Vector3(0, 24, -42),
-      new THREE.Vector3(26, 17, -42),
-      new THREE.Vector3(48, 13, -42),
-      new THREE.Vector3(65, -4.0, -42),
-    ];
-    const mountainGeo = new THREE.BufferGeometry().setFromPoints(mountainPoints);
-    const mountainMat = new THREE.LineBasicMaterial({
-      color: 0xC9A86A,
-      linewidth: 1.5,
-      transparent: true,
-      opacity: 0.45,
-    });
-    const mountainLine = new THREE.Line(mountainGeo, mountainMat);
-    scene.add(mountainLine);
+    updateContextSolarMode(solarModeRef.current, 1.0, camera.position);
+    if (isAvilaDebugRef.current) {
+      setAvilaDebugMode(true);
+    }
 
     // Dotted Structural Connection Lines for Exploded View
     const connLinesGroup = new THREE.Group();
@@ -623,6 +634,10 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
         : Math.min(window.devicePixelRatio || 1, 1.0);
 
       camera.aspect = w / h;
+      if (getAvilaFurthestDistanceRef.current) {
+        const maxDist = getAvilaFurthestDistanceRef.current(camera.position);
+        camera.far = maxDist * 1.5;
+      }
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
       renderer.setPixelRatio(currentPixelRatio);
@@ -685,17 +700,33 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
         controlsStateRef.current.targetRotationY += 0.0035;
       }
 
-      // High-performance shadow updates: Only recompute shadow maps when scene elements or camera move
-      if (renderer && renderer.shadowMap.enabled) {
-        const isSceneMoving =
-          controlsStateRef.current.isDragging ||
-          isRotatingRef.current ||
-          Math.abs(controlsStateRef.current.targetRotationX - controlsStateRef.current.rotationX) > 0.0005 ||
-          Math.abs(controlsStateRef.current.targetRotationY - controlsStateRef.current.rotationY) > 0.0005 ||
-          Math.abs(controlsStateRef.current.targetZoom - controlsStateRef.current.zoom) > 0.005 ||
-          Math.abs(controlsStateRef.current.targetExplosion - controlsStateRef.current.currentExplosion) > 0.001;
+      // Continuous smooth interpolation for glass materials, HDRI environment reflections, and solar trajectory
+      const isLightingTransitioning = transitionStepRef.current
+        ? transitionStepRef.current(solarModeRef.current, 0.08)
+        : false;
 
-        if (isSceneMoving) {
+      if (updateContextSolarModeRef.current) {
+        updateContextSolarModeRef.current(solarModeRef.current, 0.08, camera.position);
+      }
+
+      if (renderer) {
+        const targetExposure =
+          solarModeRef.current === 'golden' ? 1.26 : solarModeRef.current === 'night' ? 1.08 : 1.15;
+        renderer.toneMappingExposure += (targetExposure - renderer.toneMappingExposure) * 0.08;
+      }
+
+      // Movimiento de escena (rotación, traslación, zoom o despiece vertical)
+      const isSceneMoving =
+        controlsStateRef.current.isDragging ||
+        isRotatingRef.current ||
+        Math.abs(controlsStateRef.current.targetRotationX - controlsStateRef.current.rotationX) > 0.0005 ||
+        Math.abs(controlsStateRef.current.targetRotationY - controlsStateRef.current.rotationY) > 0.0005 ||
+        Math.abs(controlsStateRef.current.targetZoom - controlsStateRef.current.zoom) > 0.005 ||
+        Math.abs(controlsStateRef.current.targetExplosion - controlsStateRef.current.currentExplosion) > 0.001;
+
+      // High-performance shadow updates: Recompute shadow maps when camera/geometry moves OR when solar trajectory sweeps
+      if (renderer && renderer.shadowMap.enabled) {
+        if (isSceneMoving || isLightingTransitioning) {
           renderer.shadowMap.needsUpdate = true;
         }
       }
@@ -721,7 +752,11 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
         groups.p2.position.y = 4.8 * exp;
         groups.p3.position.y = 9.6 * exp;
         groups.mirador.position.y = 14.4 * exp;
-        groups.pergola.position.y = 18.2 * exp;
+        groups.pergola.position.y = 19.8 * exp;
+      }
+
+      if (altamiraContextGroupRef.current) {
+        altamiraContextGroupRef.current.position.y = -6.5 * exp;
       }
 
       if (connectionLinesGroupRef.current) {
@@ -737,6 +772,16 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       camera.position.y = Math.sin(rX) * zoom + lookAtY;
       camera.position.z = Math.cos(rY) * Math.cos(rX) * zoom;
       camera.lookAt(0, lookAtY, 0);
+
+      // Cálculo dinámico del plano lejano ('far') para prevenir cualquier recorte (clipping) del Ávila
+      if (getAvilaFurthestDistanceRef.current && isSceneMoving) {
+        const maxDist = getAvilaFurthestDistanceRef.current(camera.position);
+        const dynamicFar = maxDist * 1.5;
+        if (Math.abs(camera.far - dynamicFar) > 0.5) {
+          camera.far = dynamicFar;
+          camera.updateProjectionMatrix();
+        }
+      }
 
       // Throttled 60 FPS Raycasting in RAF loop (eliminates CPU stalls on 1000Hz gaming/Mac mice)
       if (mouseCoordsRef.current.dirty && !controlsStateRef.current.isDragging) {
@@ -761,11 +806,6 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
         } else {
           setHoverTooltip(null);
         }
-      }
-
-      // Continuous smooth interpolation for glass materials and architectural lighting
-      if (transitionStepRef.current) {
-        transitionStepRef.current(solarModeRef.current, 0.08);
       }
 
       try {
@@ -838,27 +878,57 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
           container.removeChild(renderer.domElement);
         }
       }
+      updateContextSolarModeRef.current = null;
+      setAvilaDebugModeRef.current = null;
+      getAvilaFurthestDistanceRef.current = null;
     };
   }, [isOpen, onClose, retryKey]);
 
+  // Conmutador del modo depuración unlit rojo (MeshBasicMaterial) para el Ávila
+  const handleToggleAvilaDebug = () => {
+    setIsAvilaDebug((prev) => {
+      const next = !prev;
+      isAvilaDebugRef.current = next;
+      if (setAvilaDebugModeRef.current) {
+        setAvilaDebugModeRef.current(next);
+      }
+      if (rendererRef.current) {
+        rendererRef.current.shadowMap.needsUpdate = true;
+      }
+      return next;
+    });
+  };
+
   // Camera Presets
-  const setCameraPreset = (preset: 'iso' | 'north' | 'south' | 'top') => {
+  const setCameraPreset = (preset: 'iso' | 'north' | 'south' | 'east' | 'west' | 'top') => {
     setCameraView(preset);
     setIsRotating(false);
     controlsStateRef.current.targetLookAtY = 10.5;
 
     if (preset === 'iso') {
-      controlsStateRef.current.targetRotationX = 0.32;
-      controlsStateRef.current.targetRotationY = -0.78;
-      controlsStateRef.current.targetZoom = DEFAULT_ZOOM;
+      controlsStateRef.current.targetRotationX = 0.18;
+      controlsStateRef.current.targetRotationY = -0.38;
+      controlsStateRef.current.targetZoom = 94;
+      controlsStateRef.current.targetLookAtY = 11.5;
     } else if (preset === 'north') {
-      controlsStateRef.current.targetRotationX = 0.04;
-      controlsStateRef.current.targetRotationY = Math.PI;
-      controlsStateRef.current.targetZoom = DEFAULT_ZOOM - 4;
+      // Vista dedicada "ÁVILA": Encuadre frontal-isométrico con la monumental cordillera de El Ávila coronando Residencias Caroní
+      controlsStateRef.current.targetRotationX = 0.14;
+      controlsStateRef.current.targetRotationY = -0.30;
+      controlsStateRef.current.targetZoom = 95;
+      controlsStateRef.current.targetLookAtY = 12.0;
     } else if (preset === 'south') {
-      controlsStateRef.current.targetRotationX = 0.04;
+      controlsStateRef.current.targetRotationX = 0.08;
       controlsStateRef.current.targetRotationY = 0;
-      controlsStateRef.current.targetZoom = DEFAULT_ZOOM - 4;
+      controlsStateRef.current.targetZoom = DEFAULT_ZOOM - 2;
+      controlsStateRef.current.targetLookAtY = 11.0;
+    } else if (preset === 'east') {
+      controlsStateRef.current.targetRotationX = 0.08;
+      controlsStateRef.current.targetRotationY = Math.PI * 0.36;
+      controlsStateRef.current.targetZoom = DEFAULT_ZOOM - 3;
+    } else if (preset === 'west') {
+      controlsStateRef.current.targetRotationX = 0.08;
+      controlsStateRef.current.targetRotationY = -Math.PI * 0.36;
+      controlsStateRef.current.targetZoom = DEFAULT_ZOOM - 3;
     } else if (preset === 'top') {
       controlsStateRef.current.targetRotationX = 1.48;
       controlsStateRef.current.targetRotationY = 0;
@@ -1022,7 +1092,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                   contextMode="building"
                 />
 
-                {/* 3-State Solar Time Simulation Toggle */}
+                {/* 3-State Global Illumination & Solar Time Simulation Toggle */}
                 <div className="flex items-center border border-[#C9A86A]/30 bg-black/60 p-0.5 rounded-full shadow-inner">
                   <button
                     onClick={() => setSolarTimeMode('morning')}
@@ -1031,23 +1101,23 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                         ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
                         : 'text-[#C9C4B5] hover:text-white hover:bg-white/10'
                     }`}
-                    title="10:00 AM · Sol Matutino (Alta claridad y cielo azul)"
+                    title="10:00 AM · Sol Matutino de Caracas (Cielo despejado y luz cenital)"
                   >
                     <Sun className={`w-3 h-3 ${solarTimeMode === 'morning' ? 'text-[#0A0908]' : 'text-[#C9A86A]'}`} />
-                    <span className="hidden xl:inline">10:00 AM</span>
+                    <span className="hidden lg:inline">DÍA</span>
                   </button>
 
                   <button
                     onClick={() => setSolarTimeMode('golden')}
                     className={`font-meta text-[8.5px] sm:text-[9.5px] px-2 sm:px-2.5 py-1 rounded-full transition-colors flex items-center space-x-1 cursor-pointer min-h-[26px] ${
                       solarTimeMode === 'golden'
-                        ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
+                        ? 'bg-[#E59238] text-[#0A0908] font-bold shadow-xs'
                         : 'text-[#C9C4B5] hover:text-white hover:bg-white/10'
                     }`}
-                    title="5:30 PM · Hora Dorada (Ocaso sobre El Ávila y sombras rasantes)"
+                    title="5:45 PM · Hora Dorada — Atardecer en Caracas sobre El Ávila con reflejos cobrizos y sombras rasantes"
                   >
-                    <Sparkles className={`w-3 h-3 ${solarTimeMode === 'golden' ? 'text-[#0A0908]' : 'text-[#C9A86A]'}`} />
-                    <span className="hidden xl:inline">5:30 PM</span>
+                    <Sparkles className={`w-3 h-3 ${solarTimeMode === 'golden' ? 'text-[#0A0908]' : 'text-[#E59238]'}`} />
+                    <span className="hidden sm:inline">HORA DORADA</span>
                   </button>
 
                   <button
@@ -1057,12 +1127,29 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                         ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
                         : 'text-[#C9C4B5] hover:text-white hover:bg-white/10'
                     }`}
-                    title="8:30 PM · Noche de Gala (Iluminación interior cálida habitada)"
+                    title="8:30 PM · Modo Noche (Iluminación arquitectónica cálida y reflejos nocturnos)"
                   >
                     <Moon className={`w-3 h-3 ${solarTimeMode === 'night' ? 'text-[#0A0908]' : 'text-[#C9A86A]'}`} />
-                    <span className="hidden xl:inline">8:30 PM</span>
+                    <span className="hidden lg:inline">NOCHE</span>
                   </button>
                 </div>
+
+                {/* Botón de Depuración Ávila (MeshBasicMaterial rojo unlit) */}
+                <button
+                  onClick={handleToggleAvilaDebug}
+                  className={`font-meta text-[8.5px] sm:text-[9.5px] px-2.5 sm:px-3 py-1 sm:py-1.5 border transition-all flex items-center space-x-1.5 cursor-pointer shadow-xs rounded-full min-h-[28px] ${
+                    isAvilaDebug
+                      ? 'border-red-500 bg-red-600 text-white font-bold ring-2 ring-red-400/60 shadow-lg shadow-red-500/20'
+                      : 'border-red-500/40 bg-red-950/20 text-red-200 hover:bg-red-900/40 hover:text-white'
+                  }`}
+                  title="Depuración Ávila 3D: Conmuta a material unlit rojo (MeshBasicMaterial) para verificar visibilidad y coordenadas del Ávila"
+                >
+                  <span className={`w-2 h-2 rounded-full ${isAvilaDebug ? 'bg-white animate-pulse' : 'bg-red-500'}`} />
+                  <span className="font-semibold">DEBUG ÁVILA</span>
+                  <span className="font-mono text-[8px] opacity-90 font-bold">
+                    [{isAvilaDebug ? 'ROJO' : 'OFF'}]
+                  </span>
+                </button>
 
                 <button
                   onClick={() => setIsFullscreen(!isFullscreen)}
@@ -1124,7 +1211,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                                     : 'text-[#1B1813] hover:text-[#8C7452] hover:bg-[#FAF9F6]'
                                 }`}
                               >
-                                {selectedUnit.typology === 'Jardín' ? 'PLANTA INFERIOR (SOCIAL)' : 'PLANTA PRINCIPAL'}
+                                {selectedUnit.typology === 'Jardín' ? 'PISO 1 · PLANTA BAJA (SOCIAL)' : 'PISO 1 · PLANTA BAJA PH (SOCIAL)'}
                               </button>
                               <button 
                                 onClick={() => setPlanType('Privada')}
@@ -1134,7 +1221,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                                     : 'text-[#1B1813] hover:text-[#8C7452] hover:bg-[#FAF9F6]'
                                 }`}
                               >
-                                {selectedUnit.typology === 'Jardín' ? 'PLANTA SUPERIOR (PRIVADA)' : 'NIVEL DE HABITACIONES'}
+                                {selectedUnit.typology === 'Jardín' ? 'PISO 2 · PLANTA ALTA (PRIVADA)' : 'PISO 2 · PLANTA ALTA PH (PRIVADA)'}
                               </button>
                             </>
                           ) : (
@@ -1235,10 +1322,10 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                         <div className="flex flex-col gap-1">
                           {[
                             { id: 'ALL', label: 'TODOS' },
-                            { id: 'PB', label: 'PB DÚPLEX' },
-                            { id: 'P2', label: 'P2 TIPO' },
-                            { id: 'P3', label: 'P3 TIPO' },
-                            { id: 'MIRADOR', label: 'MIRADORES' },
+                            { id: 'PB', label: 'PB DÚPLEX (2P)' },
+                            { id: 'P2', label: 'P2 TIPO (1P)' },
+                            { id: 'P3', label: 'P3 TIPO (1P)' },
+                            { id: 'MIRADOR', label: 'PH DÚPLEX (2P)' },
                           ].map((f) => (
                             <button
                               key={f.id}
@@ -1268,8 +1355,10 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                         <div className="grid grid-cols-2 gap-1">
                           {[
                             { id: 'iso', label: 'ISOM.' },
-                            { id: 'north', label: 'ÁVILA' },
                             { id: 'south', label: 'FRONTAL' },
+                            { id: 'west', label: 'OESTE' },
+                            { id: 'east', label: 'ESTE' },
+                            { id: 'north', label: 'ÁVILA' },
                             { id: 'top', label: 'PLANTA' },
                           ].map((cam) => (
                             <button
@@ -1290,7 +1379,31 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                       {/* Thin Institutional Divider */}
                       <div className="h-px bg-[#C9A86A]/20" />
 
-                      {/* Section 3: Turntable 360° & Zoom Controls */}
+                      {/* Section: Diagnóstico Visual Ávila 3D */}
+                      <div className="flex flex-col gap-1">
+                        <button
+                          onClick={handleToggleAvilaDebug}
+                          className={`font-meta text-[8px] sm:text-[8.5px] px-2 py-1.5 rounded-xl transition-all flex items-center justify-between cursor-pointer min-h-[28px] ${
+                            isAvilaDebug
+                              ? 'bg-red-600 text-white font-bold ring-2 ring-red-400/80 shadow-md animate-pulse'
+                              : 'bg-black/30 text-[#C9C4B5] border border-red-500/30 hover:border-red-500 hover:text-white'
+                          }`}
+                          title="Alternar material unlit básico rojo (MeshBasicMaterial) en la geometría del Ávila para diagnóstico visual"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full ${isAvilaDebug ? 'bg-white' : 'bg-red-500'}`} />
+                            DEBUG ÁVILA
+                          </span>
+                          <span className="font-mono text-[7.5px] uppercase font-bold">
+                            {isAvilaDebug ? 'ROJO' : 'OFF'}
+                          </span>
+                        </button>
+                      </div>
+
+                      {/* Thin Institutional Divider */}
+                      <div className="h-px bg-[#C9A86A]/20" />
+
+                      {/* Section 4: Turntable 360° & Zoom Controls */}
                       <div className="flex flex-col gap-1.5">
                         <button
                           onClick={() => setIsRotating(!isRotating)}

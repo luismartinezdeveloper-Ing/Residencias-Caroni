@@ -1,5 +1,5 @@
 /* Residencias Caroní - Service Worker for Offline Consultation */
-const CACHE_NAME = 'caroni-pwa-v5';
+const CACHE_NAME = 'caroni-pwa-v6';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',

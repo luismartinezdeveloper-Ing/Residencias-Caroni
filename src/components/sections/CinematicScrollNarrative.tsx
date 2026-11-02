@@ -15,8 +15,8 @@ import {
  * Desarrollo & Experiencia Interactiva: Ing. Luis Martinez (luismartinez.developer@gmail.com)
  */
 
-const MASTER_FILM_SRC = getMediaAssetUrl('/videos/residencias_caroni_master_film.mp4');
-const MASTER_FILM_POSTER = getMediaAssetUrl('/videos/residencias_caroni_master_film_poster.jpg');
+const MASTER_FILM_SRC = getMediaAssetUrl('/videos/residencias_caroni_master_film.mp4?v=residencias_caroni_hero_v4');
+const MASTER_FILM_POSTER = getMediaAssetUrl('/videos/residencias_caroni_master_film_poster.jpg?v=residencias_caroni_hero_v4');
 
 interface CinematicScrollNarrativeProps {
   onOpen3DModal?: () => void;
@@ -37,12 +37,34 @@ interface CinematicScrollNarrativeProps {
     const audioCtxRef = useRef<AudioContext | null>(null);
     const gainNodeRef = useRef<GainNode | null>(null);
 
-    // Precarga preventiva en memoria de GPU
+    // Precarga preventiva y arranque confiable de reproducción automática en navegadores modernos
     useEffect(() => {
       const vid = videoRef.current;
-      if (vid) {
+      if (!vid) return;
+
+      vid.defaultMuted = true;
+      vid.muted = true;
+
+      const attemptPlay = () => {
+        vid.play().then(() => {
+          setIsPlaying(true);
+          onVideoPlay?.();
+        }).catch(() => {
+          // Si el navegador aún espera buffer o interacción, mantenemos el estado sincronizado
+          setIsPlaying(!vid.paused);
+        });
+      };
+
+      if (vid.readyState >= 2) {
+        attemptPlay();
+      } else {
+        vid.addEventListener('canplay', attemptPlay, { once: true });
         vid.load();
       }
+
+      return () => {
+        vid.removeEventListener('canplay', attemptPlay);
+      };
     }, []);
 
     // Audio Toggle: activa el audio nativo del video o la atmósfera ambiental
@@ -159,10 +181,12 @@ interface CinematicScrollNarrativeProps {
         <div className="relative w-full aspect-video bg-[#070706] overflow-hidden select-none">
           {/* Master Film 1920x1080 a Ancho Completo */}
           <video
+            key={MASTER_FILM_SRC}
             ref={videoRef}
             src={MASTER_FILM_SRC}
             poster={MASTER_FILM_POSTER}
             autoPlay
+            loop
             muted={!isAudioActive}
             playsInline
             preload="auto"
