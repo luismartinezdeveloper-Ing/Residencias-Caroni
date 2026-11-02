@@ -28,13 +28,13 @@ describe('Gallery Data Model & Assets Integrity', () => {
     const norteImages = pbNorteItems.map((i) => i.image);
     expect(norteImages.some((img) => img?.includes('01_PB_Norte_Terraza.jpeg'))).toBe(true);
     expect(norteImages.some((img) => img?.includes('02_PB_Norte_Salon.jpeg'))).toBe(true);
-    expect(norteImages.some((img) => img?.includes('03_PB_Norte_Cocina.jpg.jpeg'))).toBe(true);
+    expect(norteImages.some((img) => img?.includes('03_PB_Norte_Cocina.jpeg'))).toBe(true);
 
     // Salón, terraza y cocina de PB Sur
     const surImages = pbSurItems.map((i) => i.image);
     expect(surImages.some((img) => img?.includes('04_PB_Sur_Terraza.jpeg'))).toBe(true);
     expect(surImages.some((img) => img?.includes('05_PB_Sur_Salon.jpeg'))).toBe(true);
-    expect(surImages.some((img) => img?.includes('06_PB_Sur_Cocina.jpg.jpeg'))).toBe(true);
+    expect(surImages.some((img) => img?.includes('06_PB_Sur_Cocina.jpeg'))).toBe(true);
   });
 
   it('cada elemento de la galería debe contar con ficha técnica estructurada', () => {

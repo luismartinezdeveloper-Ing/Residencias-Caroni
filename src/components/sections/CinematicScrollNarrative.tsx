@@ -15,8 +15,8 @@ import {
  * Desarrollo & Experiencia Interactiva: Ing. Luis Martinez (luismartinez.developer@gmail.com)
  */
 
-const MASTER_FILM_SRC = getMediaAssetUrl('/videos/residencias_caroni_master_film.mp4?v=residencias_caroni_hero_v4');
-const MASTER_FILM_POSTER = getMediaAssetUrl('/videos/residencias_caroni_master_film_poster.jpg?v=residencias_caroni_hero_v4');
+const MASTER_FILM_SRC = getMediaAssetUrl('/videos/residencias_caroni_master_film.mp4?v=residencias_caroni_hero_v6');
+const MASTER_FILM_POSTER = getMediaAssetUrl('/videos/residencias_caroni_master_film_poster.jpg?v=residencias_caroni_hero_v6');
 
 interface CinematicScrollNarrativeProps {
   onOpen3DModal?: () => void;
@@ -193,7 +193,7 @@ interface CinematicScrollNarrativeProps {
             onEnded={handleVideoEnded}
             onPlay={handleVideoPlay}
             onPause={() => setIsPlaying(false)}
-            className="w-full h-full object-cover object-center will-change-transform block"
+            className="w-full h-full object-cover object-center block"
           />
 
           {/* Sutil viñeta inferior para fundir de forma elegante con la sección siguiente */}

@@ -8,6 +8,7 @@ import { startLeadSyncWorker } from "./src/services/leadSyncWorker";
 import { authRouter } from "./server/routes/authRoutes";
 import { createLeadRouter } from "./server/routes/leadRoutes";
 import { chatRouter } from "./server/routes/chatRoutes";
+import { createHealthRouter } from "./server/routes/healthRoutes";
 import { ttsRouter } from "./server/routes/ttsRoutes";
 import { setupLiveVoiceWebSocket } from "./server/websocket/liveVoiceHandler";
 
@@ -16,8 +17,8 @@ dotenv.config();
 async function startServer() {
   const app = express();
   const server = http.createServer(app);
-  // Dev server and backend must run on port 3000 (port 8080 is reserved by Nginx reverse proxy)
-  const PORT = 3000;
+  // Dynamic port for Cloud Run, Railway, Render or fallback to 3000
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   // Trust proxy for secure HTTPS detection in Cloud Run / Reverse Proxies
   app.set('trust proxy', 1);
@@ -31,12 +32,26 @@ async function startServer() {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' ws: wss: https:;"
+    );
     
     if (process.env.NODE_ENV === 'production' || req.secure || req.headers['x-forwarded-proto'] === 'https') {
       res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
     }
     next();
   });
+
+
+  // Production security fail-fast: prevent running in production with insecure fallback secret
+  if (process.env.NODE_ENV === 'production') {
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret || jwtSecret.includes('caroni_dev_jwt_secret')) {
+      console.error('[SECURITY CRITICAL] Servidor bloqueado: JWT_SECRET no configurado o inseguro en producción.');
+      process.exit(1);
+    }
+  }
 
   app.use(express.json());
 

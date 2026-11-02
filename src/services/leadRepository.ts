@@ -1,7 +1,8 @@
 /**
  * Repositorio Desacoplado y Transaccional de Leads & Acreditaciones
  * Residencias Caroní · Altamira, Caracas
- * Ingeniería de Software: Ing. Luis Martinez
+ * Arquitectura: Añil Arquitectura — Arq. Juan Carlos Láncara
+ * Ingeniería de Software: Ing. Luis Martinez (luismartinez.developer@gmail.com)
  */
 
 import fs from 'fs';
@@ -21,6 +22,8 @@ export interface LeadRecord {
   ip: string;
   syncedGSheets?: boolean;
   syncedCrm?: boolean;
+  quarantineStatus?: 'DLQ_MAX_RETRIES' | 'VALIDATION_FAILED';
+  quarantineReason?: string;
 }
 
 export interface ILeadRepository {
@@ -28,13 +31,18 @@ export interface ILeadRepository {
   getAllLeads(): Promise<LeadRecord[]>;
   getUnsyncedLeads(): Promise<LeadRecord[]>;
   markSynced(leadId: string, target: 'gsheets' | 'crm'): Promise<void>;
+  markQuarantine?(leadId: string, reason: string): Promise<void>;
+  getQuarantineLeads?(): Promise<LeadRecord[]>;
 }
+
+export type LeadRepository = ILeadRepository;
 
 export class JsonFileLeadRepository implements ILeadRepository {
   private filePath: string;
   private memoryCache: LeadRecord[] = [];
   private isInitialized = false;
   private maxStoredLeads: number;
+  private writeQueue: Promise<void> = Promise.resolve();
 
   constructor(filePath?: string, maxStoredLeads: number = 1000) {
     this.filePath = filePath || path.join(process.cwd(), 'data', 'leads_store.json');
@@ -65,18 +73,52 @@ export class JsonFileLeadRepository implements ILeadRepository {
     this.isInitialized = true;
   }
 
-  private persistToDisk() {
-    try {
-      const dir = path.dirname(this.filePath);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+  /**
+   * Cola de escritura asíncrona secuencial (Async Mutex).
+   * Elimina colisiones de archivo temporal (EPERM en Windows) y evita el bloqueo del Event Loop.
+   */
+  private async persistToDisk(): Promise<void> {
+    this.writeQueue = this.writeQueue.then(async () => {
+      try {
+        const dir = path.dirname(this.filePath);
+        if (!fs.existsSync(dir)) {
+          await fs.promises.mkdir(dir, { recursive: true });
+        }
+
+        const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        const tmpPath = `${this.filePath}.tmp.${uniqueSuffix}`;
+        const payload = JSON.stringify(this.memoryCache, null, 2);
+
+        await fs.promises.writeFile(tmpPath, payload, 'utf-8');
+
+        // Mecanismo de reintento atómico para evitar bloqueos breves de indexadores o antivirus en Windows
+        let retries = 3;
+        while (retries > 0) {
+          try {
+            await fs.promises.rename(tmpPath, this.filePath);
+            break;
+          } catch (renameErr) {
+            retries--;
+            if (retries === 0) {
+              await fs.promises.writeFile(this.filePath, payload, 'utf-8');
+              try {
+                await fs.promises.unlink(tmpPath);
+              } catch {
+                // Silencioso en caso de limpieza de temporal
+              }
+              break;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 20 * (4 - retries)));
+          }
+        }
+      } catch (err) {
+        console.warn('[LeadRepository] Fallo al persistir en disco (posible entorno de solo lectura):', err);
       }
-      const tmpPath = `${this.filePath}.tmp.${Date.now()}`;
-      fs.writeFileSync(tmpPath, JSON.stringify(this.memoryCache, null, 2), 'utf-8');
-      fs.renameSync(tmpPath, this.filePath);
-    } catch (err) {
-      console.warn('[LeadRepository] Fallo al persistir en disco (posible entorno de solo lectura):', err);
-    }
+    }).catch((err) => {
+      console.error('[LeadRepository] Error en cola de persistencia:', err);
+    });
+
+    return this.writeQueue;
   }
 
   public async saveLead(lead: LeadRecord): Promise<void> {
@@ -92,7 +134,7 @@ export class JsonFileLeadRepository implements ILeadRepository {
       this.memoryCache.push(lead);
     }
 
-    this.persistToDisk();
+    await this.persistToDisk();
   }
 
   public async getAllLeads(): Promise<LeadRecord[]> {
@@ -103,7 +145,9 @@ export class JsonFileLeadRepository implements ILeadRepository {
   public async getUnsyncedLeads(): Promise<LeadRecord[]> {
     this.ensureInitialized();
     return this.memoryCache.filter(
-      (lead) => lead.syncedGSheets === false || lead.syncedCrm === false
+      (lead) =>
+        (lead.syncedGSheets === false || lead.syncedCrm === false) &&
+        lead.quarantineStatus === undefined
     );
   }
 
@@ -113,7 +157,22 @@ export class JsonFileLeadRepository implements ILeadRepository {
     if (lead) {
       if (target === 'gsheets') lead.syncedGSheets = true;
       if (target === 'crm') lead.syncedCrm = true;
-      this.persistToDisk();
+      await this.persistToDisk();
     }
+  }
+
+  public async markQuarantine(leadId: string, reason: string): Promise<void> {
+    this.ensureInitialized();
+    const lead = this.memoryCache.find((item) => item.id === leadId);
+    if (lead) {
+      lead.quarantineStatus = 'DLQ_MAX_RETRIES';
+      lead.quarantineReason = reason;
+      await this.persistToDisk();
+    }
+  }
+
+  public async getQuarantineLeads(): Promise<LeadRecord[]> {
+    this.ensureInitialized();
+    return this.memoryCache.filter((lead) => lead.quarantineStatus !== undefined);
   }
 }

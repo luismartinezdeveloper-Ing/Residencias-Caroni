@@ -1449,15 +1449,21 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                   <div className={`absolute bottom-4 right-4 z-40 pointer-events-auto transition-opacity duration-300 ${(viewMode !== 'assembled' && viewMode !== 'exploded') || isChatOpen ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
                     <button
                       onClick={() => setIsChatOpen(true)}
-                      className="bg-[#1B1813] hover:bg-[#8C7452] text-[#EFEBE0] shadow-[0_10px_30px_rgba(27,24,19,0.3)] border border-[#8C7452]/50 rounded-2xl px-3 sm:px-4 py-2.5 flex items-center gap-2 sm:gap-3 transition-all cursor-pointer group hover:scale-105 active:scale-95"
+                      className="bg-white/85 backdrop-blur-2xl hover:bg-white text-[#1B1813] shadow-[0_12px_36px_rgba(27,24,19,0.15)] border border-white/80 rounded-full px-3.5 sm:px-4 py-2 flex items-center gap-2.5 sm:gap-3 transition-all cursor-pointer group hover:scale-102 active:scale-98"
                       title="Abrir Chatbot / Agente IA con el contexto de este piso"
                     >
-                      <div className="bg-[#8C7452] p-1.5 rounded-full shadow-inner">
-                        <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#1B1813]" />
+                      <div className="w-7 h-7 rounded-full bg-white shadow-[0_2px_6px_rgba(0,0,0,0.06)] border border-black/[0.04] flex items-center justify-center shrink-0">
+                        <MessageSquare className="w-3.5 h-3.5 text-[#8C7452]" />
                       </div>
-                      <div className="flex flex-col text-left leading-none">
-                        <span className="font-meta text-[8px] sm:text-[9px] tracking-wider text-[#C9C4B5] mb-0.5 uppercase">Consultar Asesor IA</span>
-                        <span className="font-display text-[10px] sm:text-xs font-semibold text-white tracking-wide truncate max-w-[120px] sm:max-w-[180px]">Analizar {selectedUnit.level}</span>
+                      <div className="flex flex-col text-left leading-tight pr-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-display font-semibold text-xs text-[#1B1813]">Asesor</span>
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                          </span>
+                        </div>
+                        <span className="font-meta text-[8.5px] text-[#8C8678] tracking-wider uppercase truncate max-w-[130px]">{selectedUnit.level}</span>
                       </div>
                     </button>
                   </div>

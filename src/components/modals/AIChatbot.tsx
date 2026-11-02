@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Sparkles,
   X,
   Send,
   Loader2,
@@ -21,7 +20,7 @@ import {
 interface AIChatbotProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedUnit: UnitData;
+  selectedUnit?: UnitData;
 }
 
 interface Message {
@@ -30,12 +29,7 @@ interface Message {
   content: string;
 }
 
-const QUICK_PROMPTS = [
-  '¿Cuál es el precio y plan de pago?',
-  '¿Cuáles son los acabados de autor?',
-  'Ver metraje y distribución espacial',
-  '¿Cómo coordino una visita privada?',
-];
+
 
 export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedUnit }) => {
   const { isMobile } = useResponsiveChat();
@@ -49,30 +43,37 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatAbortControllerRef = useRef<AbortController | null>(null);
 
-  // Format unit context for the AI using official financial calculations
-  const getUnitContext = () => {
-    const defaultPrice = getDefaultPricePerM2(selectedUnit.typology);
-    const totals = calculateInvestmentTotals(selectedUnit.totalArea, defaultPrice);
-
-    return `
-      Residencias Caroní · Altamira, Caracas
-      Unidad: ${selectedUnit.name}
+  // General project and architectural context for the AI
+  const getProjectContext = () => {
+    let unitDetails = '';
+    if (selectedUnit) {
+      const defaultPrice = getDefaultPricePerM2(selectedUnit.typology);
+      const totals = calculateInvestmentTotals(selectedUnit.totalArea, defaultPrice);
+      unitDetails = `
+      Unidad en foco actual: ${selectedUnit.name}
       Nivel: ${selectedUnit.level}
       Tipo: ${selectedUnit.typology}
-      Área Total: ${selectedUnit.totalArea} m²
-      Área Interior: ${selectedUnit.interiorArea} m²
-      Terraza: ${selectedUnit.terraceArea} m²
-      Habitaciones: ${selectedUnit.rooms} (todas en suite)
-      Puestos de Estacionamiento: ${selectedUnit.parkingSpots}
-      Maleteros: ${selectedUnit.storageUnits}
-      Precio Referencial: ${formatUsdCurrency(totals.totalValueUsd)} (a $${totals.pricePerM2}/m²)
-      Señal de Reserva en Escrow (10%): ${formatUsdCurrency(totals.reserveDepositUsd)}
+      Área Total: ${selectedUnit.totalArea} m² (Interior: ${selectedUnit.interiorArea} m², Terraza: ${selectedUnit.terraceArea} m²)
+      Habitaciones: ${selectedUnit.rooms} (todas en suite) | Puestos: ${selectedUnit.parkingSpots} | Maleteros: ${selectedUnit.storageUnits}
+      Precio referencial: ${formatUsdCurrency(totals.totalValueUsd)} (a $${totals.pricePerM2}/m²)
+      Señal de Reserva Escrow (10%): ${formatUsdCurrency(totals.reserveDepositUsd)}
       Distribución: ${selectedUnit.roomList.join(', ')}
-      Atributo Distintivo: "${selectedUnit.distinctiveAttribute}"
+      `;
+    }
+
+    return `
+      Proyecto: Residencias Caroní · Altamira, Caracas
+      Desarrollo y Arquitectura: Añil Arquitectura — Arq. Juan Carlos Láncara
+      Ingeniería de Software & Experiencia Interactiva: Ing. Luis Martinez (luismartinez.developer@gmail.com)
+      Ubicación: Transversal 8, entre 2da y 3ra Avenida, Altamira, Chacao, Caracas, Venezuela
+      Descripción: 8 exclusivas residencias de autor al pie del Parque Nacional El Ávila (PB Norte, PB Sur, Nivel 1 Norte, Nivel 1 Sur, Nivel 2 Norte, Nivel 2 Sur, Penthouse Norte, Penthouse Sur).
+      Acabados de autor: Piedras naturales, carpintería a medida, ventanales de suelo a techo con doble acristalamiento acústico y térmico, elevador privado directo a cada residencia, domótica integral.
+      Seguridad y amenidades: Vigilancia privada 24/7, control de acceso biométrico, pozo de agua profundo de caudal continuo, planta eléctrica 100% de respaldo, estacionamiento subterráneo privado con puntos para vehículos eléctricos.
+      ${unitDetails}
     `;
   };
 
-  // Handle modal close / open lifecycle
+  // Handle modal lifecycle
   useEffect(() => {
     if (!isOpen) {
       if (chatAbortControllerRef.current) {
@@ -84,18 +85,18 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
     }
   }, [isOpen]);
 
-  // Initial welcome message
+  // Initial welcome message (Apple-style clean greeting, short and precise)
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       setMessages([
         {
           id: 'welcome',
           role: 'assistant',
-          content: `¡Bienvenido a Residencias Caroní! Soy tu Asesor Virtual. Estoy analizando la ${selectedUnit.name} (${selectedUnit.totalArea} m² en ${selectedUnit.level}). ¿En qué puedo asistirte hoy sobre precios, acabados de autor, arquitectura o agenda de visita privada?`,
+          content: '¡Bienvenido a Residencias Caroní! Soy su Asesor. Estoy a su disposición para brindarle información sobre las 8 exclusivas residencias de autor, cotas técnicas, acabados de alta gama, simulación financiera o coordinar una visita privada. ¿En qué puedo orientarle hoy?',
         },
       ]);
     }
-  }, [isOpen, selectedUnit, messages.length]);
+  }, [isOpen, messages.length]);
 
   // Auto-scroll chat messages
   useEffect(() => {
@@ -107,7 +108,6 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
     const cleanText = textToSend.trim();
     if (!cleanText || isLoadingText) return;
 
-    // Cancel any ongoing fetch request
     if (chatAbortControllerRef.current) {
       chatAbortControllerRef.current.abort();
     }
@@ -132,13 +132,13 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
         signal: abortController.signal,
         body: JSON.stringify({
           history: newMessages,
-          context: getUnitContext(),
+          context: getProjectContext(),
         }),
       });
 
       if (!response.ok) {
         const errData = await response.json().catch(() => null);
-        throw new Error(errData?.error || 'Error al conectar con el asistente.');
+        throw new Error(errData?.error || 'Error al conectar con el asesor.');
       }
       if (!response.body) throw new Error('No stream available');
 
@@ -193,7 +193,7 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
       const friendlyMsg =
         err?.message && !err.message.includes('object')
           ? err.message
-          : 'Disculpa, no pude procesar la consulta en este instante. Por favor intenta nuevamente.';
+          : 'Disculpe, ocurrió una interrupción momentánea. Por favor intente nuevamente o solicite contacto directo con el equipo comercial.';
       setMessages((prev) => [
         ...prev,
         {
@@ -219,14 +219,14 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
     <AnimatePresence>
       {isOpen && (
         isMinimized ? (
-          /* Minimized Compact Floating Capsule */
+          /* Apple-style Minimized Floating Capsule */
           <motion.div
             key="minimized-advisor-pill"
-            initial={{ opacity: 0, y: 15, scale: 0.92 }}
+            initial={{ opacity: 0, y: 15, scale: 0.94 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 15, scale: 0.92 }}
+            exit={{ opacity: 0, y: 15, scale: 0.94 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`fixed z-[999999] pointer-events-auto bg-[#1B1813] text-[#FAF9F6] border border-[#C9A86A]/40 shadow-[0_12px_36px_rgba(27,24,19,0.5)] rounded-2xl p-2 sm:px-3.5 sm:py-2 flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 transition-all ${
+            className={`fixed z-[999999] pointer-events-auto bg-white/85 backdrop-blur-2xl text-[#1B1813] border border-white/80 shadow-[0_16px_40px_rgba(27,24,19,0.12),0_1px_3px_rgba(0,0,0,0.05)] rounded-full p-2 sm:px-4 sm:py-2.5 flex items-center justify-between sm:justify-start gap-3 transition-all ${
               isMobile
                 ? 'bottom-[max(env(safe-area-inset-bottom),0.75rem)] inset-x-3'
                 : 'bottom-5 right-5'
@@ -234,117 +234,122 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
           >
             <div
               onClick={() => setIsMinimized(false)}
-              className="flex items-center gap-2.5 cursor-pointer hover:opacity-90 transition-opacity min-w-0"
-              title="Expandir Asistente Virtual"
+              className="flex items-center gap-2.5 cursor-pointer hover:opacity-80 transition-opacity min-w-0"
+              title="Abrir Asesor"
             >
-              <div className="w-7 h-7 rounded-full bg-[#8C7452] flex items-center justify-center shadow-inner shrink-0">
-                <MessageSquare className="w-3.5 h-3.5 text-[#FAF9F6]" />
+              <div className="w-8 h-8 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-black/[0.04] flex items-center justify-center shrink-0">
+                <MessageSquare className="w-4 h-4 text-[#8C7452]" />
               </div>
               <div className="flex flex-col text-left min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-display font-semibold text-xs text-[#FAF9F6]">
-                    Asistente Virtual
+                <div className="flex items-center gap-2">
+                  <span className="font-display font-semibold text-xs sm:text-sm text-[#1B1813]">
+                    Asesor
                   </span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  {/* Apple-style pulsing indicator dot */}
+                  <span className="relative flex h-1.5 w-1.5" title="En línea">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                  </span>
                 </div>
-                <span className="font-meta text-[8.5px] text-[#C9C4B5] tracking-wider uppercase truncate max-w-[140px] sm:max-w-[180px]">
-                  {selectedUnit.name} · Tocar para abrir
+                <span className="font-meta text-[9px] text-[#8C8678] tracking-wider uppercase truncate max-w-[150px] sm:max-w-[200px]">
+                  Residencias Caroní · Abrir
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1 pl-2 border-l border-white/10 shrink-0">
+            <div className="flex items-center gap-1.5 pl-2 border-l border-black/[0.08] shrink-0">
               <button
                 onClick={() => setIsMinimized(false)}
-                className="bg-white/10 text-[#FAF9F6] hover:bg-white/20 p-1.5 rounded-lg transition-colors cursor-pointer"
-                title="Maximizar Asistente"
-                aria-label="Maximizar Asistente"
+                className="w-7 h-7 rounded-full bg-black/[0.04] hover:bg-black/[0.08] text-[#5A554A] hover:text-[#1B1813] flex items-center justify-center transition-all cursor-pointer"
+                title="Maximizar"
+                aria-label="Maximizar Asesor"
               >
                 <Maximize2 className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={onClose}
-                className="bg-white/10 text-[#FAF9F6] hover:bg-rose-600 hover:text-white p-1.5 rounded-lg transition-colors cursor-pointer"
-                title="Cerrar Asistente"
-                aria-label="Cerrar Asistente"
+                className="w-7 h-7 rounded-full bg-black/[0.04] hover:bg-rose-500 hover:text-white text-[#5A554A] flex items-center justify-center transition-all cursor-pointer"
+                title="Cerrar"
+                aria-label="Cerrar Asesor"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </motion.div>
         ) : (
-          /* Full Expanded Luxury Chat Assistant Modal */
+          /* Apple-style Translucent White Glass Modal */
           <motion.div
             key="expanded-advisor-modal"
             initial={{ opacity: 0, y: 20, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.96 }}
             transition={{ type: 'spring', damping: 26, stiffness: 220 }}
-            className={`fixed z-[999999] pointer-events-auto flex flex-col bg-[#FAF9F6] backdrop-blur-2xl shadow-[0_25px_60px_rgba(27,24,19,0.35)] overflow-hidden transition-all ${
+            className={`fixed z-[999999] pointer-events-auto flex flex-col bg-white/80 backdrop-blur-3xl shadow-[0_24px_60px_rgba(27,24,19,0.12),0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden transition-all ${
               isMobile
                 ? 'inset-0 w-full h-[100dvh] max-h-[100dvh] rounded-none border-none'
-                : 'bottom-5 right-5 w-[420px] max-w-[calc(100vw-32px)] h-[min(570px,calc(100dvh-40px))] max-h-[90dvh] border border-[#8C7452]/40 rounded-3xl'
+                : 'bottom-5 right-5 w-[420px] max-w-[calc(100vw-32px)] h-[min(590px,calc(100dvh-40px))] max-h-[90dvh] border border-white/70 rounded-3xl'
             }`}
           >
-            {/* Institutional Top Header */}
+            {/* Apple Frosted Glass Header */}
             <div
-              className={`bg-[#1B1813] text-[#FAF9F6] px-4 py-3 flex items-center justify-between shrink-0 border-b border-[#8C7452]/40 shadow-sm sticky top-0 z-30 ${
-                isMobile ? 'pt-[max(env(safe-area-inset-top),0.75rem)]' : ''
+              className={`bg-white/70 backdrop-blur-2xl px-4 sm:px-5 py-3.5 flex items-center justify-between shrink-0 border-b border-black/[0.05] sticky top-0 z-30 ${
+                isMobile ? 'pt-[max(env(safe-area-inset-top),0.85rem)]' : ''
               }`}
             >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#8C7452] to-[#6E5A3E] flex items-center justify-center shadow-inner shrink-0 border border-[#C9A86A]/40">
-                  <MessageSquare className="w-4 h-4 text-[#FAF9F6]" />
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-full bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-black/[0.04] flex items-center justify-center shrink-0">
+                  <MessageSquare className="w-4 h-4 text-[#8C7452]" />
                 </div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="font-display font-semibold text-xs sm:text-sm tracking-wide text-[#FAF9F6] truncate">
-                      Asistente Virtual
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-display font-semibold text-sm sm:text-base tracking-tight text-[#1B1813] truncate">
+                      Asesor
                     </h3>
-                    <span className="flex items-center gap-1 font-mono text-[8px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.2 rounded font-bold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      EN LÍNEA
+                    {/* Pure minimal online indicator dot */}
+                    <span className="relative flex h-1.5 w-1.5 shrink-0" title="En línea">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
                     </span>
                   </div>
-                  <p className="font-meta text-[8.5px] sm:text-[9px] text-[#C9C4B5] tracking-wider uppercase opacity-90 truncate">
-                    {selectedUnit.name} · {selectedUnit.level}
+                  <p className="font-meta text-[9.5px] text-[#8C8678] tracking-widest uppercase truncate">
+                    Residencias Caroní · Altamira
                   </p>
                 </div>
               </div>
 
-              {/* Header Right Actions: Minimize + Close */}
+              {/* Minimalist Controls */}
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   onClick={() => setIsMinimized(true)}
-                  className="bg-white/10 hover:bg-white/20 text-[#FAF9F6] min-w-[34px] min-h-[34px] p-1.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
-                  title="Minimizar Asistente"
-                  aria-label="Minimizar Asistente"
+                  className="w-8 h-8 rounded-full bg-black/[0.04] hover:bg-black/[0.08] text-[#5A554A] hover:text-[#1B1813] flex items-center justify-center transition-all cursor-pointer"
+                  title="Minimizar"
+                  aria-label="Minimizar Asesor"
                 >
-                  <Minus className="w-4 h-4" />
+                  <Minus className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={onClose}
-                  className="bg-white/10 hover:bg-rose-600 hover:text-white text-[#FAF9F6] min-w-[34px] min-h-[34px] p-1.5 rounded-lg transition-colors cursor-pointer shadow-sm flex items-center justify-center"
-                  title="Cerrar Asistente"
-                  aria-label="Cerrar Asistente"
+                  className="w-8 h-8 rounded-full bg-black/[0.04] hover:bg-rose-500 hover:text-white text-[#5A554A] flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+                  title="Cerrar"
+                  aria-label="Cerrar Asesor"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
-            {/* Message List */}
-            <div className="flex-1 min-h-0 px-3.5 py-3.5 overflow-y-auto space-y-3 bg-[#FAF8F5]/80 scrollbar-thin">
+            {/* Apple-style Translucent Message Stream */}
+            <div className="flex-1 min-h-0 px-4 py-4 overflow-y-auto space-y-3.5 bg-gradient-to-b from-white/30 via-[#FAF9F6]/50 to-white/60 scrollbar-thin">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 shadow-xs text-xs sm:text-[13px] whitespace-pre-wrap leading-relaxed ${
+                    className={`max-w-[85%] px-4 py-3 text-xs sm:text-[13px] leading-relaxed whitespace-pre-wrap font-sans transition-all ${
                       msg.role === 'user'
-                        ? 'bg-[#1B1813] text-[#FAF9F6] rounded-br-none border border-[#C9A86A]/30 font-sans'
-                        : 'bg-white/95 backdrop-blur-md border border-[#8C7452]/25 text-[#1B1813] rounded-bl-none font-serif shadow-[0_2px_12px_rgba(27,24,19,0.04)]'
+                        ? 'bg-[#1B1813] text-[#FAF9F6] rounded-2xl rounded-tr-xs shadow-[0_2px_8px_rgba(27,24,19,0.12)]'
+                        : 'bg-white/95 backdrop-blur-md border border-black/[0.05] text-[#1B1813] rounded-2xl rounded-tl-xs shadow-[0_2px_12px_rgba(0,0,0,0.03)]'
                     }`}
                   >
                     {msg.content}
@@ -354,10 +359,10 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
 
               {isLoadingText && (
                 <div className="flex justify-start">
-                  <div className="bg-white/95 backdrop-blur-md border border-[#8C7452]/25 rounded-2xl rounded-bl-none px-3.5 py-2.5 shadow-xs flex items-center gap-2">
+                  <div className="bg-white/90 backdrop-blur-md border border-black/[0.05] rounded-2xl rounded-tl-xs px-4 py-2.5 shadow-2xs flex items-center gap-2.5">
                     <Loader2 className="w-3.5 h-3.5 text-[#8C7452] animate-spin" />
                     <span className="text-[10px] sm:text-xs text-[#8C8678] font-meta uppercase tracking-wider">
-                      Consultando información...
+                      Escribiendo respuesta...
                     </span>
                   </div>
                 </div>
@@ -365,29 +370,12 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Quick Inquiry Prompts Chips */}
-            <div className="px-3 py-2 bg-[#F4F1EA]/80 border-t border-[#8C7452]/15 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
-              <span className="text-[8px] font-mono text-[#8C7452] uppercase font-bold shrink-0 flex items-center gap-1 pl-1">
-                <Sparkles className="w-2.5 h-2.5" />
-                SUGERENCIAS:
-              </span>
-              {QUICK_PROMPTS.map((prompt, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => executeSendMessage(prompt)}
-                  disabled={isLoadingText}
-                  className="font-meta text-[9px] uppercase tracking-wider whitespace-nowrap px-2.5 py-1 rounded-full bg-white hover:bg-[#8C7452] text-[#5A554A] hover:text-white border border-[#8C7452]/30 shadow-2xs transition-all cursor-pointer shrink-0 disabled:opacity-40"
-                >
-                  {prompt}
-                </button>
-              ))}
-            </div>
 
-            {/* Chat Input Field */}
+
+            {/* Apple-style Frosted Input Dock */}
             <form
               onSubmit={handleFormSubmit}
-              className={`p-3 bg-white border-t border-[#8C7452]/20 shrink-0 shadow-sm sticky bottom-0 z-30 ${
+              className={`p-3.5 bg-white/70 backdrop-blur-2xl border-t border-black/[0.05] shrink-0 sticky bottom-0 z-30 ${
                 isMobile ? 'pb-[max(env(safe-area-inset-bottom),0.85rem)]' : ''
               }`}
             >
@@ -396,16 +384,16 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Escribe tu consulta sobre Residencias Caroní..."
-                  className="w-full bg-[#FAF9F6] border border-[#8C7452]/40 focus:border-[#8C7452] focus:ring-1 focus:ring-[#8C7452]/30 rounded-xl pl-3.5 pr-11 py-2.5 text-xs sm:text-sm text-[#1B1813] placeholder-[#8C8678] outline-none transition-all shadow-inner"
+                  placeholder="Escriba su consulta sobre Residencias Caroní..."
+                  className="w-full bg-white/90 border border-black/[0.08] focus:border-[#8C7452] focus:ring-2 focus:ring-[#8C7452]/10 rounded-full pl-4 pr-12 py-2.5 text-xs sm:text-sm text-[#1B1813] placeholder-[#8C8678] outline-none transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]"
                   disabled={isLoadingText}
                 />
                 <button
                   type="submit"
                   disabled={!inputValue.trim() || isLoadingText}
-                  className="absolute right-1.5 p-2 bg-[#1B1813] text-[#FAF9F6] hover:bg-[#8C7452] disabled:bg-[#C9C4B5]/60 disabled:text-[#8C8678] rounded-lg transition-all cursor-pointer shadow-xs active:scale-95"
-                  title="Enviar mensaje"
-                  aria-label="Enviar mensaje"
+                  className="absolute right-1.5 w-8 h-8 rounded-full bg-[#1B1813] hover:bg-[#8C7452] text-white disabled:bg-black/10 disabled:text-black/30 flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95"
+                  title="Enviar consulta"
+                  aria-label="Enviar consulta"
                 >
                   <Send className="w-3.5 h-3.5" />
                 </button>

@@ -1,7 +1,8 @@
 /**
  * Worker Autónomo de Sincronización y Recuperación de Leads
  * Residencias Caroní · Altamira, Caracas
- * Ingeniería de Software: Ing. Luis Martinez
+ * Arquitectura: Añil Arquitectura — Arq. Juan Carlos Láncara
+ * Ingeniería de Software: Ing. Luis Martinez (luismartinez.developer@gmail.com)
  */
 
 import { ILeadRepository, LeadRecord } from './leadRepository';
@@ -46,9 +47,10 @@ export async function syncPendingLeads(repo: ILeadRepository): Promise<SyncCycle
       const attempts = (dlqAttemptsTracker.get(lead.id) || 0) + 1;
       dlqAttemptsTracker.set(lead.id, attempts);
 
-      // Dead-Letter Queue Rescue: Si falla más de 5 veces, enviarlo a urgencias
+      // Dead-Letter Queue Rescue: Si falla más de 5 veces, activar rescate DLQ
       if (attempts > 5) {
         console.warn(`[LEAD-SYNC-RECOVERY] Lead ${lead.id} ha fallado 5 veces. Activando rescate DLQ...`);
+        let rescued = false;
         if (rescueWebhook) {
           try {
             const rescueRes = await fetch(rescueWebhook, {
@@ -59,6 +61,7 @@ export async function syncPendingLeads(repo: ILeadRepository): Promise<SyncCycle
             });
             if (rescueRes.ok) {
               console.log(`[LEAD-SYNC-RECOVERY] Rescate exitoso para Lead ${lead.id}`);
+              rescued = true;
             }
           } catch (rescueErr) {
             console.error(`[LEAD-SYNC-RECOVERY] CRÍTICO: Falló el rescate DLQ para Lead ${lead.id}`, rescueErr);
@@ -67,7 +70,17 @@ export async function syncPendingLeads(repo: ILeadRepository): Promise<SyncCycle
           console.error(`[LEAD-SYNC-RECOVERY] CRÍTICO: No hay EMERGENCY_RESCUE_WEBHOOK_URL configurado. Volcado de Lead ${lead.id}:`, JSON.stringify(lead));
         }
 
-        // Marcar como sincronizado para evitar un loop infinito destructivo
+        // Preservar en cuarentena con auditoría explícita
+        if (typeof repo.markQuarantine === 'function') {
+          await repo.markQuarantine(
+            lead.id,
+            rescued
+              ? 'Rescatado via Emergency Rescue Webhook'
+              : 'Agotados 5 reintentos sin confirmación externa de webhook'
+          );
+        }
+
+        // Marcar en cola para evitar saturación del bucle
         await repo.markSynced(lead.id, 'crm');
         await repo.markSynced(lead.id, 'gsheets');
         dlqAttemptsTracker.delete(lead.id);
@@ -99,76 +112,68 @@ export async function syncPendingLeads(repo: ILeadRepository): Promise<SyncCycle
               project: 'Residencias Caroní - Altamira',
             }),
           });
-
           if (res.ok) {
             await repo.markSynced(lead.id, 'gsheets');
             result.gsheetsSuccess++;
             console.log(`[LEAD-SYNC-RECOVERY] Lead ${lead.id} sincronizado exitosamente con Google Sheets.`);
           }
         } catch (err) {
-          console.warn(`[LEAD-SYNC-RECOVERY] Reintento fallido para ${lead.id} hacia Google Sheets:`, err);
+          console.error(`[LEAD-SYNC-RECOVERY] Reintento fallido para ${lead.id} hacia Google Sheets:`, err);
         }
       }
 
       // 2. Reintento CRM Webhook
-      if (lead.syncedCrm === false && crmWebhook) {
+      if (
+        lead.syncedCrm === false &&
+        crmWebhook &&
+        !crmWebhook.includes('placeholder')
+      ) {
         try {
           const res = await fetch(crmWebhook, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             signal: AbortSignal.timeout(4000),
-            body: JSON.stringify(lead),
+            body: JSON.stringify({
+              leadId: lead.id,
+              fullName: lead.fullName,
+              email: lead.email,
+              phone: lead.phone,
+              unitInterest: lead.unitInterest,
+              accreditationStatus: lead.accreditationStatus,
+              timestamp: lead.timestamp,
+              source: lead.source || 'Sync Worker Recovery',
+            }),
           });
-
           if (res.ok) {
             await repo.markSynced(lead.id, 'crm');
             result.crmSuccess++;
             console.log(`[LEAD-SYNC-RECOVERY] Lead ${lead.id} sincronizado exitosamente con CRM.`);
           }
         } catch (err) {
-          console.warn(`[LEAD-SYNC-RECOVERY] Reintento fallido para ${lead.id} hacia CRM:`, err);
+          console.error(`[LEAD-SYNC-RECOVERY] Reintento fallido para ${lead.id} hacia CRM:`, err);
         }
       }
-
-      // Limpiar rastreador si ambos destinos fueron sincronizados exitosamente
-      if (lead.syncedGSheets !== false && lead.syncedCrm !== false) {
-        dlqAttemptsTracker.delete(lead.id);
-      }
     }
-  } catch (outerErr) {
-    console.error('[LEAD-SYNC-RECOVERY] Error crítico en ciclo de sincronización:', outerErr);
+  } catch (error) {
+    console.error('[LEAD-SYNC-RECOVERY] Error crítico en ciclo de sincronización:', error);
   }
 
   return result;
 }
 
 /**
- * Inicia el temporizador en segundo plano para el reintento periódico
+ * Arranca el worker recurrente en segundo plano
  */
-export function startLeadSyncWorker(repo: ILeadRepository, intervalMs: number = 60000): { stop: () => void } {
+export function startLeadSyncWorker(repo: ILeadRepository, intervalMs: number = 60000) {
   console.log(`[LEAD-SYNC-RECOVERY] Worker de sincronización en segundo plano iniciado (intervalo: ${intervalMs / 1000}s).`);
 
-  let isRunning = true;
-  let timerId: NodeJS.Timeout | null = null;
-
-  const scheduleNext = () => {
-    if (!isRunning) return;
-    timerId = setTimeout(async () => {
-      if (!isRunning) return;
-      await syncPendingLeads(repo);
-      scheduleNext();
-    }, intervalMs);
-  };
-
-  scheduleNext();
+  const timer = setInterval(async () => {
+    await syncPendingLeads(repo);
+  }, intervalMs);
 
   return {
     stop: () => {
-      isRunning = false;
-      if (timerId) {
-        clearTimeout(timerId);
-        timerId = null;
-      }
+      clearInterval(timer);
       console.log('[LEAD-SYNC-RECOVERY] Worker de sincronización detenido limpiamente.');
     },
   };

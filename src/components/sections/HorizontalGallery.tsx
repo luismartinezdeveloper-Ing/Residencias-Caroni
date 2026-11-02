@@ -1,4 +1,5 @@
 import React, { useRef, useState, useMemo } from 'react';
+import { GALLERY_ITEMS, GalleryItem } from '../../data/galleryData';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent } from 'motion/react';
 
 type GalleryCategoryId = 'exteriores' | 'pb-norte' | 'pb-sur' | 'penthouse';
@@ -108,7 +109,7 @@ const ALL_SLIDES: GallerySlide[] = [
     tag: 'ALTA COCINA DE AUTOR',
     title: 'Cocina Gourmet & Isla Social',
     subtitle: 'Isla central escultórica en cuarcita exótica con carpintería europea oculta sin tiradores. Equipada con electrodomésticos empotrados de grado profesional e iluminación cenital.',
-    image: '/imagen/interior/pb-norte/03_PB_Norte_Cocina.jpg.jpeg',
+    image: '/imagen/interior/pb-norte/03_PB_Norte_Cocina.jpeg',
     dockLabel: 'Cocina',
   },
 
@@ -137,7 +138,7 @@ const ALL_SLIDES: GallerySlide[] = [
     tag: 'ALTA COCINA DE AUTOR',
     title: 'Cocina & Desayunador PB Sur',
     subtitle: 'Concepto abierto que articula elegancia minimalista con funcionalidad gastronómica. Tonos minerales cálidos y conexión directa con el comedor formal y área de servicio.',
-    image: '/imagen/interior/pb-sur/06_PB_Sur_Cocina.jpg.jpeg',
+    image: '/imagen/interior/pb-sur/06_PB_Sur_Cocina.jpeg',
     dockLabel: 'Cocina',
   },
 
@@ -309,6 +310,17 @@ const AppleCircularLoupeImage: React.FC<AppleCircularLoupeImageProps> = ({
   );
 };
 
+
+// Helper function to connect rich architectural specs from GALLERY_ITEMS
+function findSpecsForImage(imageSrc: string): GalleryItem | undefined {
+  const normalized = imageSrc.replace(/^\//, '');
+  return GALLERY_ITEMS.find((item) => {
+    if (!item.image) return false;
+    const itemNorm = item.image.replace(/^\//, '');
+    return itemNorm.includes(normalized) || normalized.includes(itemNorm);
+  });
+}
+
 export const HorizontalGallery = () => {
   const targetRef = useRef<HTMLDivElement>(null);
   const [selectedCategory, setSelectedCategory] = useState<GalleryCategoryId>('exteriores');
@@ -432,6 +444,49 @@ export const HorizontalGallery = () => {
                     <p className="font-serif text-sm sm:text-base md:text-lg text-[#5A554A] leading-relaxed max-w-lg font-light">
                       {slide.subtitle}
                     </p>
+
+                    {/* Ficha Técnica Arquitectónica de Autor (Añil Arquitectura) */}
+                    {(() => {
+                      const meta = findSpecsForImage(slide.image);
+                      if (!meta) return null;
+                      return (
+                        <div className="pt-4 border-t border-[#1B1813]/10 flex flex-col space-y-2.5">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10.5px] font-mono text-[#5A554A]">
+                            {meta.cota && (
+                              <div className="flex items-center space-x-1.5">
+                                <span className="text-[#8C7452] font-semibold">COTA:</span>
+                                <span className="truncate">{meta.cota.replace(/^COTA\s*(ACCESO|CIMA|NIVEL[^:]*|JARDÍN)?\s*:\s*/i, '')}</span>
+                              </div>
+                            )}
+                            {meta.orientation && (
+                              <div className="flex items-center space-x-1.5">
+                                <span className="text-[#8C7452] font-semibold">ORIENTACIÓN:</span>
+                                <span className="truncate">{meta.orientation}</span>
+                              </div>
+                            )}
+                            {meta.material && (
+                              <div className="sm:col-span-2 flex items-center space-x-1.5">
+                                <span className="text-[#8C7452] font-semibold">MATERIAL:</span>
+                                <span className="text-[#1B1813] font-medium truncate">{meta.material}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {meta.specs && meta.specs.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-1">
+                              {meta.specs.slice(0, 3).map((spec, i) => (
+                                <span
+                                  key={i}
+                                  className="px-2 py-0.5 rounded bg-[#FAF9F6] border border-[#1B1813]/10 text-[9px] font-mono text-[#5A554A]"
+                                >
+                                  <strong className="text-[#8C7452] font-medium">{spec.label}:</strong> {spec.value}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Columna de Imagen con Lupa Circular Clásica Estilo Apple */}

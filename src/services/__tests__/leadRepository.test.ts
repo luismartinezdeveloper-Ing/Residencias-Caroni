@@ -97,4 +97,60 @@ describe('JsonFileLeadRepository - Almacenamiento Seguro y Transaccional', () =>
     expect(leads[0].id).toBe('LEAD-002');
     expect(leads[2].id).toBe('LEAD-004');
   });
+
+  it('debe manejar escrituras concurrentes sin colisión ni excepciones EPERM gracias al Mutex asíncrono', async () => {
+    const repo = new JsonFileLeadRepository(testFile, 50);
+    const writes = Array.from({ length: 20 }, (_, i) =>
+      repo.saveLead({
+        id: `LEAD-CONCURRENT-${i}`,
+        fullName: `Inversionista Concurrente ${i}`,
+        email: `concurrent${i}@inversor.com`,
+        phone: '+58 414 1112233',
+        unitInterest: 'Penthouse Norte',
+        accreditationStatus: 'Accredited_Buyer',
+        timestamp: new Date().toISOString(),
+        ip: '127.0.0.1',
+        syncedGSheets: false,
+        syncedCrm: false,
+      })
+    );
+
+    // Ejecutar todas las escrituras en paralelo
+    await Promise.all(writes);
+
+    const leads = await repo.getAllLeads();
+    expect(leads).toHaveLength(20);
+    expect(fs.existsSync(testFile)).toBe(true);
+  });
+
+  it('debe registrar y aislar leads en cuarentena DLQ_MAX_RETRIES', async () => {
+    const repo = new JsonFileLeadRepository(testFile, 10);
+    await repo.saveLead({
+      id: 'LEAD-QUARANTINE-01',
+      fullName: 'Cliente Fallido',
+      email: 'fallido@test.com',
+      phone: '+58 412 0001122',
+      unitInterest: 'Jardín PB',
+      accreditationStatus: 'Accredited_Buyer',
+      timestamp: new Date().toISOString(),
+      ip: '127.0.0.1',
+      syncedGSheets: false,
+      syncedCrm: false,
+    });
+
+    const unsyncedBefore = await repo.getUnsyncedLeads();
+    expect(unsyncedBefore).toHaveLength(1);
+
+    await repo.markQuarantine('LEAD-QUARANTINE-01', 'Agotados 5 reintentos');
+
+    // Debe salir de unsynced activos para no ciclar el bucle
+    const unsyncedAfter = await repo.getUnsyncedLeads();
+    expect(unsyncedAfter).toHaveLength(0);
+
+    // Pero debe permanecer en la lista de cuarentena para auditoría forense
+    const quarantined = await repo.getQuarantineLeads();
+    expect(quarantined).toHaveLength(1);
+    expect(quarantined[0].quarantineStatus).toBe('DLQ_MAX_RETRIES');
+    expect(quarantined[0].quarantineReason).toBe('Agotados 5 reintentos');
+  });
 });

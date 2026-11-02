@@ -1,5 +1,5 @@
 {
-  "name": "react-example",
+  "name": "residencias-caroni",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,7 +10,7 @@
     "build:vercel": "vitest run && vite build",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.js",
+    "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true }); try { fs.unlinkSync('server.js'); } catch {}\"",
     "lint": "tsc --noEmit",
     "test": "vitest run --no-file-parallelism"
   },

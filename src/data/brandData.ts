@@ -16,6 +16,7 @@ export const BRAND_INFO = {
   unitsCount: 8,
   cotas: ['+25.50', '+21.25', '+17.00', '+12.75', '+8.50', '+4.25', '±0.00'],
   legalEntity: 'Inmobiliaria Altagracia Tres, C.A.',
+  contactEmail: 'contacto@garam.com.co',
   leadDeveloper: 'Ing. Luis Martinez',
   leadDeveloperContact: 'luismartinez.developer@gmail.com',
 };

@@ -202,27 +202,43 @@ function MainAppContent() {
       {/* Floating Executive Action Hub (Phase 1 Conversion Engine) */}
       
 
-      {/* Floating Concierge / Luxury AI Chatbot Button */}
+      {/* Floating Luxury AI Advisor Button (Apple-style Translucent Icon Button) */}
+      {!isVoiceAdvisorOpen && (
       <div className="fixed bottom-5 right-5 z-40 flex items-center">
         <button
           onClick={() => setIsVoiceAdvisorOpen(true)}
-          className="group relative w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-[#1B1813]/95 hover:bg-[#2A241C] text-[#FAF8F5] border border-[#C9A86A]/60 hover:border-[#C9A86A] shadow-[0_12px_36px_rgba(27,24,19,0.45),0_2px_10px_rgba(201,168,106,0.25)] hover:shadow-[0_16px_45px_rgba(201,168,106,0.35)] backdrop-blur-xl flex items-center justify-center transition-all duration-300 hover:scale-108 active:scale-95 cursor-pointer select-none"
-          title="Asistente Virtual · Residencias Caroní"
-          aria-label="Abrir Asistente Virtual"
+          className="group relative w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-white/85 backdrop-blur-2xl hover:bg-white text-[#1B1813] border border-white/80 shadow-[0_12px_36px_rgba(27,24,19,0.12),0_2px_6px_rgba(0,0,0,0.04)] flex items-center justify-center transition-all duration-300 hover:scale-108 active:scale-95 cursor-pointer select-none"
+          title="Asesor · Residencias Caroní"
+          aria-label="Abrir Asesor"
         >
-          {/* Subtle Ambient Golden Glow */}
-          <span className="absolute -inset-0.5 rounded-full bg-[#C9A86A]/20 blur-sm group-hover:bg-[#C9A86A]/40 transition-all pointer-events-none" />
-
-          {/* Chat Icon */}
-          <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-[#C9A86A] group-hover:text-white transition-colors relative z-10" />
-
-          {/* Micro Pulsing Online Beacon */}
-          <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5 pointer-events-none z-20">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#C9A86A] opacity-75" />
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#C9A86A]" />
+          <MessageSquare className="w-5 h-5 text-[#8C7452] group-hover:scale-105 transition-transform" />
+          {/* Apple-style ultra-micro pulsing indicator dot */}
+          <span className="absolute top-2 right-2 flex h-1.5 w-1.5 pointer-events-none" title="En línea">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
           </span>
+
+
+
+    
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
         </button>
       </div>
+
+      )}
 
       {/* AIChatbot Modal (Voz en Tiempo Real & Asesoría Inmobiliaria - Lazy loaded) */}
       {isVoiceAdvisorOpen && (

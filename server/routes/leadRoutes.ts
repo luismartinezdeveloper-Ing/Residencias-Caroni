@@ -9,6 +9,16 @@ const LEADS_RATE_LIMIT_WINDOW_MS = 60000;
 const LEADS_RATE_LIMIT_MAX = 5;
 const leadsRateLimitMap = new Map<string, { count: number; windowStart: number }>();
 
+// Periodic eviction to prevent heap leak from accumulated IP addresses
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of leadsRateLimitMap.entries()) {
+    if (now - entry.windowStart > LEADS_RATE_LIMIT_WINDOW_MS) {
+      leadsRateLimitMap.delete(ip);
+    }
+  }
+}, 180000).unref();
+
 function isLeadRateLimited(ip: string): boolean {
   const now = Date.now();
   const entry = leadsRateLimitMap.get(ip);

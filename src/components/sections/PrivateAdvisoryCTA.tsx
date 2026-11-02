@@ -109,7 +109,7 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
                 </div>
                 <div className="flex items-center space-x-2.5">
                   <Mail className="w-3.5 h-3.5 text-[#8C7452] shrink-0" />
-                  <span className="text-[#C9C4B5]">contacto@anil-arquitectura.com</span>
+                  <a href="mailto:contacto@garam.com.co" className="text-[#C9C4B5] hover:text-white transition-colors cursor-pointer">contacto@garam.com.co</a>
                 </div>
               </div>
 
