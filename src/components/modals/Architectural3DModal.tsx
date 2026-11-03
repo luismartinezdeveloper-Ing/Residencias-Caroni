@@ -1134,22 +1134,24 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                   </button>
                 </div>
 
-                {/* Botón de Depuración Ávila (MeshBasicMaterial rojo unlit) */}
-                <button
-                  onClick={handleToggleAvilaDebug}
-                  className={`font-meta text-[8.5px] sm:text-[9.5px] px-2.5 sm:px-3 py-1 sm:py-1.5 border transition-all flex items-center space-x-1.5 cursor-pointer shadow-xs rounded-full min-h-[28px] ${
-                    isAvilaDebug
-                      ? 'border-red-500 bg-red-600 text-white font-bold ring-2 ring-red-400/60 shadow-lg shadow-red-500/20'
-                      : 'border-red-500/40 bg-red-950/20 text-red-200 hover:bg-red-900/40 hover:text-white'
-                  }`}
-                  title="Depuración Ávila 3D: Conmuta a material unlit rojo (MeshBasicMaterial) para verificar visibilidad y coordenadas del Ávila"
-                >
-                  <span className={`w-2 h-2 rounded-full ${isAvilaDebug ? 'bg-white animate-pulse' : 'bg-red-500'}`} />
-                  <span className="font-semibold">DEBUG ÁVILA</span>
-                  <span className="font-mono text-[8px] opacity-90 font-bold">
-                    [{isAvilaDebug ? 'ROJO' : 'OFF'}]
-                  </span>
-                </button>
+                {/* Botón de Depuración Ávila (MeshBasicMaterial rojo unlit) — solo en desarrollo */}
+                {import.meta.env.DEV && (
+                  <button
+                    onClick={handleToggleAvilaDebug}
+                    className={`font-meta text-[8.5px] sm:text-[9.5px] px-2.5 sm:px-3 py-1 sm:py-1.5 border transition-all flex items-center space-x-1.5 cursor-pointer shadow-xs rounded-full min-h-[28px] ${
+                      isAvilaDebug
+                        ? 'border-red-500 bg-red-600 text-white font-bold ring-2 ring-red-400/60 shadow-lg shadow-red-500/20'
+                        : 'border-red-500/40 bg-red-950/20 text-red-200 hover:bg-red-900/40 hover:text-white'
+                    }`}
+                    title="Depuración Ávila 3D: Conmuta a material unlit rojo (MeshBasicMaterial) para verificar visibilidad y coordenadas del Ávila"
+                  >
+                    <span className={`w-2 h-2 rounded-full ${isAvilaDebug ? 'bg-white animate-pulse' : 'bg-red-500'}`} />
+                    <span className="font-semibold">DEBUG ÁVILA</span>
+                    <span className="font-mono text-[8px] opacity-90 font-bold">
+                      [{isAvilaDebug ? 'ROJO' : 'OFF'}]
+                    </span>
+                  </button>
+                )}
 
                 <button
                   onClick={() => setIsFullscreen(!isFullscreen)}
@@ -1379,29 +1381,33 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                       {/* Thin Institutional Divider */}
                       <div className="h-px bg-[#C9A86A]/20" />
 
-                      {/* Section: Diagnóstico Visual Ávila 3D */}
-                      <div className="flex flex-col gap-1">
-                        <button
-                          onClick={handleToggleAvilaDebug}
-                          className={`font-meta text-[8px] sm:text-[8.5px] px-2 py-1.5 rounded-xl transition-all flex items-center justify-between cursor-pointer min-h-[28px] ${
-                            isAvilaDebug
-                              ? 'bg-red-600 text-white font-bold ring-2 ring-red-400/80 shadow-md animate-pulse'
-                              : 'bg-black/30 text-[#C9C4B5] border border-red-500/30 hover:border-red-500 hover:text-white'
-                          }`}
-                          title="Alternar material unlit básico rojo (MeshBasicMaterial) en la geometría del Ávila para diagnóstico visual"
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <span className={`w-2 h-2 rounded-full ${isAvilaDebug ? 'bg-white' : 'bg-red-500'}`} />
-                            DEBUG ÁVILA
-                          </span>
-                          <span className="font-mono text-[7.5px] uppercase font-bold">
-                            {isAvilaDebug ? 'ROJO' : 'OFF'}
-                          </span>
-                        </button>
-                      </div>
+                      {/* Section: Diagnóstico Visual Ávila 3D — solo en desarrollo */}
+                      {import.meta.env.DEV && (
+                        <>
+                          <div className="flex flex-col gap-1">
+                            <button
+                              onClick={handleToggleAvilaDebug}
+                              className={`font-meta text-[8px] sm:text-[8.5px] px-2 py-1.5 rounded-xl transition-all flex items-center justify-between cursor-pointer min-h-[28px] ${
+                                isAvilaDebug
+                                  ? 'bg-red-600 text-white font-bold ring-2 ring-red-400/80 shadow-md animate-pulse'
+                                  : 'bg-black/30 text-[#C9C4B5] border border-red-500/30 hover:border-red-500 hover:text-white'
+                              }`}
+                              title="Alternar material unlit básico rojo (MeshBasicMaterial) en la geometría del Ávila para diagnóstico visual"
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <span className={`w-2 h-2 rounded-full ${isAvilaDebug ? 'bg-white' : 'bg-red-500'}`} />
+                                DEBUG ÁVILA
+                              </span>
+                              <span className="font-mono text-[7.5px] uppercase font-bold">
+                                {isAvilaDebug ? 'ROJO' : 'OFF'}
+                              </span>
+                            </button>
+                          </div>
 
-                      {/* Thin Institutional Divider */}
-                      <div className="h-px bg-[#C9A86A]/20" />
+                          {/* Thin Institutional Divider */}
+                          <div className="h-px bg-[#C9A86A]/20" />
+                        </>
+                      )}
 
                       {/* Section 4: Turntable 360° & Zoom Controls */}
                       <div className="flex flex-col gap-1.5">
