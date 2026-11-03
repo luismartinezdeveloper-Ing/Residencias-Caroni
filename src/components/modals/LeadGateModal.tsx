@@ -326,7 +326,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
                     type="text"
                     value={vipCode}
                     onChange={(e) => setVipCode(e.target.value)}
-                    placeholder="Ej. ANIL-2026, CARONI-VIII, LANCARA"
+                    placeholder="Ingrese su código de invitación"
                     className="w-full bg-[#1C1813] border border-[#FAF9F6]/15 rounded-xl px-4 py-3 text-sm text-[#EFEBE0] font-mono uppercase tracking-widest focus:outline-hidden focus:border-[#8C7452] transition-colors"
                   />
                 </div>
@@ -345,13 +345,16 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
                     <Unlock className="w-4 h-4" />
                     <span>Validar Código y Desbloquear</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleQuickDemo}
-                    className="bg-[#1C1813] border border-[#FAF9F6]/20 text-[#A6A092] hover:text-[#EFEBE0] hover:border-[#8C7452] text-[10.5px] font-meta py-3 px-4 rounded-full transition-colors cursor-pointer"
-                  >
-                    Pase Demo Rápido
-                  </button>
+                  {import.meta.env.DEV && (
+                    <button
+                      type="button"
+                      onClick={handleQuickDemo}
+                      className="bg-[#1C1813] border border-[#FAF9F6]/20 text-[#A6A092] hover:text-[#EFEBE0] hover:border-[#8C7452] text-[10.5px] font-meta py-3 px-4 rounded-full transition-colors cursor-pointer"
+                      title="Solo visible en entorno de desarrollo"
+                    >
+                      [DEV] Pase Demo Rápido
+                    </button>
+                  )}
                 </div>
               </form>
             ) : (

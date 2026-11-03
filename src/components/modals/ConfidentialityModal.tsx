@@ -33,10 +33,6 @@ export const ConfidentialityModal: React.FC = () => {
     }
   };
 
-  const handleQuickUnlock = async () => {
-    await authenticate('Comité de Inversión Institucional', 'ANIL-2026', 'Añil Arquitectura');
-  };
-
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-[#1B1813]/60 backdrop-blur-xs">
@@ -126,7 +122,7 @@ export const ConfidentialityModal: React.FC = () => {
                     type="text"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    placeholder="Ej. ANIL-2026 o CARONI-VIII"
+                    placeholder="Ingrese su código de invitación"
                     className="w-full bg-[#FFFFFF] border border-[#C9C4B5] px-3.5 py-2.5 text-xs font-mono tracking-wider text-[#1B1813] uppercase focus:outline-hidden focus:border-[#8C7452] transition-colors rounded-lg"
                   />
                 </div>
@@ -144,15 +140,6 @@ export const ConfidentialityModal: React.FC = () => {
                   >
                     <span>Ver Información y Precios Privados</span>
                     <span>→</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleQuickUnlock}
-                    className="bg-[#EFEBE0] text-[#1B1813] border border-[#C9C4B5] hover:border-[#8C7452] transition-colors py-2.5 px-3 font-meta text-[10px] uppercase tracking-wider cursor-pointer"
-                    title="Acceso directo de demostración para comité"
-                  >
-                    Pase de Demostración
                   </button>
                 </div>
               </form>
