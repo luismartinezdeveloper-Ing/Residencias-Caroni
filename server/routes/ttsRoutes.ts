@@ -1,12 +1,16 @@
 import { Router } from 'express';
 import { GoogleGenAI } from '@google/genai';
 import { AI_MODELS, AI_VOICES } from '../../src/config/aiConfig';
+import { parseTtsText } from '../security/aiInput';
 
 export const ttsRouter = Router();
 
 ttsRouter.post('/api/tts', async (req, res) => {
   try {
-    const { text } = req.body;
+    const text = parseTtsText(req.body?.text);
+    if (!text) {
+      return res.status(400).json({ error: 'Texto inválido o demasiado largo.' });
+    }
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({ error: 'GEMINI_API_KEY no configurada.' });
     }

@@ -11,11 +11,6 @@ import {
 import { UnitData } from '../../types/brand';
 import { useResponsiveChat } from '../../hooks/useResponsiveChat';
 import { SSEStreamParser } from '../../utils/sseParser';
-import {
-  calculateInvestmentTotals,
-  getDefaultPricePerM2,
-  formatUsdCurrency,
-} from '../../utils/financialCalculations';
 
 interface AIChatbotProps {
   isOpen: boolean;
@@ -42,36 +37,6 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatAbortControllerRef = useRef<AbortController | null>(null);
-
-  // General project and architectural context for the AI
-  const getProjectContext = () => {
-    let unitDetails = '';
-    if (selectedUnit) {
-      const defaultPrice = getDefaultPricePerM2(selectedUnit.typology);
-      const totals = calculateInvestmentTotals(selectedUnit.totalArea, defaultPrice);
-      unitDetails = `
-      Unidad en foco actual: ${selectedUnit.name}
-      Nivel: ${selectedUnit.level}
-      Tipo: ${selectedUnit.typology}
-      Área Total: ${selectedUnit.totalArea} m² (Interior: ${selectedUnit.interiorArea} m², Terraza: ${selectedUnit.terraceArea} m²)
-      Habitaciones: ${selectedUnit.rooms} (todas en suite) | Puestos: ${selectedUnit.parkingSpots} | Maleteros: ${selectedUnit.storageUnits}
-      Precio referencial: ${formatUsdCurrency(totals.totalValueUsd)} (a $${totals.pricePerM2}/m²)
-      Señal de Reserva Escrow (10%): ${formatUsdCurrency(totals.reserveDepositUsd)}
-      Distribución: ${selectedUnit.roomList.join(', ')}
-      `;
-    }
-
-    return `
-      Proyecto: Residencias Caroní · Altamira, Caracas
-      Desarrollo y Arquitectura: Añil Arquitectura — Arq. Juan Carlos Láncara
-      Ingeniería de Software & Experiencia Interactiva: Ing. Luis Martinez (luismartinez.developer@gmail.com)
-      Ubicación: Transversal 8, entre 2da y 3ra Avenida, Altamira, Chacao, Caracas, Venezuela
-      Descripción: 8 exclusivas residencias de autor al pie del Parque Nacional El Ávila (PB Norte, PB Sur, Nivel 1 Norte, Nivel 1 Sur, Nivel 2 Norte, Nivel 2 Sur, Penthouse Norte, Penthouse Sur).
-      Acabados de autor: Piedras naturales, carpintería a medida, ventanales de suelo a techo con doble acristalamiento acústico y térmico, elevador privado directo a cada residencia, domótica integral.
-      Seguridad y amenidades: Vigilancia privada 24/7, control de acceso biométrico, pozo de agua profundo de caudal continuo, planta eléctrica 100% de respaldo, estacionamiento subterráneo privado con puntos para vehículos eléctricos.
-      ${unitDetails}
-    `;
-  };
 
   // Handle modal lifecycle
   useEffect(() => {
@@ -132,7 +97,8 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
         signal: abortController.signal,
         body: JSON.stringify({
           history: newMessages,
-          context: getProjectContext(),
+          // El servidor construye el contexto a partir del id de la unidad
+          unitId: selectedUnit?.id,
         }),
       });
 

@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { SignJWT } from 'jose';
 import { sanitizeInput } from '../services/aiClient';
-import { JWT_SECRET } from './authRoutes';
+import { getJwtSecret } from '../security/auth';
+import { getClientIp } from '../security/http';
 import { LeadRepository } from '../../src/services/leadRepository';
 
 // Rate limiter for /api/leads (max 5 requests per IP per 60 seconds)
@@ -49,10 +50,7 @@ export function createLeadRouter(leadRepository: LeadRepository): Router {
 
   router.post('/api/leads', async (req, res) => {
     try {
-      const clientIp =
-        (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() ||
-        req.socket.remoteAddress ||
-        'unknown';
+      const clientIp = getClientIp(req);
 
       // 0. Rate Limiting — max 5 leads per IP per minute
       if (isLeadRateLimited(clientIp)) {
@@ -131,7 +129,7 @@ export function createLeadRouter(leadRepository: LeadRepository): Router {
         syncedGSheets: false,
         syncedCrm: false,
       });
-      console.log(`[LEAD CAPTURED] ${leadEntry.fullName} (${leadEntry.email}) interesado en: ${leadEntry.unitInterest}`);
+      console.log(`[LEAD CAPTURED] ${leadEntry.id} interesado en: ${leadEntry.unitInterest}`);
 
       // Dispatch to external Google Sheets Webhook server-side (with 4s atomic timeout)
       const gsheetsWebhook = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
@@ -193,7 +191,7 @@ export function createLeadRouter(leadRepository: LeadRepository): Router {
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
         .setExpirationTime('30d')
-        .sign(JWT_SECRET);
+        .sign(getJwtSecret());
 
       return res.status(200).json({
         success: true,

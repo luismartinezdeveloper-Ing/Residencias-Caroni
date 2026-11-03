@@ -6,6 +6,7 @@ import { createServer as createViteServer } from "vite";
 import { JsonFileLeadRepository } from "./src/services/leadRepository";
 import { startLeadSyncWorker } from "./src/services/leadSyncWorker";
 import { authRouter } from "./server/routes/authRoutes";
+import { getJwtSecret } from "./server/security/auth";
 import { createLeadRouter } from "./server/routes/leadRoutes";
 import { chatRouter } from "./server/routes/chatRoutes";
 import { createHealthRouter } from "./server/routes/healthRoutes";
@@ -45,12 +46,11 @@ async function startServer() {
 
 
   // Production security fail-fast: prevent running in production with insecure fallback secret
-  if (process.env.NODE_ENV === 'production') {
-    const jwtSecret = process.env.JWT_SECRET;
-    if (!jwtSecret || jwtSecret.includes('caroni_dev_jwt_secret')) {
-      console.error('[SECURITY CRITICAL] Servidor bloqueado: JWT_SECRET no configurado o inseguro en producción.');
-      process.exit(1);
-    }
+  try {
+    getJwtSecret();
+  } catch {
+    console.error('[SECURITY CRITICAL] Servidor bloqueado: JWT_SECRET no configurado o inseguro en producción.');
+    process.exit(1);
   }
 
   app.use(express.json());
