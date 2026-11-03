@@ -5799,6 +5799,15 @@ export function buildCompleteBuildingScene(
   poolSolariumWarmSouth.position.set(9.2, 1.35, 9.65);
   lightsGroup.add(poolSolariumWarmSouth);
 
+  const artificialLights: THREE.PointLight[] = [
+    warmFacadeGlow,
+    ...balconyNightLights,
+    poolNorthUnderwaterLight,
+    poolSouthUnderwaterLight,
+    poolSolariumWarmNorth,
+    poolSolariumWarmSouth,
+  ];
+
   let targetSolarMode: SolarTimeMode = 'morning';
   const prevSunPos = new THREE.Vector3().copy(sunLight.position);
 
@@ -5901,6 +5910,14 @@ export function buildCompleteBuildingScene(
       poolSouthUnderwaterLight.intensity = THREE.MathUtils.lerp(poolSouthUnderwaterLight.intensity, 4.4, t);
       poolSolariumWarmNorth.intensity = THREE.MathUtils.lerp(poolSolariumWarmNorth.intensity, 2.6, t);
       poolSolariumWarmSouth.intensity = THREE.MathUtils.lerp(poolSolariumWarmSouth.intensity, 2.6, t);
+    }
+
+    // De día las 13 luces artificiales apenas aportan (intensidad 0.1–0.35) pero cada
+    // PointLight encarece el shader de todos los materiales iluminados. Se apagan cuando
+    // el modo es diurno y ya se desvanecieron; el modal precompila ambas variantes.
+    const artificialLightsOn = mode !== 'morning' || warmFacadeGlow.intensity > 0.5;
+    if (warmFacadeGlow.visible !== artificialLightsOn) {
+      artificialLights.forEach((l) => (l.visible = artificialLightsOn));
     }
 
     const sunMovedDistSq = prevSunPos.distanceToSquared(sunLight.position);
