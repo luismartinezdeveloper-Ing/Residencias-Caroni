@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { getAIClient } from '../services/aiClient';
 import { AI_MODELS, AI_PROMPTS } from '../../src/config/aiConfig';
 import { getDomainFallbackReply } from '../../src/utils/aiDomainFallback';
+import { buildProjectContext, findUnitById } from '../../src/config/aiContext';
+import { parseChatHistory, parseUnitId } from '../security/aiInput';
 
 export const chatRouter = Router();
 
@@ -14,14 +16,20 @@ chatRouter.post('/api/chat', async (req, res) => {
   });
 
   try {
-    const { history, context } = req.body;
+    const history = parseChatHistory(req.body?.history);
+    if (!history) {
+      return res.status(400).json({ error: 'Conversación inválida o demasiado extensa.' });
+    }
+    // Contexto construido en el servidor a partir del id de la unidad
+    const unit = findUnitById(parseUnitId(req.body?.unitId));
+    const context = unit?.name;
     const ai = getAIClient();
 
     let streamResponse: any = null;
 
     if (ai) {
-      const systemInstruction = AI_PROMPTS.getChatSystemInstruction(context);
-      const contents = (history || []).map((msg: any) => ({
+      const systemInstruction = AI_PROMPTS.getChatSystemInstruction(buildProjectContext(unit));
+      const contents = history.map((msg) => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: msg.content }],
       }));

@@ -5,10 +5,10 @@
  */
 
 export const AI_MODELS = {
-  // Cascada de modelos para chat conversacional y streaming SSE
+  // Cascada de modelos para chat conversacional y streaming SSE.
+  // Solo modelos flash: un fallo no debe escalar a un modelo más caro.
   CHAT_STREAMING: [
     'gemini-2.5-flash',
-    'gemini-2.5-pro',
     'gemini-2.0-flash',
   ] as const,
 

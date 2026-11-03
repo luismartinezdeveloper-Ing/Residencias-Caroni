@@ -117,6 +117,12 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
         source: sourceTrigger,
       });
 
+      if (!result.success) {
+        setErrorMsg('No pudimos validar sus datos. Verifique su correo y teléfono e intente nuevamente.');
+        setIsSubmitting(false);
+        return;
+      }
+
       unlockWithLead(result.lead);
       setIsSuccess(true);
 

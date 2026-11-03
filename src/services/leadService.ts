@@ -62,6 +62,12 @@ function saveOutboxLeads(leads: LeadRecord[]): void {
 }
 
 /**
+ * El servidor rechazó el lead de forma definitiva (4xx distinto de 429):
+ * reintentarlo nunca tendrá éxito, así que no debe ir al outbox.
+ */
+export class LeadRejectedError extends Error {}
+
+/**
  * Dispatches a lead directly to the backend /api/leads endpoint
  */
 async function dispatchToBackend(lead: LeadRecord): Promise<{ success: boolean; accessToken?: string }> {
@@ -81,6 +87,9 @@ async function dispatchToBackend(lead: LeadRecord): Promise<{ success: boolean; 
   });
 
   if (!response.ok) {
+    if (response.status >= 400 && response.status < 500 && response.status !== 429) {
+      throw new LeadRejectedError(`HTTP ${response.status}: Lead rechazado por el backend`);
+    }
     throw new Error(`HTTP ${response.status}: Failed to register lead on backend`);
   }
 
@@ -112,8 +121,10 @@ export async function flushOutboxQueue(): Promise<number> {
       } else {
         remaining.push(lead);
       }
-    } catch {
-      remaining.push(lead);
+    } catch (err) {
+      if (!(err instanceof LeadRejectedError)) {
+        remaining.push(lead);
+      }
     }
   }
 
@@ -165,6 +176,11 @@ export async function submitLeadToGoogleSheets(lead: Omit<LeadRecord, 'id' | 'ti
     newLead.accessToken = res.accessToken;
     localStorage.setItem(ACTIVE_LEAD_KEY, JSON.stringify(newLead));
   } catch (networkErr) {
+    if (networkErr instanceof LeadRejectedError) {
+      console.warn('[OUTBOX] El backend rechazó el lead; no se encola para reintento.');
+      localStorage.removeItem('caroni_accredited');
+      return { success: false, lead: newLead, synced: false };
+    }
     console.warn('[OUTBOX] Conexión no disponible o servidor ocupado. Encolando en Outbox local:', networkErr);
     // Queue for subsequent background sync
     const outbox = getOutboxLeads();
