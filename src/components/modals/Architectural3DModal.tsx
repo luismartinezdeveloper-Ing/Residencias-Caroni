@@ -80,6 +80,28 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
   const [voiceFeedback, setVoiceFeedback] = useState<VoiceFeedback | null>(null);
   const [lastVoiceCommand, setLastVoiceCommand] = useState<VoiceNavigationCommand | null>(null);
 
+  // Callbacks del padre en refs: App los recrea en cada render y, si fueran dependencias
+  // del efecto principal, cada selección de unidad reconstruiría la escena completa.
+  const onCloseRef = useRef(onClose);
+  const onSelectUnitRef = useRef(onSelectUnit);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+    onSelectUnitRef.current = onSelectUnit;
+  }, [onClose, onSelectUnit]);
+
+  // Render bajo demanda: el bucle solo dibuja cuando algo cambió en la escena
+  const needsRenderRef = useRef<boolean>(true);
+  const requestRender = () => {
+    needsRenderRef.current = true;
+  };
+  const viewModeRef = useRef(viewMode);
+  useEffect(() => {
+    viewModeRef.current = viewMode;
+    requestRender();
+  }, [viewMode]);
+  const hoveredUnitIdRef = useRef<string | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
   // Ref to hold states for requestAnimationFrame loop without stale closures
   const isRotatingRef = useRef<boolean>(false);
   useEffect(() => {
@@ -178,6 +200,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
     if (rendererRef.current) {
       rendererRef.current.shadowMap.needsUpdate = true;
     }
+    requestRender();
   }, [solarTimeMode]);
 
   // Filter Floor Visibility and Highlight Selected Unit
@@ -219,6 +242,12 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
         });
       });
     }
+
+    // Ocultar o mostrar niveles cambia las sombras proyectadas
+    if (rendererRef.current) {
+      rendererRef.current.shadowMap.needsUpdate = true;
+    }
+    requestRender();
   }, [selectedUnit, hoveredUnitId, activeFloorFilter, solarTimeMode]);
 
   // Smooth cinematic camera focus transition to selected unit
@@ -463,6 +492,18 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
     try {
       if (renderer && scene && camera) {
         renderer.compile(scene, camera);
+        // Las luces artificiales se apagan de día (ver transitionStep); precompilar también
+        // la otra variante evita el tirón de compilación de shaders al cambiar de modo.
+        const pointLights: THREE.PointLight[] = [];
+        lightsGroup.traverse((o) => {
+          if ((o as THREE.PointLight).isPointLight) pointLights.push(o as THREE.PointLight);
+        });
+        if (pointLights.length > 0) {
+          const initialVisibility = pointLights[0].visible;
+          pointLights.forEach((l) => (l.visible = !initialVisibility));
+          renderer.compile(scene, camera);
+          pointLights.forEach((l) => (l.visible = initialVisibility));
+        }
       }
     } catch {
       // Ignore fallback
@@ -533,7 +574,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
     const onMouseUp = (e: MouseEvent) => {
       controlsStateRef.current.isDragging = false;
       if (mountRef.current) {
-        mountRef.current.style.cursor = hoveredUnitId ? 'pointer' : 'grab';
+        mountRef.current.style.cursor = hoveredUnitIdRef.current ? 'pointer' : 'grab';
       }
       const dist = Math.hypot(e.clientX - clickStartX, e.clientY - clickStartY);
       if (dist < 5) {
@@ -541,7 +582,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
         if (hitUnitId) {
           const found = UNITS_DATA.find((u) => u.id === hitUnitId);
           if (found) {
-            onSelectUnit(found);
+            onSelectUnitRef.current(found);
             focusCameraOnUnit(found);
           }
         }
@@ -641,6 +682,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
       renderer.setPixelRatio(currentPixelRatio);
+      needsRenderRef.current = true;
     };
     window.addEventListener('resize', handleResize);
 
@@ -650,15 +692,34 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
     let highFpsFrames = 0;
     let isDegraded = false;
 
+    // Render bajo demanda: tras cada cambio se dibujan unos frames más para que las
+    // interpolaciones suaves (luz, materiales, exposición) terminen de asentarse.
+    const SETTLE_FRAMES = 24;
+    // El faro del Humboldt parpadea en atardecer y noche: en reposo se dibuja a ~15 fps.
+    const IDLE_ANIMATED_INTERVAL_MS = 66;
+    let settleFrames = SETTLE_FRAMES;
+    let lastRenderTime = 0;
+    let renderedPrevFrame = false;
+
     const animate = () => {
       animationFrameRef.current = requestAnimationFrame(animate);
 
+      // En la vista de planta 2D el canvas está oculto: no hay nada que dibujar
+      if (viewModeRef.current === 'floorplan') {
+        renderedPrevFrame = false;
+        return;
+      }
+
       // FPS Monitor for Thermal Throttling & Graceful Degradation
+      // Solo cuenta frames consecutivos dibujados: un frame sin render no mide nada.
       const currentTime = performance.now();
       const deltaTime = currentTime - lastTime;
       lastTime = currentTime;
+      const measureFps = renderedPrevFrame;
 
-      if (!isDegraded) {
+      if (!measureFps) {
+        // sin muestra válida
+      } else if (!isDegraded) {
         // If frame took more than 66ms (<15 FPS)
         if (deltaTime > 66) {
           lowFpsFrames++;
@@ -709,10 +770,13 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
         updateContextSolarModeRef.current(solarModeRef.current, 0.08, camera.position);
       }
 
+      let isExposureTransitioning = false;
       if (renderer) {
         const targetExposure =
           solarModeRef.current === 'golden' ? 1.26 : solarModeRef.current === 'night' ? 1.08 : 1.15;
-        renderer.toneMappingExposure += (targetExposure - renderer.toneMappingExposure) * 0.08;
+        const exposureDelta = targetExposure - renderer.toneMappingExposure;
+        renderer.toneMappingExposure += exposureDelta * 0.08;
+        isExposureTransitioning = Math.abs(exposureDelta) > 0.002;
       }
 
       // Movimiento de escena (rotación, traslación, zoom o despiece vertical)
@@ -724,9 +788,12 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
         Math.abs(controlsStateRef.current.targetZoom - controlsStateRef.current.zoom) > 0.005 ||
         Math.abs(controlsStateRef.current.targetExplosion - controlsStateRef.current.currentExplosion) > 0.001;
 
-      // High-performance shadow updates: Recompute shadow maps when camera/geometry moves OR when solar trajectory sweeps
+      // El mapa de sombras solo depende del sol y de la geometría, no de la cámara:
+      // se recalcula al mover niveles (despiece) o al cambiar la trayectoria solar.
+      const isExploding =
+        Math.abs(controlsStateRef.current.targetExplosion - controlsStateRef.current.currentExplosion) > 0.001;
       if (renderer && renderer.shadowMap.enabled) {
-        if (isSceneMoving || isLightingTransitioning) {
+        if (isExploding || isLightingTransitioning) {
           renderer.shadowMap.needsUpdate = true;
         }
       }
@@ -787,25 +854,48 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       if (mouseCoordsRef.current.dirty && !controlsStateRef.current.isDragging) {
         mouseCoordsRef.current.dirty = false;
         const hitUnitId = getRaycastHit(mouseCoordsRef.current.clientX, mouseCoordsRef.current.clientY);
-        setHoveredUnitId(hitUnitId);
+        const hoverChanged = hitUnitId !== hoveredUnitIdRef.current;
 
-        if (mountRef.current) {
-          mountRef.current.style.cursor = hitUnitId ? 'pointer' : 'grab';
+        if (hoverChanged) {
+          // Estado React solo cuando cambia la unidad bajo el puntero, no en cada movimiento
+          hoveredUnitIdRef.current = hitUnitId;
+          setHoveredUnitId(hitUnitId);
+          if (mountRef.current) {
+            mountRef.current.style.cursor = hitUnitId ? 'pointer' : 'grab';
+          }
         }
 
-        if (hitUnitId) {
-          const foundUnit = UNITS_DATA.find((u) => u.id === hitUnitId);
-          if (foundUnit && mountRef.current) {
-            const rect = mountRef.current.getBoundingClientRect();
-            setHoverTooltip({
-              unit: foundUnit,
-              x: mouseCoordsRef.current.clientX - rect.left,
-              y: mouseCoordsRef.current.clientY - rect.top,
-            });
+        if (hitUnitId && mountRef.current) {
+          const rect = mountRef.current.getBoundingClientRect();
+          const x = mouseCoordsRef.current.clientX - rect.left;
+          const y = mouseCoordsRef.current.clientY - rect.top;
+          if (hoverChanged) {
+            const foundUnit = UNITS_DATA.find((u) => u.id === hitUnitId);
+            setHoverTooltip(foundUnit ? { unit: foundUnit, x, y } : null);
+          } else if (tooltipRef.current) {
+            // Seguir el puntero moviendo el nodo directamente, sin re-render de React
+            tooltipRef.current.style.left = `${Math.min(x + 14, rect.width - 200)}px`;
+            tooltipRef.current.style.top = `${Math.max(y - 50, 15)}px`;
           }
-        } else {
+        } else if (hoverChanged) {
           setHoverTooltip(null);
         }
+      }
+
+      const isActive =
+        isSceneMoving || isLightingTransitioning || isExposureTransitioning || needsRenderRef.current;
+      if (isActive) {
+        settleFrames = SETTLE_FRAMES;
+        needsRenderRef.current = false;
+      }
+
+      const isAnimatedMode = solarModeRef.current !== 'morning';
+      const shouldRender =
+        settleFrames > 0 || (isAnimatedMode && currentTime - lastRenderTime >= IDLE_ANIMATED_INTERVAL_MS);
+
+      if (!shouldRender) {
+        renderedPrevFrame = false;
+        return;
       }
 
       try {
@@ -815,12 +905,16 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       } catch (renderError) {
         console.warn('Render frame skipped:', renderError);
       }
+      if (settleFrames > 0) settleFrames--;
+      lastRenderTime = currentTime;
+      // Los frames de reposo a ~15 fps no son una muestra válida para el monitor de FPS
+      renderedPrevFrame = isActive || settleFrames > 0;
     };
 
     animate();
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onCloseRef.current();
     };
     window.addEventListener('keydown', handleKeyDown);
 
@@ -855,17 +949,33 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
           if (scene.environment) {
             scene.environment.dispose();
           }
+          // material.dispose() no libera sus texturas: hay que recorrerlas una a una
+          // (map, bumpMap, roughnessMap, uniforms de shaders...). Las texturas en caché
+          // de módulo se vuelven a subir a la GPU solas si el modal se abre de nuevo.
+          const disposedTextures = new Set<THREE.Texture>();
+          const disposeTexturesIn = (source: Record<string, unknown>) => {
+            Object.values(source).forEach((value) => {
+              const tex = (value as { value?: unknown })?.value ?? value;
+              if ((tex as THREE.Texture)?.isTexture && !disposedTextures.has(tex as THREE.Texture)) {
+                disposedTextures.add(tex as THREE.Texture);
+                (tex as THREE.Texture).dispose();
+              }
+            });
+          };
           scene.traverse((obj) => {
             if ((obj as THREE.Mesh).geometry) {
               (obj as THREE.Mesh).geometry.dispose();
             }
             if ((obj as THREE.Mesh).material) {
               const mat = (obj as THREE.Mesh).material;
-              if (Array.isArray(mat)) {
-                mat.forEach((m) => m.dispose());
-              } else if (mat && typeof (mat as any).dispose === 'function') {
-                (mat as any).dispose();
-              }
+              const mats = Array.isArray(mat) ? mat : [mat];
+              mats.forEach((m) => {
+                if (!m) return;
+                disposeTexturesIn(m as unknown as Record<string, unknown>);
+                const uniforms = (m as THREE.ShaderMaterial).uniforms;
+                if (uniforms) disposeTexturesIn(uniforms as unknown as Record<string, unknown>);
+                m.dispose();
+              });
             }
           });
         }
@@ -882,7 +992,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       setAvilaDebugModeRef.current = null;
       getAvilaFurthestDistanceRef.current = null;
     };
-  }, [isOpen, onClose, retryKey]);
+  }, [isOpen, retryKey]);
 
   // Conmutador del modo depuración unlit rojo (MeshBasicMaterial) para el Ávila
   const handleToggleAvilaDebug = () => {
@@ -895,6 +1005,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       if (rendererRef.current) {
         rendererRef.current.shadowMap.needsUpdate = true;
       }
+      requestRender();
       return next;
     });
   };
@@ -1290,6 +1401,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                   {/* Hover HUD Tooltip */}
                   {hoverTooltip && (
                     <div
+                      ref={tooltipRef}
                       style={{
                         left: `${Math.min(hoverTooltip.x + 14, (mountRef.current?.clientWidth || 600) - 200)}px`,
                         top: `${Math.max(hoverTooltip.y - 50, 15)}px`,
