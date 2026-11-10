@@ -10,7 +10,7 @@ export function SlideDesignSheet({ item }: { item: GalleryItem }) {
   const { blocks, rest } = buildSlideDesignSheet(item);
   if (blocks.length === 0 && !item.cota) return null;
 
-  const cota = item.cota?.replace(/^COTA\s*(ACCESO|CIMA|NIVEL[^:]*|JARDÍN)?\s*:\s*/i, '');
+  const cota = item.cota?.replace(/^COTA[^:]*:\s*/i, '');
 
   return (
     <div className="pt-4 border-t border-[#1B1813]/10 flex flex-col space-y-3">

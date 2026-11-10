@@ -48,7 +48,7 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
   const navItems = [
     { id: 'obra' as NavSection, label: 'EL PROYECTO' },
     { id: 'galeria' as NavSection, label: 'GALERÍA' },
-    { id: 'elevacion' as NavSection, label: 'RESIDENCIAS' },
+    { id: 'elevacion' as NavSection, label: 'PLANOS' },
     { id: 'contacto' as NavSection, label: 'CONTACTO' },
   ];
 
@@ -114,9 +114,11 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
                 <button
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
-                  className={`relative font-meta text-[10px] sm:text-[11px] px-3.5 py-1.5 transition-all duration-200 flex items-center cursor-pointer rounded-full tracking-wider active:scale-95 ${isActive
-                      ? 'text-[#1B1813] font-semibold'
-                      : 'text-[#8C8678] hover:text-[#1B1813]'
+                  className={`relative font-meta text-[10px] sm:text-[11px] px-3.5 py-1.5 transition-all duration-200 flex items-center cursor-pointer rounded-full tracking-wider active:scale-95 ${item.id === 'contacto'
+                      ? 'bg-[#1B1813] text-[#FAF9F6] font-semibold hover:bg-[#2d2820]'
+                      : isActive
+                        ? 'text-[#1B1813] font-semibold'
+                        : 'text-[#8C8678] hover:text-[#1B1813]'
                     }`}
                 >
                   <span>{item.label}</span>
