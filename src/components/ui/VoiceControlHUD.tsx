@@ -180,7 +180,7 @@ export const VoiceControlHUD: React.FC<VoiceControlHUDProps> = ({
                     setShowCommandsHelp(false);
                     if (!isListening) onToggleListening();
                   }}
-                  className="w-full bg-gradient-to-r from-[#8C7452] to-[#B8986B] text-[#1B1813] font-meta font-bold text-xs py-2.5 rounded-xl hover:brightness-110 transition-all cursor-pointer text-center uppercase tracking-wider"
+                  className="btn-apple btn-apple-bronze w-full font-meta font-bold text-xs py-2.5 uppercase tracking-wider"
                 >
                   {isListening ? 'Comenzar a Hablar' : 'Activar Micrófono Ahora'}
                 </button>

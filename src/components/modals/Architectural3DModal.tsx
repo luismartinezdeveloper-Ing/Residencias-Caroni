@@ -1381,7 +1381,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                             setHasWebGLError(false);
                             setRetryKey((k) => k + 1);
                           }}
-                          className="font-meta text-[10px] px-2.5 py-1 bg-[#1B1813] text-[#EFEBE0] hover:bg-[#8C7452] transition-colors cursor-pointer"
+                          className="btn-apple btn-apple-ink font-meta text-[10px] px-3 py-1"
                         >
                           REINTENTAR RENDER 3D ↺
                         </button>
@@ -1452,7 +1452,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                             <button
                               key={f.id}
                               onClick={() => setActiveFloorFilter(f.id as any)}
-                              className={`font-meta text-[10px] sm:text-[10px] px-2.5 py-1 rounded-xl text-left transition-all cursor-pointer min-h-[25px] flex items-center justify-between ${
+                              className={`font-meta text-[10px] sm:text-[10px] px-2.5 py-1 rounded-full text-left transition-all cursor-pointer min-h-[25px] flex items-center justify-between ${
                                 activeFloorFilter === f.id
                                   ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
                                   : 'bg-black/30 text-[#C9C4B5] border border-white/5 hover:border-[#C9A86A]/40 hover:text-white'
@@ -1486,7 +1486,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                             <button
                               key={cam.id}
                               onClick={() => setCameraPreset(cam.id as any)}
-                              className={`font-meta text-[10px] sm:text-[10px] py-1 rounded-lg text-center transition-all cursor-pointer min-h-[25px] flex items-center justify-center ${
+                              className={`font-meta text-[10px] sm:text-[10px] py-1 rounded-full text-center transition-all cursor-pointer min-h-[25px] flex items-center justify-center ${
                                 cameraView === cam.id
                                   ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
                                   : 'bg-black/30 text-[#C9C4B5] border border-white/5 hover:border-[#C9A86A]/40 hover:text-white'
@@ -1507,7 +1507,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                           <div className="flex flex-col gap-1">
                             <button
                               onClick={handleToggleAvilaDebug}
-                              className={`font-meta text-[10px] sm:text-[10px] px-2 py-1.5 rounded-xl transition-all flex items-center justify-between cursor-pointer min-h-[28px] ${
+                              className={`font-meta text-[10px] sm:text-[10px] px-2.5 py-1.5 rounded-full transition-all flex items-center justify-between cursor-pointer min-h-[28px] ${
                                 isAvilaDebug
                                   ? 'bg-red-600 text-white font-bold ring-2 ring-red-400/80 shadow-md animate-pulse'
                                   : 'bg-black/30 text-[#C9C4B5] border border-red-500/30 hover:border-red-500 hover:text-white'
@@ -1533,7 +1533,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                       <div className="flex flex-col gap-1.5">
                         <button
                           onClick={() => setIsRotating(!isRotating)}
-                          className={`font-meta text-[10px] sm:text-[10px] px-2 py-1.5 rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer min-h-[28px] ${
+                          className={`font-meta text-[10px] sm:text-[10px] px-2 py-1.5 rounded-full transition-all flex items-center justify-center space-x-1.5 cursor-pointer min-h-[28px] ${
                             isRotating
                               ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
                               : 'bg-black/30 text-[#C9C4B5] border border-white/5 hover:border-[#C9A86A]/40 hover:text-white'
@@ -1547,21 +1547,21 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                           <button
                             onClick={() => handleZoomChange(10)}
                             title="Alejar modelo"
-                            className="font-mono text-xs h-7 flex items-center justify-center rounded-lg border border-white/5 bg-black/30 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all cursor-pointer active:scale-95"
+                            className="font-mono text-xs h-7 flex items-center justify-center rounded-full border border-white/5 bg-black/30 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all cursor-pointer active:scale-95"
                           >
                             −
                           </button>
                           <button
                             onClick={handleResetView}
                             title="Reajustar encuadre"
-                            className="font-meta text-[10px] h-7 flex items-center justify-center rounded-lg border border-white/5 bg-black/30 hover:border-[#C9A86A] hover:text-[#C9A86A] text-[#C9C4B5] transition-all cursor-pointer active:scale-95"
+                            className="font-meta text-[10px] h-7 flex items-center justify-center rounded-full border border-white/5 bg-black/30 hover:border-[#C9A86A] hover:text-[#C9A86A] text-[#C9C4B5] transition-all cursor-pointer active:scale-95"
                           >
                             RESET
                           </button>
                           <button
                             onClick={() => handleZoomChange(-10)}
                             title="Acercar modelo"
-                            className="font-mono text-xs h-7 flex items-center justify-center rounded-lg border border-white/5 bg-black/30 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all cursor-pointer active:scale-95"
+                            className="font-mono text-xs h-7 flex items-center justify-center rounded-full border border-white/5 bg-black/30 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all cursor-pointer active:scale-95"
                           >
                             +
                           </button>

@@ -63,7 +63,7 @@ export const OfflineNotification: React.FC = () => {
                 </span>
                 <button
                   onClick={() => setIsDismissed(true)}
-                  className="text-[#A6A092] hover:text-white p-1 rounded transition-colors"
+                  className="text-[#A6A092] hover:text-white p-1 rounded-full transition-colors"
                   aria-label="Cerrar aviso"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -116,13 +116,13 @@ export const OfflineNotification: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => promptInstall()}
-                className="bg-[#1B1813] hover:bg-[#8C7452] text-white px-2.5 py-1 rounded-lg font-meta text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
+                className="btn-apple btn-apple-ink px-3 py-1 font-meta text-[10px] uppercase tracking-wider"
               >
                 Instalar
               </button>
               <button
                 onClick={handleDismissInstall}
-                className="text-[#8C7452] hover:text-[#1B1813] hover:bg-black/5 p-1 rounded-lg transition-colors cursor-pointer"
+                className="text-[#8C7452] hover:text-[#1B1813] hover:bg-black/5 p-1 rounded-full transition-colors cursor-pointer"
                 aria-label="Cerrar sugerencia de instalación"
                 title="Cerrar"
               >
