@@ -109,14 +109,14 @@ export const OfflineNotification: React.FC = () => {
           >
             <div className="flex items-center gap-2">
               <Download className="w-3.5 h-3.5 text-[#8C7452]" />
-              <span className="font-meta text-[9px] uppercase tracking-wider font-semibold">
+              <span className="font-meta text-[10px] uppercase tracking-wider font-semibold">
                 Instalar App Residencias Caroní
               </span>
             </div>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => promptInstall()}
-                className="bg-[#1B1813] hover:bg-[#8C7452] text-white px-2.5 py-1 rounded-lg font-meta text-[9px] uppercase tracking-wider transition-colors cursor-pointer"
+                className="bg-[#1B1813] hover:bg-[#8C7452] text-white px-2.5 py-1 rounded-lg font-meta text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
               >
                 Instalar
               </button>

@@ -11,6 +11,7 @@ import {
 import { UnitData } from '../../types/brand';
 import { useResponsiveChat } from '../../hooks/useResponsiveChat';
 import { SSEStreamParser } from '../../utils/sseParser';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 interface AIChatbotProps {
   isOpen: boolean;
@@ -29,6 +30,14 @@ interface Message {
 export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedUnit }) => {
   const { isMobile } = useResponsiveChat();
   const [isMinimized, setIsMinimized] = useState(false);
+
+  // Panel expandido: en escritorio es una ventana flotante (no modal) y en teléfono ocupa toda la
+  // pantalla (modal). Escape lo cierra; el foco se atrapa y el scroll se bloquea solo en teléfono.
+  const panelRef = useModalA11y<HTMLDivElement>(isOpen && !isMinimized, onClose, {
+    trap: isMobile,
+    lockScroll: isMobile,
+    autoFocus: false,
+  });
 
   // Text Chat State
   const [messages, setMessages] = useState<Message[]>([]);
@@ -57,7 +66,7 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
         {
           id: 'welcome',
           role: 'assistant',
-          content: '¡Bienvenido a Residencias Caroní! Soy su Asesor. Estoy a su disposición para brindarle información sobre las 8 exclusivas residencias de autor, cotas técnicas, acabados de alta gama, simulación financiera o coordinar una visita privada. ¿En qué puedo orientarle hoy?',
+          content: '¡Bienvenido a Residencias Caroní! Soy su Asesor. Estoy a su disposición para brindarle información sobre las 8 residencias de autor, cotas técnicas, acabados de alta gama, simulación financiera o coordinar una visita privada. ¿En qué puedo orientarle hoy?',
         },
       ]);
     }
@@ -217,7 +226,7 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
                     <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
                   </span>
                 </div>
-                <span className="font-meta text-[9px] text-[#8C8678] tracking-wider uppercase truncate max-w-[150px] sm:max-w-[200px]">
+                <span className="font-meta text-[10px] text-[#8C8678] tracking-wider uppercase truncate max-w-[150px] sm:max-w-[200px]">
                   Residencias Caroní · Abrir
                 </span>
               </div>
@@ -246,6 +255,10 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
           /* Apple-style Translucent White Glass Modal */
           <motion.div
             key="expanded-advisor-modal"
+            ref={panelRef}
+            role="dialog"
+            aria-modal={isMobile ? true : undefined}
+            aria-label="Asesor de Residencias Caroní"
             initial={{ opacity: 0, y: 20, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.96 }}
@@ -268,16 +281,16 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-display font-semibold text-sm sm:text-base tracking-tight text-[#1B1813] truncate">
+                    <h2 className="font-display font-semibold text-sm sm:text-base tracking-tight text-[#1B1813] truncate">
                       Asesor
-                    </h3>
+                    </h2>
                     {/* Pure minimal online indicator dot */}
                     <span className="relative flex h-1.5 w-1.5 shrink-0" title="En línea">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                       <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
                     </span>
                   </div>
-                  <p className="font-meta text-[9.5px] text-[#8C8678] tracking-widest uppercase truncate">
+                  <p className="font-meta text-[10px] text-[#8C8678] tracking-widest uppercase truncate">
                     Residencias Caroní · Altamira
                   </p>
                 </div>

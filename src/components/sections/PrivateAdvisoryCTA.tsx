@@ -48,7 +48,7 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
               <div className="bg-[#FAF9F6]/5 border border-[#FAF9F6]/10 p-3 rounded-xl flex items-center space-x-3">
                 <ShieldCheck className="w-4 h-4 text-[#8C7452] shrink-0" />
                 <span className="font-meta text-[10px] text-[#C9C4B5] tracking-wider uppercase">
-                  8 Residencias Exclusivas
+                  8 Residencias de Autor
                 </span>
               </div>
               <div className="bg-[#FAF9F6]/5 border border-[#FAF9F6]/10 p-3 rounded-xl flex items-center space-x-3">
@@ -72,7 +72,7 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
               <div className="flex items-center justify-between border-b border-[#FAF9F6]/10 pb-4">
                 <div className="space-y-0.5">
                   <div className="font-display text-lg text-[#FAF9F6]">Dirección de Arquitectura</div>
-                  <div className="font-meta text-[9px] text-[#8C8678] tracking-widest uppercase">
+                  <div className="font-meta text-[10px] text-[#8C8678] tracking-widest uppercase">
                     Añil Arquitectura · Altamira
                   </div>
                 </div>
@@ -114,7 +114,7 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
               </div>
 
               <div className="text-center pt-2">
-                <span className="font-meta text-[8.5px] text-[#8C8678] tracking-[0.2em] uppercase">
+                <span className="font-meta text-[10px] text-[#8C8678] tracking-[0.2em] uppercase">
                   Atención confidencial de lunes a sábado previa cita
                 </span>
               </div>

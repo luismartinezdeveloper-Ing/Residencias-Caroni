@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShieldCheck, X, FileText, CheckCircle2, Building, Sparkles } from 'lucide-react';
 import { useConfidentiality } from '../../context/ConfidentialityContext';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 export const ConfidentialityModal: React.FC = () => {
   const { isAuthModalOpen, closeAuthModal, authenticate } = useConfidentiality();
+  const titleId = useId();
+  const panelRef = useModalA11y<HTMLDivElement>(isAuthModalOpen, closeAuthModal);
   const [name, setName] = useState('');
   const [org, setOrg] = useState('');
   const [code, setCode] = useState('');
@@ -37,6 +40,11 @@ export const ConfidentialityModal: React.FC = () => {
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-[#1B1813]/60 backdrop-blur-xs">
         <motion.div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          tabIndex={-1}
           initial={{ opacity: 0, scale: 0.96, y: 12 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 12 }}
@@ -47,6 +55,8 @@ export const ConfidentialityModal: React.FC = () => {
           <button
             onClick={closeAuthModal}
             className="absolute top-4 right-4 p-2 text-[#8C8678] hover:text-[#1B1813] transition-colors cursor-pointer"
+            aria-label="Cerrar"
+            title="Cerrar"
           >
             <X className="w-5 h-5" />
           </button>
@@ -58,11 +68,11 @@ export const ConfidentialityModal: React.FC = () => {
             </div>
             <div>
               <span className="font-meta text-[10px] tracking-widest text-[#8C7452] uppercase block">
-                Atención Privada & Exclusiva
+                Atención Privada
               </span>
-              <h3 className="font-serif text-xl sm:text-2xl text-[#1B1813] font-normal">
+              <h2 id={titleId} className="font-serif text-xl sm:text-2xl text-[#1B1813] font-normal">
                 .Solicitud de Información & Cita Privada
-              </h3>
+              </h2>
             </div>
           </div>
 
@@ -114,7 +124,7 @@ export const ConfidentialityModal: React.FC = () => {
                     <label className="font-meta text-[10.5px] uppercase tracking-wider text-[#1B1813]">
                       Código de Invitación Privada
                     </label>
-                    <span className="font-meta text-[9.5px] text-[#8C7452]">
+                    <span className="font-meta text-[10px] text-[#8C7452]">
                       (Opcional)
                     </span>
                   </div>

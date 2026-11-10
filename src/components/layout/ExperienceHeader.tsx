@@ -100,7 +100,7 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
               <div className="font-display text-lg sm:text-2xl tracking-tight text-[#1B1813] leading-none group-hover:text-[#8C7452] transition-colors">
                 Residencias Caroní
               </div>
-              <div className="font-meta text-[7.5px] sm:text-[8.5px] text-[#8C8678] mt-0.5 tracking-[0.18em] sm:tracking-[0.22em] hidden sm:block">
+              <div className="font-meta text-[10px] sm:text-[10px] text-[#8C8678] mt-0.5 tracking-[0.18em] sm:tracking-[0.22em] hidden sm:block">
                 AÑIL ARQUITECTURA · ALTAMIRA
               </div>
             </div>
@@ -155,7 +155,7 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
                 <button
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
-                  className={`relative font-meta text-[9.5px] px-3 py-1.5 whitespace-nowrap transition-all duration-200 shrink-0 flex items-center space-x-1 rounded-full cursor-pointer min-h-[32px] tracking-wider ${isActive
+                  className={`relative font-meta text-[10px] px-3 py-1.5 whitespace-nowrap transition-all duration-200 shrink-0 flex items-center space-x-1 rounded-full cursor-pointer min-h-[32px] tracking-wider ${isActive
                       ? 'bg-[#1B1813] text-[#FAF9F6] font-semibold shadow-xs'
                       : 'bg-[#FAF8F5] text-[#8C8678] border border-[#C9C4B5]/50 hover:text-[#1B1813] hover:border-[#1B1813]/30'
                     }`}
@@ -168,7 +168,7 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
             {/* Maqueta 3D en versión móvil */}
             <button
               onClick={onOpen3DModal}
-              className="relative font-meta text-[9.5px] px-3 py-1.5 whitespace-nowrap transition-all duration-200 shrink-0 flex items-center space-x-1 rounded-full cursor-pointer min-h-[32px] bg-[#FAF8F5] text-[#8C7452] border border-[#8C7452]/40 hover:text-[#1B1813] font-semibold tracking-wider"
+              className="relative font-meta text-[10px] px-3 py-1.5 whitespace-nowrap transition-all duration-200 shrink-0 flex items-center space-x-1 rounded-full cursor-pointer min-h-[32px] bg-[#FAF8F5] text-[#8C7452] border border-[#8C7452]/40 hover:text-[#1B1813] font-semibold tracking-wider"
             >
               <Sparkles className="w-2.5 h-2.5 text-[#8C7452]" />
               <span>MAQUETA 3D</span>

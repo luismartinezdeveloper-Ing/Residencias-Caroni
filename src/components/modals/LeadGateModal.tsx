@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useModalA11y } from '../../hooks/useModalA11y';
 import { Lock, Unlock, ShieldCheck, X, Sparkles, CheckCircle2, Building, Send, KeyRound, ExternalLink, Settings, Smartphone, Mail, User } from 'lucide-react';
 import { useConfidentiality } from '../../context/ConfidentialityContext';
 import { submitLeadToGoogleSheets } from '../../services/leadService';
@@ -59,6 +60,10 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Accesibilidad del diálogo: foco atrapado, Escape, retorno del foco y scroll bloqueado
+  const titleId = useId();
+  const panelRef = useModalA11y<HTMLDivElement>(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -186,6 +191,11 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
     <AnimatePresence>
       <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-5 bg-[#0A0908]/80 backdrop-blur-md">
         <motion.div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          tabIndex={-1}
           initial={{ opacity: 0, scale: 0.95, y: 16 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 16 }}
@@ -200,6 +210,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
             onClick={onClose}
             className="absolute top-4 right-4 p-2 text-[#8C8678] hover:text-[#EFEBE0] hover:bg-[#FAF9F6]/10 rounded-full transition-colors cursor-pointer z-20"
             title="Cerrar modal"
+            aria-label="Cerrar modal"
           >
             <X className="w-5 h-5" />
           </button>
@@ -211,13 +222,13 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
                 <CaroniIsotype size={18} color="#8C7452" />
               </div>
               <span className="font-meta text-[10px] tracking-[0.24em] text-[#8C7452] uppercase font-semibold">
-                ACCESO EXCLUSIVO · LEAD GATE
+                ACCESO PRIVADO
               </span>
             </div>
 
-            <h3 className="font-display text-2xl sm:text-3xl text-[#EFEBE0] tracking-tight leading-tight">
+            <h2 id={titleId} className="font-display text-2xl sm:text-3xl text-[#EFEBE0] tracking-tight leading-tight">
               {title}
-            </h3>
+            </h2>
 
             <p className="font-serif italic text-xs sm:text-[13px] text-[#A6A092] mt-1.5 leading-relaxed">
               {subtitle}
@@ -414,6 +425,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
                     </label>
                     <div className="flex gap-1.5">
                       <select
+                        aria-label="Código de país del teléfono"
                         value={countryCode}
                         onChange={(e) => setCountryCode(e.target.value)}
                         className="bg-[#1C1813] border border-[#FAF9F6]/15 rounded-xl px-2 py-2.5 text-xs text-[#EFEBE0] focus:outline-hidden focus:border-[#8C7452] cursor-pointer"
@@ -460,7 +472,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
                           }`}
                         >
                           <div className="font-meta text-[10px] font-semibold">{p.label}</div>
-                          <div className="text-[8.5px] text-[#A6A092] truncate">{p.desc}</div>
+                          <div className="text-[10px] text-[#A6A092] truncate">{p.desc}</div>
                         </button>
                       );
                     })}
@@ -473,6 +485,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
                     Tipología de Preferencia (Opcional)
                   </label>
                   <select
+                    aria-label="Tipología de preferencia"
                     value={preferredUnit}
                     onChange={(e) => setPreferredUnit(e.target.value)}
                     className="w-full bg-[#1C1813] border border-[#FAF9F6]/15 rounded-xl px-3.5 py-2.5 text-xs text-[#EFEBE0] focus:outline-hidden focus:border-[#8C7452] cursor-pointer"
@@ -534,7 +547,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
           </div>
 
           {/* Footer note */}
-          <div className="bg-[#0E0C0A] px-6 py-3 border-t border-[#FAF9F6]/10 flex flex-col sm:flex-row items-center justify-between text-[9px] font-meta text-[#8C8678] gap-1">
+          <div className="bg-[#0E0C0A] px-6 py-3 border-t border-[#FAF9F6]/10 flex flex-col sm:flex-row items-center justify-between text-[10px] font-meta text-[#8C8678] gap-1">
             <span>Añil Arquitectura · Fideicomiso Residencias Caroní MMXXVIII</span>
             <span className="text-[#8C7452]">Google Sheets Sync Activo</span>
           </div>

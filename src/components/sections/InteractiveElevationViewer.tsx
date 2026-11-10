@@ -405,7 +405,7 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                                   setActiveVariantIndex(idx);
                                   setIsMobileRailOpen(false);
                                 }}
-                                className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[9px] sm:text-[9.5px] font-mono tracking-wider uppercase transition-all duration-150 flex items-center justify-between cursor-pointer ${isVarActive
+                                className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[10px] sm:text-[10px] font-mono tracking-wider uppercase transition-all duration-150 flex items-center justify-between cursor-pointer ${isVarActive
                                     ? 'bg-[#8C7452]/15 text-[#1B1813] font-bold border-l-2 border-[#8C7452] shadow-2xs'
                                     : 'text-[#5A554A] hover:text-[#1B1813] hover:bg-black/[0.03]'
                                   }`}
@@ -481,7 +481,7 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                 </div>
 
                 {/* Micro-Píldora Flotante Superior */}
-                <div className="absolute top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-[#1B1813]/85 backdrop-blur-md border border-white/25 text-[8px] font-mono tracking-widest text-[#FAF9F6] uppercase whitespace-nowrap shadow-md">
+                <div className="absolute top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-[#1B1813]/85 backdrop-blur-md border border-white/25 text-[10px] font-mono tracking-widest text-[#FAF9F6] uppercase whitespace-nowrap shadow-md">
                   2.5× DETALLE
                 </div>
               </div>

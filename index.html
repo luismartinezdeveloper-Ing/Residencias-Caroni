@@ -1,26 +1,6 @@
 <!doctype html>
 <html lang="es">
   <head>
-    <script>
-      (function() {
-        try {
-          var originalFetch = window.fetch;
-          var _currentFetch = originalFetch;
-          Object.defineProperty(window, 'fetch', {
-            get: function() {
-              return _currentFetch;
-            },
-            set: function(val) {
-              _currentFetch = val;
-            },
-            configurable: true,
-            enumerable: true
-          });
-        } catch (e) {
-          // ignore if already configured or restricted
-        }
-      })();
-    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     

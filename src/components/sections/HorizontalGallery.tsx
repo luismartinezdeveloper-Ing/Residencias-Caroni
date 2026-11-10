@@ -97,7 +97,7 @@ const ALL_SLIDES: GallerySlide[] = [
   {
     id: 'pbn-terraza',
     categoryId: 'pb-norte',
-    tag: 'EXTERIOR EXCLUSIVO',
+    tag: 'EXTERIOR DE AUTOR',
     title: 'El Jardín y la Terraza Norte',
     subtitle: 'Terrazas continuas y jardines privados protegidos del entorno urbano. Un oasis de calma diseñado para la contemplación directa de la cresta verde del Parque Nacional.',
     image: '/imagen/interior/pb-norte/01_PB_Norte_Terraza.jpeg',
@@ -148,7 +148,7 @@ const ALL_SLIDES: GallerySlide[] = [
     categoryId: 'penthouse',
     tag: 'MIRADOR SUPERIOR',
     title: 'La Cima Panorámica',
-    subtitle: 'Perspectivas privilegiadas de 180° sobre el valle de Caracas y la cresta verde del Ávila, con terrazas perimetrales y privacidad absoluta.',
+    subtitle: 'Perspectivas de 180° sobre el valle de Caracas y la cresta verde del Ávila, con terrazas perimetrales y privacidad absoluta.',
     image: '/imagen/exterior/RC-exterior.ventanal-PH.jpeg',
     dockLabel: 'Mirador',
   },
@@ -302,7 +302,7 @@ const AppleCircularLoupeImage: React.FC<AppleCircularLoupeImageProps> = ({
         </div>
 
         {/* Micro-Píldora Flotante Superior en Lupa */}
-        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-[#1B1813]/85 backdrop-blur-md border border-white/25 text-[8px] font-mono tracking-widest text-[#FAF9F6] uppercase whitespace-nowrap shadow-md">
+        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-[#1B1813]/85 backdrop-blur-md border border-white/25 text-[10px] font-mono tracking-widest text-[#FAF9F6] uppercase whitespace-nowrap shadow-md">
           2.5×
         </div>
       </div>
@@ -387,17 +387,17 @@ export const HorizontalGallery = () => {
         {/* Identificador Superior Izquierdo Minimalista */}
         <div className="absolute top-6 left-6 sm:left-12 z-20 hidden md:flex items-center space-x-3 pointer-events-none">
           <div className="w-2 h-2 rounded-full bg-[#8C7452] shadow-[0_0_8px_rgba(140,116,82,0.35)]" />
-          <span className="font-mono text-[9px] sm:text-[10px] text-[#8C7452] tracking-[0.25em] uppercase font-semibold">
+          <span className="font-mono text-[10px] sm:text-[10px] text-[#8C7452] tracking-[0.25em] uppercase font-semibold">
             PERSPECTIVAS & MATERIALIDAD
           </span>
           <span className="text-[#1B1813]/20 text-xs font-mono">·</span>
-          <span className="font-meta text-[9px] sm:text-[10px] text-[#5A554A] tracking-[0.2em] uppercase">
+          <span className="font-meta text-[10px] sm:text-[10px] text-[#5A554A] tracking-[0.2em] uppercase">
             RENDERS DE AUTOR
           </span>
         </div>
 
         {/* Indicador de Desplazamiento Superior Derecho */}
-        <div className="absolute top-6 right-6 sm:right-12 z-20 hidden md:flex items-center space-x-2 text-[9px] font-mono text-[#5A554A] tracking-widest pointer-events-none">
+        <div className="absolute top-6 right-6 sm:right-12 z-20 hidden md:flex items-center space-x-2 text-[10px] font-mono text-[#5A554A] tracking-widest pointer-events-none">
           <span className="hidden lg:inline">DESPLAZAMIENTO HORIZONTAL</span>
           <span className="text-[#8C7452]">→</span>
         </div>
@@ -428,7 +428,7 @@ export const HorizontalGallery = () => {
                   {/* Columna Editorial (Apple Glass Minimalist Claro) */}
                   <div className="w-full lg:w-5/12 flex flex-col space-y-4 sm:space-y-6 lg:pr-4">
                     <div className="flex items-center space-x-2.5">
-                      <span className="px-3 py-1 rounded-full bg-[#1B1813]/[0.04] backdrop-blur-md border border-[#1B1813]/10 text-[9px] sm:text-[10px] font-mono tracking-[0.22em] text-[#8C7452] uppercase font-semibold">
+                      <span className="px-3 py-1 rounded-full bg-[#1B1813]/[0.04] backdrop-blur-md border border-[#1B1813]/10 text-[10px] sm:text-[10px] font-mono tracking-[0.22em] text-[#8C7452] uppercase font-semibold">
                         {CATEGORIES.find((c) => c.id === slide.categoryId)?.badge || 'RESIDENCIAS'}
                       </span>
                       <span className="text-[#1B1813]/25 text-xs font-mono">·</span>
@@ -437,9 +437,9 @@ export const HorizontalGallery = () => {
                       </span>
                     </div>
 
-                    <h3 className="font-display text-3xl sm:text-4xl md:text-5xl text-[#1B1813] leading-[1.1] tracking-tight">
+                    <h2 className="font-display text-3xl sm:text-4xl md:text-5xl text-[#1B1813] leading-[1.1] tracking-tight">
                       {slide.title}
-                    </h3>
+                    </h2>
 
                     <p className="font-serif text-sm sm:text-base md:text-lg text-[#5A554A] leading-relaxed max-w-lg font-light">
                       {slide.subtitle}
@@ -477,7 +477,7 @@ export const HorizontalGallery = () => {
                               {meta.specs.slice(0, 3).map((spec, i) => (
                                 <span
                                   key={i}
-                                  className="px-2 py-0.5 rounded bg-[#FAF9F6] border border-[#1B1813]/10 text-[9px] font-mono text-[#5A554A]"
+                                  className="px-2 py-0.5 rounded bg-[#FAF9F6] border border-[#1B1813]/10 text-[10px] font-mono text-[#5A554A]"
                                 >
                                   <strong className="text-[#8C7452] font-medium">{spec.label}:</strong> {spec.value}
                                 </span>
@@ -513,7 +513,7 @@ export const HorizontalGallery = () => {
                 <button
                   key={cat.id}
                   onClick={() => handleSelectCategory(cat.id)}
-                  className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-mono tracking-wider transition-all duration-200 uppercase whitespace-nowrap flex items-center space-x-1.5 cursor-pointer ${
+                  className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-[10px] font-mono tracking-wider transition-all duration-200 uppercase whitespace-nowrap flex items-center space-x-1.5 cursor-pointer ${
                     isCatActive
                       ? 'bg-[#1B1813]/90 text-[#FAF9F6] shadow-[0_2px_8px_rgba(27,24,19,0.2),inset_0_1px_0.5px_rgba(255,255,255,0.25)] border border-white/20 backdrop-blur-md font-semibold'
                       : 'text-[#5A554A] hover:text-[#1B1813] hover:bg-white/60 hover:shadow-[0_2px_6px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.8)] border border-transparent hover:border-white/50'
@@ -541,7 +541,7 @@ export const HorizontalGallery = () => {
                 <button
                   key={slide.id}
                   onClick={() => scrollToSlide(idx)}
-                  className={`px-2.5 sm:px-3.5 py-1 rounded-full text-[9px] sm:text-[10px] font-mono tracking-wider transition-all duration-200 uppercase whitespace-nowrap flex items-center space-x-1.5 cursor-pointer ${
+                  className={`px-2.5 sm:px-3.5 py-1 rounded-full text-[10px] sm:text-[10px] font-mono tracking-wider transition-all duration-200 uppercase whitespace-nowrap flex items-center space-x-1.5 cursor-pointer ${
                     isActive
                       ? 'bg-gradient-to-r from-[#8C7452] to-[#A08255] text-white shadow-[0_2px_8px_rgba(140,116,82,0.35),inset_0_1px_0.5px_rgba(255,255,255,0.3)] border border-white/30 font-medium'
                       : 'text-[#5A554A] hover:text-[#1B1813] hover:bg-white/60 hover:shadow-[0_2px_6px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.8)] border border-transparent hover:border-white/50'

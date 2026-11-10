@@ -15,8 +15,8 @@ import {
  * Desarrollo & Experiencia Interactiva: Ing. Luis Martinez (luismartinez.developer@gmail.com)
  */
 
-const MASTER_FILM_SRC = getMediaAssetUrl('/videos/residencias_caroni_master_film.mp4?v=residencias_caroni_hero_v6');
-const MASTER_FILM_POSTER = getMediaAssetUrl('/videos/residencias_caroni_master_film_poster.jpg?v=residencias_caroni_hero_v6');
+const MASTER_FILM_SRC = getMediaAssetUrl('/videos/residencias_caroni_master_film.mp4?v=residencias_caroni_hero_v7');
+const MASTER_FILM_POSTER = getMediaAssetUrl('/videos/residencias_caroni_master_film_poster.jpg?v=residencias_caroni_hero_v7');
 
 interface CinematicScrollNarrativeProps {
   onOpen3DModal?: () => void;
@@ -174,6 +174,8 @@ interface CinematicScrollNarrativeProps {
 
     return (
       <section id="obra" className="relative w-full bg-[#070706] text-[#FAF8F5]">
+        {/* Encabezado principal solo para lectores de pantalla y buscadores: no altera el diseño */}
+        <h1 className="sr-only">Residencias Caroní · Altamira, Caracas · Añil Arquitectura</h1>
         {/* ========================================================================= */}
         {/* HERO CINEMÁTICO — ANCHO TOTAL DE BORDE A BORDE · PROPORCIÓN 16:9 NATURAL   */}
         {/* CERO ZOOM · CERO RECORTE · 100% NITIDEZ FULL HD NATIVA · SIN INFORMACIÓN  */}
@@ -204,7 +206,7 @@ interface CinematicScrollNarrativeProps {
             {/* Audio Toggle */}
             <button
               onClick={toggleAudio}
-              className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full border backdrop-blur-md text-[9.5px] font-mono tracking-wider uppercase transition-all cursor-pointer shadow-lg ${isAudioActive
+              className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-full border backdrop-blur-md text-[10px] font-mono tracking-wider uppercase transition-all cursor-pointer shadow-lg ${isAudioActive
                   ? 'bg-[#C9A86A] text-[#070706] border-[#C9A86A] font-bold shadow-[#C9A86A]/20'
                   : 'bg-black/60 text-white/90 border-white/20 hover:text-white hover:bg-black/80 hover:border-white/40'
                 }`}
@@ -232,7 +234,7 @@ interface CinematicScrollNarrativeProps {
               className="flex flex-col items-center space-y-1 text-white/70 hover:text-[#C9A86A] transition-colors cursor-pointer group py-2 px-4 backdrop-blur-[2px] rounded-full"
               title="Desplazarse a la Galería de Perspectivas"
             >
-              <span className="font-meta text-[9px] tracking-[0.28em] uppercase font-semibold">
+              <span className="font-meta text-[10px] tracking-[0.28em] uppercase font-semibold">
                 EXPLORAR GALERÍA
               </span>
               <ChevronDown className="w-4 h-4 text-[#C9A86A] animate-bounce" />

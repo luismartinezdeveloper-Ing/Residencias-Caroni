@@ -29,6 +29,24 @@
   }
 }
 
+/* Foco visible solo para quien navega con teclado (no aparece al usar el ratón) */
+:focus-visible {
+  outline: 2px solid var(--color-bronce);
+  outline-offset: 2px;
+}
+
+/* Respeta "reducir movimiento" del sistema: sin animaciones en bucle ni desplazamientos suaves */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Custom editorial helpers */
 .accent-dot::before {
   content: "·";
