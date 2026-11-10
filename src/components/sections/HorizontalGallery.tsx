@@ -307,6 +307,15 @@ const AppleCircularLoupeImage: React.FC<AppleCircularLoupeImageProps> = ({
           2.5×
         </div>
       </div>
+
+      {/* Pista de la lupa: solo con puntero (no en táctil) y se oculta al usarla */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-3 right-3 z-20 hidden [@media(hover:hover)]:block px-3 py-1 rounded-full bg-white/80 backdrop-blur-xl border border-white/80 text-[10.5px] font-mono tracking-wider text-[#5A554A] shadow-[0_4px_16px_rgba(27,24,19,0.1)] transition-opacity duration-200"
+        style={{ opacity: isHovering ? 0 : 1 }}
+      >
+        Pasa el cursor para ampliar
+      </div>
     </div>
   );
 };
@@ -423,7 +432,7 @@ export const HorizontalGallery = () => {
             {currentSlides.map((slide, index) => (
               <div
                 key={slide.id}
-                className="relative w-screen h-screen flex items-center justify-center px-4 sm:px-10 md:px-16 pt-10 sm:pt-12 pb-24 sm:pb-28"
+                className="relative w-screen h-screen flex items-center justify-center px-4 sm:px-10 md:px-16 pt-10 sm:pt-12 pb-32 sm:pb-28"
               >
                 <div className="w-full max-w-7xl flex flex-col lg:flex-row items-center gap-8 lg:gap-14 bg-white/80 backdrop-blur-2xl border border-[#1B1813]/10 rounded-3xl p-6 sm:p-10 shadow-[0_25px_60px_-15px_rgba(27,24,19,0.06)]">
                   {/* Columna Editorial (Apple Glass Minimalist Claro) */}
@@ -478,7 +487,7 @@ export const HorizontalGallery = () => {
                 <button
                   key={cat.id}
                   onClick={() => handleSelectCategory(cat.id)}
-                  className={`px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-[10px] font-mono tracking-wider transition-all duration-200 uppercase whitespace-nowrap flex items-center space-x-1.5 cursor-pointer ${
+                  className={`px-3 sm:px-4 py-1 sm:py-1.5 min-h-[34px] sm:min-h-0 rounded-full text-[11px] sm:text-[10px] font-mono tracking-wider transition-all duration-200 uppercase whitespace-nowrap flex items-center space-x-1.5 cursor-pointer ${
                     isCatActive
                       ? 'bg-[#1B1813]/90 text-[#FAF9F6] shadow-[0_2px_8px_rgba(27,24,19,0.2),inset_0_1px_0.5px_rgba(255,255,255,0.25)] border border-white/20 backdrop-blur-md font-semibold'
                       : 'text-[#5A554A] hover:text-[#1B1813] hover:bg-white/60 hover:shadow-[0_2px_6px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.8)] border border-transparent hover:border-white/50'
@@ -506,7 +515,7 @@ export const HorizontalGallery = () => {
                 <button
                   key={slide.id}
                   onClick={() => scrollToSlide(idx)}
-                  className={`px-2.5 sm:px-3.5 py-1 rounded-full text-[10px] sm:text-[10px] font-mono tracking-wider transition-all duration-200 uppercase whitespace-nowrap flex items-center space-x-1.5 cursor-pointer ${
+                  className={`px-2.5 sm:px-3.5 py-1 min-h-[34px] sm:min-h-0 rounded-full text-[11px] sm:text-[10px] font-mono tracking-wider transition-all duration-200 uppercase whitespace-nowrap flex items-center space-x-1.5 cursor-pointer ${
                     isActive
                       ? 'bg-gradient-to-r from-[#8C7452] to-[#A08255] text-white shadow-[0_2px_8px_rgba(140,116,82,0.35),inset_0_1px_0.5px_rgba(255,255,255,0.3)] border border-white/30 font-medium'
                       : 'text-[#5A554A] hover:text-[#1B1813] hover:bg-white/60 hover:shadow-[0_2px_6px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.8)] border border-transparent hover:border-white/50'
