@@ -1,22 +1,21 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { JsonFileLeadRepository, LeadRecord } from '../leadRepository';
 
 describe('JsonFileLeadRepository - Almacenamiento Seguro y Transaccional', () => {
-  const testDir = path.join(process.cwd(), 'scratch', 'test_leads');
-  const testFile = path.join(testDir, 'leads_test.json');
+  // Carpeta temporal única por prueba: evita arrastrar datos entre tests y bloqueos de OneDrive/antivirus.
+  let testDir = '';
+  let testFile = '';
 
   beforeEach(() => {
-    if (fs.existsSync(testDir)) {
-      fs.rmSync(testDir, { recursive: true, force: true });
-    }
+    testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'caroni-leads-'));
+    testFile = path.join(testDir, 'leads_test.json');
   });
 
   afterEach(() => {
-    if (fs.existsSync(testDir)) {
-      fs.rmSync(testDir, { recursive: true, force: true });
-    }
+    fs.rmSync(testDir, { recursive: true, force: true });
   });
 
   it('debe inicializar el archivo en disco si no existe y permitir guardar leads', async () => {

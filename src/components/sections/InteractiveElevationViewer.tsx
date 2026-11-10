@@ -338,7 +338,7 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
               <div className="absolute top-4 left-4 z-40 lg:hidden">
                 <button
                   onClick={() => setIsMobileRailOpen(!isMobileRailOpen)}
-                  className="px-3 py-1.5 rounded-full bg-white/80 backdrop-blur-2xl border border-white/90 shadow-md text-[#1B1813] font-mono text-[10px] tracking-wider uppercase font-semibold flex items-center space-x-1.5 cursor-pointer"
+                  className="px-3.5 py-2 rounded-full bg-white/80 backdrop-blur-2xl border border-white/90 shadow-md text-[#1B1813] font-mono text-[11px] tracking-wider uppercase font-semibold flex items-center space-x-1.5 cursor-pointer"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-[#8C7452]" />
                   <span>{isMobileRailOpen ? '✕ CERRAR MENÚ' : '☰ PLANOS & VISTAS'}</span>
@@ -370,15 +370,15 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                                   handleSelectCategory(cat.id);
                                   setIsMobileRailOpen(false);
                                 }}
-                                className={`w-full text-left px-3 py-2 rounded-xl text-[10px] sm:text-[10.5px] font-mono tracking-wider transition-all duration-200 uppercase flex items-center justify-between cursor-pointer ${isCatActive
-                                    ? 'bg-[#1B1813] text-[#FAF9F6] shadow-sm font-semibold'
-                                    : 'text-[#5A554A] hover:text-[#1B1813] hover:bg-black/[0.03]'
+                                className={`w-full text-left px-4 py-2 rounded-full text-[11px] font-mono tracking-wider transition-all duration-200 uppercase flex items-center justify-between cursor-pointer active:scale-[0.98] ${isCatActive
+                                    ? 'bg-[#1B1813]/90 text-[#FAF9F6] shadow-[0_2px_8px_rgba(27,24,19,0.2),inset_0_1px_0.5px_rgba(255,255,255,0.25)] border border-white/20 backdrop-blur-md font-semibold'
+                                    : 'text-[#5A554A] hover:text-[#1B1813] hover:bg-white/60 hover:shadow-[0_2px_6px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.8)] border border-transparent hover:border-white/50'
                                   }`}
                           >
                     <div className="flex items-center space-x-2">
                       <span
                         className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                          isCatActive ? 'bg-[#C9A86A]' : 'bg-[#1B1813]/25'
+                          isCatActive ? 'bg-[#C9A86A] shadow-[0_0_6px_#C9A86A]' : 'bg-[#1B1813]/25'
                         }`}
                       />
                       <span>{cat.label}</span>
@@ -393,7 +393,7 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                           animate={{ height: 'auto', opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
                           transition={{ duration: 0.22 }}
-                          className="overflow-hidden pl-3 pr-1 py-1 space-y-1 border-l-2 border-[#8C7452]/30 ml-2.5 my-1"
+                          className="overflow-hidden pl-3 pr-0 py-1 space-y-1 my-1"
                         >
                           {cat.variants.map((variant, idx) => {
                             const isVarActive = activeVariantIndex === idx;
@@ -405,13 +405,13 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                                   setActiveVariantIndex(idx);
                                   setIsMobileRailOpen(false);
                                 }}
-                                className={`w-full text-left px-2.5 py-1.5 rounded-lg text-[9px] sm:text-[9.5px] font-mono tracking-wider uppercase transition-all duration-150 flex items-center justify-between cursor-pointer ${isVarActive
-                                    ? 'bg-[#8C7452]/15 text-[#1B1813] font-bold border-l-2 border-[#8C7452] shadow-2xs'
-                                    : 'text-[#5A554A] hover:text-[#1B1813] hover:bg-black/[0.03]'
+                                className={`w-full text-left px-3.5 py-2 rounded-full text-[11px] font-mono tracking-wider uppercase transition-all duration-200 flex items-center justify-between cursor-pointer active:scale-[0.98] ${isVarActive
+                                    ? 'bg-gradient-to-r from-[#8C7452] to-[#A08255] text-white shadow-[0_2px_8px_rgba(140,116,82,0.35),inset_0_1px_0.5px_rgba(255,255,255,0.3)] border border-white/30 font-medium'
+                                    : 'text-[#5A554A] hover:text-[#1B1813] hover:bg-white/60 hover:shadow-[0_2px_6px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.8)] border border-transparent hover:border-white/50'
                                   }`}
                               >
-                                <div className="flex items-center space-x-1.5 truncate">
-                                  <span className={isVarActive ? 'text-[#8C7452]' : 'text-[#1B1813]/25'}>▪</span>
+                                <div className="flex items-center space-x-2 truncate">
+                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isVarActive ? 'bg-white shadow-[0_0_4px_#ffffff]' : 'bg-[#1B1813]/25'}`} />
                                   <span className="truncate">{variant.pillTitle}</span>
                                 </div>
                               </button>
@@ -429,10 +429,10 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
               <div className="border-t border-[#1B1813]/10 pt-2.5">
                 {/* Ficha Resumida de la Lámina */}
                 <div className="bg-white/50 backdrop-blur-md rounded-xl p-2.5 border border-white/80 shadow-2xs space-y-1">
-                  <div className="font-display text-[11px] text-[#1B1813] font-semibold leading-tight truncate">
+                  <div className="font-display text-[13px] text-[#1B1813] font-semibold leading-tight">
                     {currentVariant.tag}
                   </div>
-                  <div className="font-serif text-[10px] text-[#5A554A] font-light leading-snug line-clamp-2 italic">
+                  <div className="font-serif text-xs text-[#5A554A] font-light leading-snug line-clamp-3 italic">
                     «{currentVariant.subtitle}»
                   </div>
                 </div>
@@ -481,7 +481,7 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                 </div>
 
                 {/* Micro-Píldora Flotante Superior */}
-                <div className="absolute top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-[#1B1813]/85 backdrop-blur-md border border-white/25 text-[8px] font-mono tracking-widest text-[#FAF9F6] uppercase whitespace-nowrap shadow-md">
+                <div className="absolute top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-[#1B1813]/85 backdrop-blur-md border border-white/25 text-[10px] font-mono tracking-widest text-[#FAF9F6] uppercase whitespace-nowrap shadow-md">
                   2.5× DETALLE
                 </div>
               </div>

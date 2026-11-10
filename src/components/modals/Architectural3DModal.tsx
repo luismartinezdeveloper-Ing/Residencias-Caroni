@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { Maximize2, Minimize2, Sun, Moon, Sparkles, Layers, Compass, RotateCw, ShieldCheck, MessageSquare, CheckCircle, Mic } from 'lucide-react';
 import { UnitData } from '../../types/brand';
 import { AIChatbot } from './AIChatbot';
+import { useModalA11y } from '../../hooks/useModalA11y';
 
 import { UNITS_DATA, BRAND_INFO, MILESTONES_DATA } from '../../data/brandData';
 import { CaroniIsotype, ArchitecturalElevation, FloorPlanSchema } from '../ui/ArchitecturalDrawings';
@@ -38,6 +39,8 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const { isAccredited, activeLead, credentials } = useConfidentiality();
+  // Foco atrapado, devolución del foco y scroll bloqueado (Escape ya lo gestiona el efecto principal)
+  const dialogRef = useModalA11y<HTMLDivElement>(isOpen, onClose, { escape: false });
 
   const VALID_VIEW_MODES = ['assembled', 'exploded', 'floorplan'];
   const sanitizedInitial = typeof initialViewMode === 'string' && VALID_VIEW_MODES.includes(initialViewMode)
@@ -1145,6 +1148,11 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
         >
           {/* Modal Container: Studio Arquitectónico de Alta Gama */}
           <motion.div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Maqueta 3D interactiva de Residencias Caroní"
+            tabIndex={-1}
             initial={{ opacity: 0, scale: 0.96, y: 14 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 10 }}
@@ -1164,7 +1172,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                   <div className="font-display text-sm sm:text-base md:text-lg text-[#FAF8F5] leading-none truncate">
                     Estudio Volumétrico 3D & Estratos
                   </div>
-                  <div className="font-meta text-[8.5px] sm:text-[9.5px] text-[#C9A86A] tracking-[0.2em] mt-0.5 truncate font-semibold">
+                  <div className="font-meta text-[10px] sm:text-[10px] text-[#C9A86A] tracking-[0.2em] mt-0.5 truncate font-semibold">
                     MAQUETA DIGITAL A TINTA · AÑIL ARQUITECTURA
                   </div>
                 </div>
@@ -1180,7 +1188,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                   <button
                     key={mode.id}
                     onClick={() => setViewMode(mode.id as any)}
-                    className={`font-meta text-[8.5px] sm:text-[9.5px] px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer min-h-[28px] flex items-center justify-center ${
+                    className={`font-meta text-[10px] sm:text-[10px] px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full whitespace-nowrap transition-all cursor-pointer min-h-[28px] flex items-center justify-center ${
                       viewMode === mode.id
                         ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-md'
                         : 'text-[#C9C4B5] hover:text-white hover:bg-white/5'
@@ -1207,7 +1215,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                 <div className="flex items-center border border-[#C9A86A]/30 bg-black/60 p-0.5 rounded-full shadow-inner">
                   <button
                     onClick={() => setSolarTimeMode('morning')}
-                    className={`font-meta text-[8.5px] sm:text-[9.5px] px-2 sm:px-2.5 py-1 rounded-full transition-colors flex items-center space-x-1 cursor-pointer min-h-[26px] ${
+                    className={`font-meta text-[10px] sm:text-[10px] px-2 sm:px-2.5 py-1 rounded-full transition-colors flex items-center space-x-1 cursor-pointer min-h-[26px] ${
                       solarTimeMode === 'morning'
                         ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
                         : 'text-[#C9C4B5] hover:text-white hover:bg-white/10'
@@ -1220,7 +1228,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
                   <button
                     onClick={() => setSolarTimeMode('golden')}
-                    className={`font-meta text-[8.5px] sm:text-[9.5px] px-2 sm:px-2.5 py-1 rounded-full transition-colors flex items-center space-x-1 cursor-pointer min-h-[26px] ${
+                    className={`font-meta text-[10px] sm:text-[10px] px-2 sm:px-2.5 py-1 rounded-full transition-colors flex items-center space-x-1 cursor-pointer min-h-[26px] ${
                       solarTimeMode === 'golden'
                         ? 'bg-[#E59238] text-[#0A0908] font-bold shadow-xs'
                         : 'text-[#C9C4B5] hover:text-white hover:bg-white/10'
@@ -1233,7 +1241,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
                   <button
                     onClick={() => setSolarTimeMode('night')}
-                    className={`font-meta text-[8.5px] sm:text-[9.5px] px-2 sm:px-2.5 py-1 rounded-full transition-colors flex items-center space-x-1 cursor-pointer min-h-[26px] ${
+                    className={`font-meta text-[10px] sm:text-[10px] px-2 sm:px-2.5 py-1 rounded-full transition-colors flex items-center space-x-1 cursor-pointer min-h-[26px] ${
                       solarTimeMode === 'night'
                         ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
                         : 'text-[#C9C4B5] hover:text-white hover:bg-white/10'
@@ -1249,7 +1257,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                 {import.meta.env.DEV && (
                   <button
                     onClick={handleToggleAvilaDebug}
-                    className={`font-meta text-[8.5px] sm:text-[9.5px] px-2.5 sm:px-3 py-1 sm:py-1.5 border transition-all flex items-center space-x-1.5 cursor-pointer shadow-xs rounded-full min-h-[28px] ${
+                    className={`font-meta text-[10px] sm:text-[10px] px-2.5 sm:px-3 py-1 sm:py-1.5 border transition-all flex items-center space-x-1.5 cursor-pointer shadow-xs rounded-full min-h-[28px] ${
                       isAvilaDebug
                         ? 'border-red-500 bg-red-600 text-white font-bold ring-2 ring-red-400/60 shadow-lg shadow-red-500/20'
                         : 'border-red-500/40 bg-red-950/20 text-red-200 hover:bg-red-900/40 hover:text-white'
@@ -1258,7 +1266,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                   >
                     <span className={`w-2 h-2 rounded-full ${isAvilaDebug ? 'bg-white animate-pulse' : 'bg-red-500'}`} />
                     <span className="font-semibold">DEBUG ÁVILA</span>
-                    <span className="font-mono text-[8px] opacity-90 font-bold">
+                    <span className="font-mono text-[10px] opacity-90 font-bold">
                       [{isAvilaDebug ? 'ROJO' : 'OFF'}]
                     </span>
                   </button>
@@ -1266,7 +1274,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
                 <button
                   onClick={() => setIsFullscreen(!isFullscreen)}
-                  className="font-meta text-[8.5px] sm:text-[9.5px] px-2.5 sm:px-3 py-1 sm:py-1.5 border border-[#C9A86A]/30 bg-black/50 hover:bg-[#C9A86A]/20 text-[#FAF8F5] transition-colors flex items-center space-x-1 cursor-pointer shadow-xs rounded-full min-h-[28px]"
+                  className="font-meta text-[10px] sm:text-[10px] px-2.5 sm:px-3 py-1 sm:py-1.5 border border-[#C9A86A]/30 bg-black/50 hover:bg-[#C9A86A]/20 text-[#FAF8F5] transition-colors flex items-center space-x-1 cursor-pointer shadow-xs rounded-full min-h-[28px]"
                   title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla Completa'}
                 >
                   {isFullscreen ? (
@@ -1284,7 +1292,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
                 <button
                   onClick={onClose}
-                  className="font-meta text-[9px] sm:text-[9.5px] px-3.5 sm:px-4 py-2 sm:py-1.5 border border-[#C9A86A]/40 bg-[#C9A86A]/10 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer shadow-xs rounded-full min-h-[44px] sm:min-h-[28px]"
+                  className="btn-apple btn-apple-glass-dark font-meta text-[10px] px-3.5 sm:px-4 py-2 sm:py-1.5 gap-1.5 shrink-0 min-h-[44px] sm:min-h-[28px]"
                   title="Cerrar Maqueta 3D"
                   aria-label="Cerrar Maqueta 3D"
                 >
@@ -1318,7 +1326,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                             <>
                               <button 
                                 onClick={() => setPlanType('Social')}
-                                className={`font-meta text-[8.5px] sm:text-[9.5px] px-3.5 sm:px-4.5 py-1.5 rounded-full whitespace-nowrap transition-colors cursor-pointer min-h-[30px] flex items-center justify-center ${
+                                className={`font-meta text-[10px] sm:text-[10px] px-3.5 sm:px-4.5 py-1.5 rounded-full whitespace-nowrap transition-colors cursor-pointer min-h-[30px] flex items-center justify-center ${
                                   planType === 'Social' 
                                     ? 'bg-[#1B1813] text-[#EFEBE0] font-semibold shadow-2xs' 
                                     : 'text-[#1B1813] hover:text-[#8C7452] hover:bg-[#FAF9F6]'
@@ -1328,7 +1336,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                               </button>
                               <button 
                                 onClick={() => setPlanType('Privada')}
-                                className={`font-meta text-[8.5px] sm:text-[9.5px] px-3.5 sm:px-4.5 py-1.5 rounded-full whitespace-nowrap transition-colors cursor-pointer min-h-[30px] flex items-center justify-center ${
+                                className={`font-meta text-[10px] sm:text-[10px] px-3.5 sm:px-4.5 py-1.5 rounded-full whitespace-nowrap transition-colors cursor-pointer min-h-[30px] flex items-center justify-center ${
                                   planType === 'Privada' 
                                     ? 'bg-[#1B1813] text-[#EFEBE0] font-semibold shadow-2xs' 
                                     : 'text-[#1B1813] hover:text-[#8C7452] hover:bg-[#FAF9F6]'
@@ -1338,7 +1346,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                               </button>
                             </>
                           ) : (
-                            <span className="font-meta text-[8.5px] sm:text-[9.5px] px-3.5 sm:px-4.5 py-1.5 rounded-full whitespace-nowrap bg-[#1B1813] text-[#EFEBE0] font-semibold min-h-[30px] flex items-center justify-center">
+                            <span className="font-meta text-[10px] sm:text-[10px] px-3.5 sm:px-4.5 py-1.5 rounded-full whitespace-nowrap bg-[#1B1813] text-[#EFEBE0] font-semibold min-h-[30px] flex items-center justify-center">
                               PLANTA COMPLETA (UNA PLANTA)
                             </span>
                           )}
@@ -1364,7 +1372,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#C9C4B5] pb-2">
                         <div className="flex items-center space-x-2">
                           <span className="w-2 h-2 rounded-full bg-[#8C7452]" />
-                          <span className="font-meta text-[9px] text-[#1B1813] font-semibold">
+                          <span className="font-meta text-[10px] text-[#1B1813] font-semibold">
                             ESTUDIO ESTRATIGRÁFICO VECTORIAL
                           </span>
                         </div>
@@ -1373,7 +1381,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                             setHasWebGLError(false);
                             setRetryKey((k) => k + 1);
                           }}
-                          className="font-meta text-[8.5px] px-2.5 py-1 bg-[#1B1813] text-[#EFEBE0] hover:bg-[#8C7452] transition-colors cursor-pointer"
+                          className="btn-apple btn-apple-ink font-meta text-[10px] px-3 py-1"
                         >
                           REINTENTAR RENDER 3D ↺
                         </button>
@@ -1410,7 +1418,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                     >
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-display text-xs text-[#FAF8F5] font-semibold">{hoverTooltip.unit.name}</span>
-                        <span className="font-mono text-[9.5px] text-[#C9A86A] font-bold">{hoverTooltip.unit.level}</span>
+                        <span className="font-mono text-[10px] text-[#C9A86A] font-bold">{hoverTooltip.unit.level}</span>
                       </div>
                       <div className="font-mono text-[10px] text-[#C9C4B5] font-medium mt-0.5">
                         {hoverTooltip.unit.totalArea.toLocaleString('es-VE', { minimumFractionDigits: 2 })} m² · {hoverTooltip.unit.rooms} hab
@@ -1425,11 +1433,11 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                       {/* Section 1: Estratos en Corte */}
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center justify-between px-1">
-                          <span className="font-meta text-[7.5px] sm:text-[8.5px] text-[#C9A86A] tracking-[0.15em] uppercase font-bold flex items-center gap-1">
+                          <span className="font-meta text-[10px] sm:text-[10px] text-[#C9A86A] tracking-[0.15em] uppercase font-bold flex items-center gap-1">
                             <Layers className="w-2.5 h-2.5 text-[#C9A86A]" />
                             Estratos
                           </span>
-                          <span className="font-mono text-[8px] text-[#FAF8F5]/60">
+                          <span className="font-mono text-[10px] text-[#FAF8F5]/60">
                             {activeFloorFilter}
                           </span>
                         </div>
@@ -1444,7 +1452,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                             <button
                               key={f.id}
                               onClick={() => setActiveFloorFilter(f.id as any)}
-                              className={`font-meta text-[8px] sm:text-[9px] px-2.5 py-1 rounded-xl text-left transition-all cursor-pointer min-h-[25px] flex items-center justify-between ${
+                              className={`font-meta text-[10px] sm:text-[10px] px-2.5 py-1 rounded-full text-left transition-all cursor-pointer min-h-[25px] flex items-center justify-between ${
                                 activeFloorFilter === f.id
                                   ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
                                   : 'bg-black/30 text-[#C9C4B5] border border-white/5 hover:border-[#C9A86A]/40 hover:text-white'
@@ -1462,7 +1470,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
                       {/* Section 2: Perspectivas de Cámara */}
                       <div className="flex flex-col gap-1.5">
-                        <span className="font-meta text-[7.5px] sm:text-[8.5px] text-[#C9A86A] tracking-[0.15em] uppercase font-bold px-1 flex items-center gap-1">
+                        <span className="font-meta text-[10px] sm:text-[10px] text-[#C9A86A] tracking-[0.15em] uppercase font-bold px-1 flex items-center gap-1">
                           <Compass className="w-2.5 h-2.5 text-[#C9A86A]" />
                           Perspectiva
                         </span>
@@ -1478,7 +1486,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                             <button
                               key={cam.id}
                               onClick={() => setCameraPreset(cam.id as any)}
-                              className={`font-meta text-[8px] sm:text-[8.5px] py-1 rounded-lg text-center transition-all cursor-pointer min-h-[25px] flex items-center justify-center ${
+                              className={`font-meta text-[10px] sm:text-[10px] py-1 rounded-full text-center transition-all cursor-pointer min-h-[25px] flex items-center justify-center ${
                                 cameraView === cam.id
                                   ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
                                   : 'bg-black/30 text-[#C9C4B5] border border-white/5 hover:border-[#C9A86A]/40 hover:text-white'
@@ -1499,7 +1507,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                           <div className="flex flex-col gap-1">
                             <button
                               onClick={handleToggleAvilaDebug}
-                              className={`font-meta text-[8px] sm:text-[8.5px] px-2 py-1.5 rounded-xl transition-all flex items-center justify-between cursor-pointer min-h-[28px] ${
+                              className={`font-meta text-[10px] sm:text-[10px] px-2.5 py-1.5 rounded-full transition-all flex items-center justify-between cursor-pointer min-h-[28px] ${
                                 isAvilaDebug
                                   ? 'bg-red-600 text-white font-bold ring-2 ring-red-400/80 shadow-md animate-pulse'
                                   : 'bg-black/30 text-[#C9C4B5] border border-red-500/30 hover:border-red-500 hover:text-white'
@@ -1510,7 +1518,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                                 <span className={`w-2 h-2 rounded-full ${isAvilaDebug ? 'bg-white' : 'bg-red-500'}`} />
                                 DEBUG ÁVILA
                               </span>
-                              <span className="font-mono text-[7.5px] uppercase font-bold">
+                              <span className="font-mono text-[10px] uppercase font-bold">
                                 {isAvilaDebug ? 'ROJO' : 'OFF'}
                               </span>
                             </button>
@@ -1525,7 +1533,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                       <div className="flex flex-col gap-1.5">
                         <button
                           onClick={() => setIsRotating(!isRotating)}
-                          className={`font-meta text-[8px] sm:text-[8.5px] px-2 py-1.5 rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer min-h-[28px] ${
+                          className={`font-meta text-[10px] sm:text-[10px] px-2 py-1.5 rounded-full transition-all flex items-center justify-center space-x-1.5 cursor-pointer min-h-[28px] ${
                             isRotating
                               ? 'bg-[#C9A86A] text-[#0A0908] font-bold shadow-xs'
                               : 'bg-black/30 text-[#C9C4B5] border border-white/5 hover:border-[#C9A86A]/40 hover:text-white'
@@ -1539,21 +1547,21 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                           <button
                             onClick={() => handleZoomChange(10)}
                             title="Alejar modelo"
-                            className="font-mono text-xs h-7 flex items-center justify-center rounded-lg border border-white/5 bg-black/30 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all cursor-pointer active:scale-95"
+                            className="font-mono text-xs h-7 flex items-center justify-center rounded-full border border-white/5 bg-black/30 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all cursor-pointer active:scale-95"
                           >
                             −
                           </button>
                           <button
                             onClick={handleResetView}
                             title="Reajustar encuadre"
-                            className="font-meta text-[7.5px] h-7 flex items-center justify-center rounded-lg border border-white/5 bg-black/30 hover:border-[#C9A86A] hover:text-[#C9A86A] text-[#C9C4B5] transition-all cursor-pointer active:scale-95"
+                            className="font-meta text-[10px] h-7 flex items-center justify-center rounded-full border border-white/5 bg-black/30 hover:border-[#C9A86A] hover:text-[#C9A86A] text-[#C9C4B5] transition-all cursor-pointer active:scale-95"
                           >
                             RESET
                           </button>
                           <button
                             onClick={() => handleZoomChange(-10)}
                             title="Acercar modelo"
-                            className="font-mono text-xs h-7 flex items-center justify-center rounded-lg border border-white/5 bg-black/30 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all cursor-pointer active:scale-95"
+                            className="font-mono text-xs h-7 flex items-center justify-center rounded-full border border-white/5 bg-black/30 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all cursor-pointer active:scale-95"
                           >
                             +
                           </button>
@@ -1581,7 +1589,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
                             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
                           </span>
                         </div>
-                        <span className="font-meta text-[8.5px] text-[#8C8678] tracking-wider uppercase truncate max-w-[130px]">{selectedUnit.level}</span>
+                        <span className="font-meta text-[10px] text-[#8C8678] tracking-wider uppercase truncate max-w-[130px]">{selectedUnit.level}</span>
                       </div>
                     </button>
                   </div>

@@ -27,6 +27,7 @@ export const CinematicIntroLoader: React.FC<CinematicIntroLoaderProps> = ({
       {isVisible && (
         <motion.div
           key="cinematic-curtain"
+          aria-hidden="true"
           initial={{ opacity: 1 }}
           exit={{
             opacity: 0,
@@ -84,8 +85,8 @@ export const CinematicIntroLoader: React.FC<CinematicIntroLoaderProps> = ({
           </motion.div>
 
           {/* Bottom Telemetry Note */}
-          <div className="absolute bottom-8 font-meta text-[8.5px] tracking-[0.3em] uppercase text-white/40">
-            EXPERIENCIA CINEMÁTICA DE ULTRA-LUJO
+          <div className="absolute bottom-8 font-meta text-[10px] tracking-[0.3em] uppercase text-white/40">
+            EXPERIENCIA CINEMÁTICA DE AUTOR
           </div>
         </motion.div>
       )}

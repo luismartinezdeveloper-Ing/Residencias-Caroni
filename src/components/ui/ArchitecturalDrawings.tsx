@@ -1079,7 +1079,7 @@ export const FloorPlanSchema: React.FC<{
               : (planType === 'Social' ? `Planta Principal de Coronación (${orientation})` : `Nivel de Habitaciones (${orientation})`)}
           </h4>
         </div>
-        <div className="text-right font-meta text-[9px] text-[#8C7452]">
+        <div className="text-right font-meta text-[10px] text-[#8C7452]">
           AÑIL ARQUITECTURA · ESCALA 1:100
         </div>
       </div>

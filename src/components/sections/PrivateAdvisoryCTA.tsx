@@ -48,7 +48,7 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
               <div className="bg-[#FAF9F6]/5 border border-[#FAF9F6]/10 p-3 rounded-xl flex items-center space-x-3">
                 <ShieldCheck className="w-4 h-4 text-[#8C7452] shrink-0" />
                 <span className="font-meta text-[10px] text-[#C9C4B5] tracking-wider uppercase">
-                  8 Residencias Exclusivas
+                  8 Residencias de Autor
                 </span>
               </div>
               <div className="bg-[#FAF9F6]/5 border border-[#FAF9F6]/10 p-3 rounded-xl flex items-center space-x-3">
@@ -72,7 +72,7 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
               <div className="flex items-center justify-between border-b border-[#FAF9F6]/10 pb-4">
                 <div className="space-y-0.5">
                   <div className="font-display text-lg text-[#FAF9F6]">Dirección de Arquitectura</div>
-                  <div className="font-meta text-[9px] text-[#8C8678] tracking-widest uppercase">
+                  <div className="font-meta text-[10px] text-[#8C8678] tracking-widest uppercase">
                     Añil Arquitectura · Altamira
                   </div>
                 </div>
@@ -83,7 +83,7 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
               <div className="space-y-3">
                 <button
                   onClick={onOpenAdvisoryModal}
-                  className="w-full bg-[#8C7452] hover:bg-[#A38965] text-[#1B1813] hover:text-[#1B1813] font-meta text-[11px] uppercase tracking-widest py-3.5 px-5 rounded-full font-bold transition-all flex items-center justify-center space-x-2 cursor-pointer shadow-lg hover:shadow-xl"
+                  className="btn-apple btn-apple-bronze w-full font-meta text-[11px] uppercase tracking-widest py-3.5 px-5 font-bold"
                 >
                   <Calendar className="w-4 h-4" />
                   <span>Agendar Cita Privada</span>
@@ -94,7 +94,7 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
                   href="https://wa.me/?text=Hola%2C%20quisiera%20solicitar%20informaci%C3%B3n%20privada%20y%20disponibilidad%20sobre%20Residencias%20Caron%C3%AD%20en%20Altamira."
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full bg-white/5 hover:bg-white/10 text-[#FAF9F6] border border-white/10 hover:border-[#8C7452]/50 font-meta text-[10.5px] uppercase tracking-wider py-3 px-4 rounded-full transition-all flex items-center justify-center space-x-2 cursor-pointer"
+                  className="btn-apple btn-apple-glass-dark w-full font-meta text-[10.5px] uppercase tracking-wider py-3 px-4"
                 >
                   <MessageSquare className="w-4 h-4 text-[#8C7452]" />
                   <span>Contacto Directo vía WhatsApp</span>
@@ -114,7 +114,7 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
               </div>
 
               <div className="text-center pt-2">
-                <span className="font-meta text-[8.5px] text-[#8C8678] tracking-[0.2em] uppercase">
+                <span className="font-meta text-[10px] text-[#8C8678] tracking-[0.2em] uppercase">
                   Atención confidencial de lunes a sábado previa cita
                 </span>
               </div>

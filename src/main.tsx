@@ -1,5 +1,6 @@
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
+import { MotionConfig } from 'motion/react';
 import App from './App.tsx';
 import './index.css';
 import { registerServiceWorker } from './utils/registerServiceWorker';
@@ -9,6 +10,9 @@ registerServiceWorker();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {/* Respeta "reducir movimiento" del sistema: sin transformaciones, solo cambios de opacidad */}
+    <MotionConfig reducedMotion="user">
+      <App />
+    </MotionConfig>
   </StrictMode>,
 );

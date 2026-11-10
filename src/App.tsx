@@ -268,7 +268,7 @@ function MainAppContent() {
           </div>
 
           {/* Right: Quick Links & Back to Top */}
-          <div className="flex items-center space-x-4 sm:space-x-5 text-[9.5px] uppercase tracking-wider">
+          <div className="flex items-center space-x-4 sm:space-x-5 text-[10px] uppercase tracking-wider">
             <button 
               onClick={() => handleNavigate('obra')} 
               className="text-[#C9C4B5] hover:text-[#8C7452] transition-colors cursor-pointer"

@@ -66,7 +66,7 @@ export const VoiceControlHUD: React.FC<VoiceControlHUDProps> = ({
             )}
           </div>
 
-          <span className="font-meta text-[9.5px] uppercase tracking-wider font-semibold hidden md:inline">
+          <span className="font-meta text-[10px] uppercase tracking-wider font-semibold hidden md:inline">
             {isListening ? 'Escuchando...' : 'Control por Voz'}
           </span>
         </motion.button>
@@ -91,7 +91,7 @@ export const VoiceControlHUD: React.FC<VoiceControlHUDProps> = ({
             transition={{ duration: 0.2 }}
             className="absolute top-12 left-0 sm:left-auto sm:right-0 min-w-[220px] max-w-xs z-50 bg-[#1B1813]/95 backdrop-blur-xl border border-rose-500/40 rounded-2xl p-3 shadow-2xl text-left"
           >
-            <div className="flex items-center justify-between text-[8px] font-mono text-rose-400 uppercase tracking-wider mb-1">
+            <div className="flex items-center justify-between text-[10px] font-mono text-rose-400 uppercase tracking-wider mb-1">
               <span className="flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
                 Voz Detectada
@@ -105,7 +105,7 @@ export const VoiceControlHUD: React.FC<VoiceControlHUDProps> = ({
 
             {/* Matched Command Badge */}
             {feedback.matchedCommand && (
-              <div className="mt-2 pt-2 border-t border-[#8C7452]/30 flex items-center gap-1.5 text-[9px] font-meta text-emerald-300">
+              <div className="mt-2 pt-2 border-t border-[#8C7452]/30 flex items-center gap-1.5 text-[10px] font-meta text-emerald-300">
                 <Check className="w-3 h-3 text-emerald-400" />
                 <span className="truncate">
                   {('label' in feedback.matchedCommand && feedback.matchedCommand.label) ||
@@ -148,7 +148,7 @@ export const VoiceControlHUD: React.FC<VoiceControlHUDProps> = ({
                   <h3 className="font-display font-bold text-base text-[#FAF9F6]">
                     Navegación 3D por Comandos de Voz
                   </h3>
-                  <p className="font-meta text-[9px] text-[#F5C780] uppercase tracking-widest">
+                  <p className="font-meta text-[10px] text-[#F5C780] uppercase tracking-widest">
                     Habla naturalmente en español
                   </p>
                 </div>
@@ -180,7 +180,7 @@ export const VoiceControlHUD: React.FC<VoiceControlHUDProps> = ({
                     setShowCommandsHelp(false);
                     if (!isListening) onToggleListening();
                   }}
-                  className="w-full bg-gradient-to-r from-[#8C7452] to-[#B8986B] text-[#1B1813] font-meta font-bold text-xs py-2.5 rounded-xl hover:brightness-110 transition-all cursor-pointer text-center uppercase tracking-wider"
+                  className="btn-apple btn-apple-bronze w-full font-meta font-bold text-xs py-2.5 uppercase tracking-wider"
                 >
                   {isListening ? 'Comenzar a Hablar' : 'Activar Micrófono Ahora'}
                 </button>
