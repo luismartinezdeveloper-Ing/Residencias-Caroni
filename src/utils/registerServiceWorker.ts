@@ -1,24 +1,38 @@
+const CURRENT_CACHE_NAME = 'caroni-pwa-v7';
+
 export function registerServiceWorker() {
   if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-    const isLocalhost =
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1' ||
-      window.location.hostname === '[::1]';
-
-    if (isLocalhost) {
-      // In local development, unregister any active service worker and purge all stale caches
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        for (const registration of registrations) {
-          registration.unregister();
-        }
-      });
-      if ('caches' in window) {
-        caches.keys().then((names) => {
+    // 1. Purge any legacy caches from previous versions on all environments
+    if ('caches' in window) {
+      caches
+        .keys()
+        .then((names) => {
           for (const name of names) {
-            caches.delete(name);
+            if (name !== CURRENT_CACHE_NAME) {
+              caches.delete(name).catch(() => {});
+            }
           }
-        });
-      }
+        })
+        .catch(() => {});
+    }
+
+    const hostname = window.location.hostname;
+    const isDevOrPreviewHost =
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '[::1]' ||
+      hostname.startsWith('ais-dev-');
+
+    if (isDevOrPreviewHost) {
+      // In local development or AI Studio dev preview, unregister any active service worker
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((registrations) => {
+          for (const registration of registrations) {
+            registration.unregister().catch(() => {});
+          }
+        })
+        .catch(() => {});
       return;
     }
 
@@ -26,22 +40,19 @@ export function registerServiceWorker() {
       navigator.serviceWorker
         .register('/sw.js', { scope: '/' })
         .then((registration) => {
-          console.log('[SW] Service Worker registrado exitosamente con scope:', registration.scope);
-          
-          // Check for updates
           registration.addEventListener('updatefound', () => {
             const installingWorker = registration.installing;
             if (installingWorker) {
               installingWorker.addEventListener('statechange', () => {
                 if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  console.log('[SW] Nueva versión de Residencias Caroní disponible.');
+                  // New version ready
                 }
               });
             }
           });
         })
-        .catch((error) => {
-          console.warn('[SW] Error al registrar el Service Worker:', error);
+        .catch(() => {
+          // Silent fallback if Service Worker registration is restricted
         });
     });
   }

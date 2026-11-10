@@ -12,6 +12,7 @@ import { UnitData } from '../../types/brand';
 import { useResponsiveChat } from '../../hooks/useResponsiveChat';
 import { SSEStreamParser } from '../../utils/sseParser';
 import { useModalA11y } from '../../hooks/useModalA11y';
+import { getDomainFallbackReply } from '../../utils/aiDomainFallback';
 
 interface AIChatbotProps {
   isOpen: boolean;
@@ -24,8 +25,6 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
-
-
 
 export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedUnit }) => {
   const { isMobile } = useResponsiveChat();
@@ -66,7 +65,8 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
         {
           id: 'welcome',
           role: 'assistant',
-          content: '¡Bienvenido a Residencias Caroní! Soy su Asesor. Estoy a su disposición para brindarle información sobre las 8 residencias de autor, cotas técnicas, acabados de alta gama, simulación financiera o coordinar una visita privada. ¿En qué puedo orientarle hoy?',
+          content:
+            '¡Bienvenido a Residencias Caroní! Soy su Asesor. Estoy a su disposición para brindarle información sobre las 8 residencias de autor, cotas técnicas, acabados de alta gama, simulación financiera o coordinar una visita privada. ¿En qué puedo orientarle hoy?',
         },
       ]);
     }
@@ -99,6 +99,8 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
     setInputValue('');
     setIsLoadingText(true);
 
+    const assistantMessageId = (Date.now() + 1).toString();
+
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -111,28 +113,27 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
         }),
       });
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => null);
-        throw new Error(errData?.error || 'Error al conectar con el asesor.');
+      if (!response.ok || !response.body) {
+        throw new Error('Fallback to local domain advisor');
       }
-      if (!response.body) throw new Error('No stream available');
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       const sseParser = new SSEStreamParser();
 
-      const assistantMessageId = (Date.now() + 1).toString();
       setMessages((prev) => [
         ...prev,
         { id: assistantMessageId, role: 'assistant', content: '' },
       ]);
 
       let done = false;
+      let receivedAnyText = false;
       const appendPayloads = (payloads: string[]) => {
         for (const payload of payloads) {
           try {
             const data = JSON.parse(payload);
             if (data.text) {
+              receivedAnyText = true;
               setMessages((prev) =>
                 prev.map((msg) =>
                   msg.id === assistantMessageId
@@ -160,23 +161,38 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
       // Flush remaining SSE buffer
       const finalPayloads = sseParser.flush();
       appendPayloads(finalPayloads);
+
+      if (!receivedAnyText) {
+        const localReply = getDomainFallbackReply(cleanText, selectedUnit?.name);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMessageId ? { ...msg, content: localReply } : msg
+          )
+        );
+      }
     } catch (err: any) {
       if (err?.name === 'AbortError') {
         return;
       }
-      console.error('Chat error:', err);
-      const friendlyMsg =
-        err?.message && !err.message.includes('object')
-          ? err.message
-          : 'Disculpe, ocurrió una interrupción momentánea. Por favor intente nuevamente o solicite contacto directo con el equipo comercial.';
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          role: 'assistant',
-          content: friendlyMsg,
-        },
-      ]);
+      const localFallbackReply = getDomainFallbackReply(cleanText, selectedUnit?.name);
+      setMessages((prev) => {
+        const exists = prev.some((m) => m.id === assistantMessageId);
+        if (exists) {
+          return prev.map((msg) =>
+            msg.id === assistantMessageId && !msg.content.trim()
+              ? { ...msg, content: localFallbackReply }
+              : msg
+          );
+        }
+        return [
+          ...prev,
+          {
+            id: assistantMessageId,
+            role: 'assistant',
+            content: localFallbackReply,
+          },
+        ];
+      });
     } finally {
       if (chatAbortControllerRef.current === abortController) {
         chatAbortControllerRef.current = null;
@@ -192,8 +208,8 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
 
   return (
     <AnimatePresence>
-      {isOpen && (
-        isMinimized ? (
+      {isOpen &&
+        (isMinimized ? (
           /* Apple-style Minimized Floating Capsule */
           <motion.div
             key="minimized-advisor-pill"
@@ -335,7 +351,6 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
                   </div>
                 </div>
               ))}
-
               {isLoadingText && (
                 <div className="flex justify-start">
                   <div className="bg-white/90 backdrop-blur-md border border-black/[0.05] rounded-2xl rounded-tl-xs px-4 py-2.5 shadow-2xs flex items-center gap-2.5">
@@ -348,8 +363,6 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
               )}
               <div ref={messagesEndRef} />
             </div>
-
-
 
             {/* Apple-style Frosted Input Dock */}
             <form
@@ -379,8 +392,7 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
               </div>
             </form>
           </motion.div>
-        )
-      )}
+        ))}
     </AnimatePresence>
   );
 };

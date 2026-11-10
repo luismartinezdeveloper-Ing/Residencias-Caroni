@@ -5,18 +5,18 @@
  */
 
 export const AI_MODELS = {
-  // Cascada de modelos para chat conversacional y streaming SSE.
-  // Solo modelos flash: un fallo no debe escalar a un modelo más caro.
+  // Cascada de modelos para chat conversacional y streaming SSE
   CHAT_STREAMING: [
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
+    'gemini-3.8-flash',
+    'gemini-3.1-flash-lite',
+    'gemini-flash-latest',
   ] as const,
 
   // Modelo de voz en tiempo real con audio bidireccional PCM
-  LIVE_WEBSOCKET: 'gemini-3.1-flash-live-preview' as const,
+  LIVE_WEBSOCKET: 'gemini-3.8-live' as const,
 
   // Modelo de síntesis de voz
-  TTS: 'gemini-3.1-flash-tts-preview' as const,
+  TTS: 'gemini-3.8-flash-lite-tts' as const,
 };
 
 export const AI_VOICES = {

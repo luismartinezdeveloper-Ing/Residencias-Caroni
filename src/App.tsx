@@ -13,6 +13,9 @@ import { UNITS_DATA, BRAND_INFO } from './data/brandData';
 import { CaroniIsotype } from './components/ui/ArchitecturalDrawings';
 import { OfflineNotification } from './components/ui/OfflineNotification';
 import { CinematicIntroLoader } from './components/ui/CinematicIntroLoader';
+import { SilentErrorBoundary } from './components/ui/SilentErrorBoundary';
+import { MaintenanceBanner } from './components/ui/MaintenanceBanner';
+import { useServiceRecoveryMonitor } from './hooks/useServiceRecoveryMonitor';
 import { MessageSquare } from 'lucide-react';
 
 // Automated Heavy Code Splitting (Lazy-loaded Three.js 3D Model & Gemini Live Voice Assistant)
@@ -25,6 +28,7 @@ const AIChatbot = lazy(() =>
 
 function MainAppContent() {
   const { isAdvisorMode, openAuthModal, isAccredited } = useConfidentiality();
+  const { isInRecoveryMode, reason, latencyMs, dismissBanner, recheckNow } = useServiceRecoveryMonitor();
   const [activeSection, setActiveSection] = useState<NavSection>('obra');
   const [selectedUnit, setSelectedUnit] = useState<UnitData>(UNITS_DATA[0]);
   const [is3DModalOpen, setIs3DModalOpen] = useState<boolean>(false);
@@ -121,6 +125,15 @@ function MainAppContent() {
       {/* Offline Status & PWA Install Notification */}
       <OfflineNotification />
 
+      {/* Global Maintenance & Service Recovery Banner */}
+      <MaintenanceBanner
+        isVisible={isInRecoveryMode}
+        reason={reason}
+        latencyMs={latencyMs}
+        onRetry={recheckNow}
+        onDismiss={dismissBanner}
+      />
+
       {/* Lead Gate Modal (Unlock 3D & Precios Funnel) */}
       <LeadGateModal
         isOpen={isLeadGateOpen}
@@ -142,17 +155,19 @@ function MainAppContent() {
         isVideoEnded={isVideoEnded}
       />
 
-      {/* 3D Maqueta Modal strictly following architectural standards (Lazy loaded) */}
+      {/* 3D Maqueta Modal strictly following architectural standards (Lazy loaded with SilentErrorBoundary) */}
       {is3DModalOpen && (
-        <Suspense fallback={null}>
-          <Architectural3DModal
-            isOpen={is3DModalOpen}
-            onClose={() => setIs3DModalOpen(false)}
-            selectedUnit={selectedUnit}
-            onSelectUnit={setSelectedUnit}
-            initialViewMode={modalInitialViewMode}
-          />
-        </Suspense>
+        <SilentErrorBoundary>
+          <Suspense fallback={null}>
+            <Architectural3DModal
+              isOpen={is3DModalOpen}
+              onClose={() => setIs3DModalOpen(false)}
+              selectedUnit={selectedUnit}
+              onSelectUnit={setSelectedUnit}
+              initialViewMode={modalInitialViewMode}
+            />
+          </Suspense>
+        </SilentErrorBoundary>
       )}
 
       {/* Main Continuous Scroll Narrative with Apple-Style Section Transitions */}
@@ -199,56 +214,36 @@ function MainAppContent() {
         </motion.div>
       </main>
 
-      {/* Floating Executive Action Hub (Phase 1 Conversion Engine) */}
-      
-
       {/* Floating Luxury AI Advisor Button (Apple-style Translucent Icon Button) */}
       {!isVoiceAdvisorOpen && (
-      <div className="fixed bottom-5 right-5 z-40 flex items-center">
-        <button
-          onClick={() => setIsVoiceAdvisorOpen(true)}
-          className="group relative w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-white/85 backdrop-blur-2xl hover:bg-white text-[#1B1813] border border-white/80 shadow-[0_12px_36px_rgba(27,24,19,0.12),0_2px_6px_rgba(0,0,0,0.04)] flex items-center justify-center transition-all duration-300 hover:scale-108 active:scale-95 cursor-pointer select-none"
-          title="Asesor · Residencias Caroní"
-          aria-label="Abrir Asesor"
-        >
-          <MessageSquare className="w-5 h-5 text-[#8C7452] group-hover:scale-105 transition-transform" />
-          {/* Apple-style ultra-micro pulsing indicator dot */}
-          <span className="absolute top-2 right-2 flex h-1.5 w-1.5 pointer-events-none" title="En línea">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-          </span>
-
-
-
-    
-
-
-    
-
-
-
-
-
-
-
-
-
-
-
-        </button>
-      </div>
-
+        <div className="fixed bottom-5 right-5 z-40 flex items-center">
+          <button
+            onClick={() => setIsVoiceAdvisorOpen(true)}
+            className="group relative w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-white/85 backdrop-blur-2xl hover:bg-white text-[#1B1813] border border-white/80 shadow-[0_12px_36px_rgba(27,24,19,0.12),0_2px_6px_rgba(0,0,0,0.04)] flex items-center justify-center transition-all duration-300 hover:scale-108 active:scale-95 cursor-pointer select-none"
+            title="Asesor · Residencias Caroní"
+            aria-label="Abrir Asesor"
+          >
+            <MessageSquare className="w-5 h-5 text-[#8C7452] group-hover:scale-105 transition-transform" />
+            {/* Apple-style ultra-micro pulsing indicator dot */}
+            <span className="absolute top-2 right-2 flex h-1.5 w-1.5 pointer-events-none" title="En línea">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+            </span>
+          </button>
+        </div>
       )}
 
-      {/* AIChatbot Modal (Voz en Tiempo Real & Asesoría Inmobiliaria - Lazy loaded) */}
+      {/* AIChatbot Modal (Voz en Tiempo Real & Asesoría Inmobiliaria - Lazy loaded with SilentErrorBoundary) */}
       {isVoiceAdvisorOpen && (
-        <Suspense fallback={null}>
-          <AIChatbot
-            isOpen={isVoiceAdvisorOpen}
-            onClose={() => setIsVoiceAdvisorOpen(false)}
-            selectedUnit={selectedUnit}
-          />
-        </Suspense>
+        <SilentErrorBoundary>
+          <Suspense fallback={null}>
+            <AIChatbot
+              isOpen={isVoiceAdvisorOpen}
+              onClose={() => setIsVoiceAdvisorOpen(false)}
+              selectedUnit={selectedUnit}
+            />
+          </Suspense>
+        </SilentErrorBoundary>
       )}
 
       {/* Slim Minimalist Footer */}

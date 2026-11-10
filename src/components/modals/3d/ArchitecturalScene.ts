@@ -134,15 +134,32 @@ function configureCrispTexture(
   return texture;
 }
 
+const PROCEDURAL_CANVAS_CACHE = new Map<string, HTMLCanvasElement>();
+
+function getOrCreateProceduralCanvas(
+  key: string,
+  width: number,
+  height: number,
+  draw: (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => void
+): HTMLCanvasElement {
+  const cached = PROCEDURAL_CANVAS_CACHE.get(key);
+  if (cached) return cached;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    draw(ctx, canvas);
+  }
+  PROCEDURAL_CANVAS_CACHE.set(key, canvas);
+  return canvas;
+}
+
 /**
  * 1. Textura de Concreto Visto Arquitectónico (Fair-faced Board-Formed Grey Concrete)
  */
 function createFairFacedConcreteTexture(maxAnisotropy: number = 16): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 1024;
-  canvas.height = 1024;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
+  const canvas = getOrCreateProceduralCanvas('fairFacedConcrete', 1024, 1024, (ctx) => {
     ctx.fillStyle = '#D2CEC5';
     ctx.fillRect(0, 0, 1024, 1024);
 
@@ -183,7 +200,7 @@ function createFairFacedConcreteTexture(maxAnisotropy: number = 16): THREE.Canva
         ctx.fill();
       }
     }
-  }
+  });
   return configureCrispTexture(new THREE.CanvasTexture(canvas), 3, 2, maxAnisotropy, true);
 }
 
@@ -195,81 +212,83 @@ function createParkingBoardFormedConcreteTexture(maxAnisotropy: number = 16): {
   map: THREE.CanvasTexture;
   bumpMap: THREE.CanvasTexture;
 } {
-  const canvas = document.createElement('canvas');
-  canvas.width = 1024;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d');
+  let canvas = PROCEDURAL_CANVAS_CACHE.get('parkingConcreteMap');
+  let bumpCanvas = PROCEDURAL_CANVAS_CACHE.get('parkingConcreteBump');
 
-  const bumpCanvas = document.createElement('canvas');
-  bumpCanvas.width = 1024;
-  bumpCanvas.height = 512;
-  const bCtx = bumpCanvas.getContext('2d');
+  if (!canvas || !bumpCanvas) {
+    canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
 
-  if (ctx && bCtx) {
-    ctx.fillStyle = '#BEB9AE';
-    ctx.fillRect(0, 0, 1024, 512);
-    bCtx.fillStyle = '#909090';
-    bCtx.fillRect(0, 0, 1024, 512);
+    bumpCanvas = document.createElement('canvas');
+    bumpCanvas.width = 1024;
+    bumpCanvas.height = 512;
+    const bCtx = bumpCanvas.getContext('2d');
 
-    // Tablas horizontales de encofrado de madera con veta marcada
-    const plankH = 32;
-    for (let y = 0; y < 512; y += plankH) {
-      const shade = 182 + (((y * 7) % 19) - 9);
-      ctx.fillStyle = `rgb(${shade}, ${shade - 4}, ${shade - 10})`;
-      ctx.fillRect(0, y + 1, 1024, plankH - 2);
+    if (ctx && bCtx) {
+      ctx.fillStyle = '#BEB9AE';
+      ctx.fillRect(0, 0, 1024, 512);
+      bCtx.fillStyle = '#909090';
+      bCtx.fillRect(0, 0, 1024, 512);
 
-      const bShade = 128 + (((y * 11) % 36) - 18);
-      bCtx.fillStyle = `rgb(${bShade}, ${bShade}, ${bShade})`;
-      bCtx.fillRect(0, y + 2, 1024, plankH - 3);
+      const plankH = 32;
+      for (let y = 0; y < 512; y += plankH) {
+        const shade = 182 + (((y * 7) % 19) - 9);
+        ctx.fillStyle = `rgb(${shade}, ${shade - 4}, ${shade - 10})`;
+        ctx.fillRect(0, y + 1, 1024, plankH - 2);
 
-      // Veta longitudinal del tablón en el concreto
-      for (let g = 0; g < 18; g++) {
-        const gy = y + 3 + Math.random() * (plankH - 6);
-        ctx.fillStyle = g % 2 === 0 ? 'rgba(95, 90, 82, 0.16)' : 'rgba(235, 231, 224, 0.14)';
-        ctx.fillRect(0, gy, 1024, 1.5);
-        bCtx.fillStyle = g % 2 === 0 ? 'rgba(65, 65, 65, 0.35)' : 'rgba(195, 195, 195, 0.28)';
-        bCtx.fillRect(0, gy, 1024, 1.5);
+        const bShade = 128 + (((y * 11) % 36) - 18);
+        bCtx.fillStyle = `rgb(${bShade}, ${bShade}, ${bShade})`;
+        bCtx.fillRect(0, y + 2, 1024, plankH - 3);
+
+        for (let g = 0; g < 18; g++) {
+          const gy = y + 3 + Math.random() * (plankH - 6);
+          ctx.fillStyle = g % 2 === 0 ? 'rgba(95, 90, 82, 0.16)' : 'rgba(235, 231, 224, 0.14)';
+          ctx.fillRect(0, gy, 1024, 1.5);
+          bCtx.fillStyle = g % 2 === 0 ? 'rgba(65, 65, 65, 0.35)' : 'rgba(195, 195, 195, 0.28)';
+          bCtx.fillRect(0, gy, 1024, 1.5);
+        }
+
+        ctx.fillStyle = 'rgba(72, 68, 62, 0.55)';
+        ctx.fillRect(0, y, 1024, 2);
+        bCtx.fillStyle = '#202020';
+        bCtx.fillRect(0, y, 1024, 3);
       }
 
-      // Junta horizontal entre tablas de encofrado
-      ctx.fillStyle = 'rgba(72, 68, 62, 0.55)';
-      ctx.fillRect(0, y, 1024, 2);
-      bCtx.fillStyle = '#202020';
-      bCtx.fillRect(0, y, 1024, 3);
-    }
+      for (let x = 0; x < 1024; x += 256) {
+        ctx.fillStyle = 'rgba(62, 58, 52, 0.68)';
+        ctx.fillRect(x, 0, 4, 512);
+        ctx.fillStyle = 'rgba(238, 234, 226, 0.45)';
+        ctx.fillRect(x + 4, 0, 2, 512);
 
-    // Juntas verticales de paneles modulares y conos de tirantes de encofrado
-    for (let x = 0; x < 1024; x += 256) {
-      ctx.fillStyle = 'rgba(62, 58, 52, 0.68)';
-      ctx.fillRect(x, 0, 4, 512);
-      ctx.fillStyle = 'rgba(238, 234, 226, 0.45)';
-      ctx.fillRect(x + 4, 0, 2, 512);
+        bCtx.fillStyle = '#101010';
+        bCtx.fillRect(x, 0, 5, 512);
 
-      bCtx.fillStyle = '#101010';
-      bCtx.fillRect(x, 0, 5, 512);
+        const coneRows = [96, 256, 416];
+        coneRows.forEach((cy) => {
+          [x + 48, x + 208].forEach((cx) => {
+            ctx.fillStyle = 'rgba(54, 50, 45, 0.78)';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 6.5, 0, Math.PI * 2);
+            ctx.fill();
 
-      // Conos de anclaje simétricos en cada panel
-      const coneRows = [96, 256, 416];
-      coneRows.forEach((cy) => {
-        [x + 48, x + 208].forEach((cx) => {
-          ctx.fillStyle = 'rgba(54, 50, 45, 0.78)';
-          ctx.beginPath();
-          ctx.arc(cx, cy, 6.5, 0, Math.PI * 2);
-          ctx.fill();
+            ctx.strokeStyle = 'rgba(225, 220, 212, 0.55)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 7.5, 0, Math.PI * 2);
+            ctx.stroke();
 
-          ctx.strokeStyle = 'rgba(225, 220, 212, 0.55)';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.arc(cx, cy, 7.5, 0, Math.PI * 2);
-          ctx.stroke();
-
-          bCtx.fillStyle = '#080808';
-          bCtx.beginPath();
-          bCtx.arc(cx, cy, 7, 0, Math.PI * 2);
-          bCtx.fill();
+            bCtx.fillStyle = '#080808';
+            bCtx.beginPath();
+            bCtx.arc(cx, cy, 7, 0, Math.PI * 2);
+            bCtx.fill();
+          });
         });
-      });
+      }
     }
+    PROCEDURAL_CANVAS_CACHE.set('parkingConcreteMap', canvas);
+    PROCEDURAL_CANVAS_CACHE.set('parkingConcreteBump', bumpCanvas);
   }
 
   return {
@@ -285,50 +304,55 @@ function createPoolMosaicTileTexture(maxAnisotropy: number = 16): {
   map: THREE.CanvasTexture;
   bumpMap: THREE.CanvasTexture;
 } {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d');
+  let canvas = PROCEDURAL_CANVAS_CACHE.get('poolMosaicMap');
+  let bumpCanvas = PROCEDURAL_CANVAS_CACHE.get('poolMosaicBump');
 
-  const bumpCanvas = document.createElement('canvas');
-  bumpCanvas.width = 512;
-  bumpCanvas.height = 512;
-  const bCtx = bumpCanvas.getContext('2d');
+  if (!canvas || !bumpCanvas) {
+    canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
 
-  if (ctx && bCtx) {
-    // Base junta blanca/celeste
-    ctx.fillStyle = '#A8E8F4';
-    ctx.fillRect(0, 0, 512, 512);
-    bCtx.fillStyle = '#303030';
-    bCtx.fillRect(0, 0, 512, 512);
+    bumpCanvas = document.createElement('canvas');
+    bumpCanvas.width = 512;
+    bumpCanvas.height = 512;
+    const bCtx = bumpCanvas.getContext('2d');
 
-    const tileSize = 16;
-    for (let y = 0; y < 512; y += tileSize) {
-      for (let x = 0; x < 512; x += tileSize) {
-        const variation = ((x * 13 + y * 29) % 32) - 16;
-        const r = Math.max(8, Math.min(48, 18 + (variation >> 1)));
-        const g = Math.max(125, Math.min(205, 168 + variation));
-        const b = Math.max(175, Math.min(242, 212 + variation));
-        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-        ctx.fillRect(x + 1.5, y + 1.5, tileSize - 2.5, tileSize - 2.5);
+    if (ctx && bCtx) {
+      ctx.fillStyle = '#A8E8F4';
+      ctx.fillRect(0, 0, 512, 512);
+      bCtx.fillStyle = '#303030';
+      bCtx.fillRect(0, 0, 512, 512);
 
-        bCtx.fillStyle = '#E6E6E6';
-        bCtx.fillRect(x + 2, y + 2, tileSize - 3, tileSize - 3);
+      const tileSize = 16;
+      for (let y = 0; y < 512; y += tileSize) {
+        for (let x = 0; x < 512; x += tileSize) {
+          const variation = ((x * 13 + y * 29) % 32) - 16;
+          const r = Math.max(8, Math.min(48, 18 + (variation >> 1)));
+          const g = Math.max(125, Math.min(205, 168 + variation));
+          const b = Math.max(175, Math.min(242, 212 + variation));
+          ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+          ctx.fillRect(x + 1.5, y + 1.5, tileSize - 2.5, tileSize - 2.5);
+
+          bCtx.fillStyle = '#E6E6E6';
+          bCtx.fillRect(x + 2, y + 2, tileSize - 3, tileSize - 3);
+        }
+      }
+
+      for (let c = 0; c < 28; c++) {
+        const cx = ((c * 97) % 460) + 26;
+        const cy = ((c * 151) % 460) + 26;
+        const rad = 28 + (c % 5) * 14;
+        const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, rad);
+        grad.addColorStop(0, 'rgba(195, 252, 255, 0.34)');
+        grad.addColorStop(0.6, 'rgba(90, 225, 245, 0.14)');
+        grad.addColorStop(1, 'rgba(18, 168, 210, 0.0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 512, 512);
       }
     }
-
-    // Destellos de cáusticas solares sobre el gresite
-    for (let c = 0; c < 28; c++) {
-      const cx = ((c * 97) % 460) + 26;
-      const cy = ((c * 151) % 460) + 26;
-      const rad = 28 + (c % 5) * 14;
-      const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, rad);
-      grad.addColorStop(0, 'rgba(195, 252, 255, 0.34)');
-      grad.addColorStop(0.6, 'rgba(90, 225, 245, 0.14)');
-      grad.addColorStop(1, 'rgba(18, 168, 210, 0.0)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, 512, 512);
-    }
+    PROCEDURAL_CANVAS_CACHE.set('poolMosaicMap', canvas);
+    PROCEDURAL_CANVAS_CACHE.set('poolMosaicBump', bumpCanvas);
   }
 
   return {
@@ -341,11 +365,7 @@ function createPoolMosaicTileTexture(maxAnisotropy: number = 16): {
  * 1D. Textura de Ondas de Agua para el Espejo de las Piscinas
  */
 function createWaterRippleBumpTexture(maxAnisotropy: number = 16): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
+  const canvas = getOrCreateProceduralCanvas('waterRippleBump', 512, 512, (ctx) => {
     const imgData = ctx.createImageData(512, 512);
     const data = imgData.data;
     for (let y = 0; y < 512; y++) {
@@ -365,7 +385,7 @@ function createWaterRippleBumpTexture(maxAnisotropy: number = 16): THREE.CanvasT
       }
     }
     ctx.putImageData(imgData, 0, 0);
-  }
+  });
   return configureCrispTexture(new THREE.CanvasTexture(canvas), 3, 2, maxAnisotropy, false);
 }
 
@@ -376,45 +396,52 @@ function createHorizontalGroovedCladdingTexture(maxAnisotropy: number = 16): {
   map: THREE.CanvasTexture;
   bumpMap: THREE.CanvasTexture;
 } {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 1024;
-  const ctx = canvas.getContext('2d');
+  let canvas = PROCEDURAL_CANVAS_CACHE.get('horizontalGroovedMap');
+  let bumpCanvas = PROCEDURAL_CANVAS_CACHE.get('horizontalGroovedBump');
 
-  const bumpCanvas = document.createElement('canvas');
-  bumpCanvas.width = 512;
-  bumpCanvas.height = 1024;
-  const bCtx = bumpCanvas.getContext('2d');
+  if (!canvas || !bumpCanvas) {
+    canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
 
-  if (ctx && bCtx) {
-    ctx.fillStyle = '#F2EFE9';
-    ctx.fillRect(0, 0, 512, 1024);
+    bumpCanvas = document.createElement('canvas');
+    bumpCanvas.width = 512;
+    bumpCanvas.height = 1024;
+    const bCtx = bumpCanvas.getContext('2d');
 
-    bCtx.fillStyle = '#E2E2E2';
-    bCtx.fillRect(0, 0, 512, 1024);
+    if (ctx && bCtx) {
+      ctx.fillStyle = '#F2EFE9';
+      ctx.fillRect(0, 0, 512, 1024);
 
-    for (let y = 0; y < 1024; y += 22) {
-      ctx.fillStyle = 'rgba(135, 129, 119, 0.50)';
-      ctx.fillRect(0, y, 512, 3);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-      ctx.fillRect(0, y + 3, 512, 2);
+      bCtx.fillStyle = '#E2E2E2';
+      bCtx.fillRect(0, 0, 512, 1024);
 
-      bCtx.fillStyle = '#222222';
-      bCtx.fillRect(0, y, 512, 4);
-    }
+      for (let y = 0; y < 1024; y += 22) {
+        ctx.fillStyle = 'rgba(135, 129, 119, 0.50)';
+        ctx.fillRect(0, y, 512, 3);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        ctx.fillRect(0, y + 3, 512, 2);
 
-    ctx.strokeStyle = 'rgba(158, 152, 142, 0.30)';
-    ctx.lineWidth = 1.5;
-    for (let row = 0; row < Math.floor(1024 / 22); row++) {
-      const y0 = row * 22;
-      const offset = (row % 2) * 85;
-      for (let x = offset; x < 512; x += 170) {
-        ctx.beginPath();
-        ctx.moveTo(x, y0);
-        ctx.lineTo(x, y0 + 22);
-        ctx.stroke();
+        bCtx.fillStyle = '#222222';
+        bCtx.fillRect(0, y, 512, 4);
+      }
+
+      ctx.strokeStyle = 'rgba(158, 152, 142, 0.30)';
+      ctx.lineWidth = 1.5;
+      for (let row = 0; row < Math.floor(1024 / 22); row++) {
+        const y0 = row * 22;
+        const offset = (row % 2) * 85;
+        for (let x = offset; x < 512; x += 170) {
+          ctx.beginPath();
+          ctx.moveTo(x, y0);
+          ctx.lineTo(x, y0 + 22);
+          ctx.stroke();
+        }
       }
     }
+    PROCEDURAL_CANVAS_CACHE.set('horizontalGroovedMap', canvas);
+    PROCEDURAL_CANVAS_CACHE.set('horizontalGroovedBump', bumpCanvas);
   }
 
   return {
@@ -435,32 +462,43 @@ function createVerticalFlutedTexture(
   map: THREE.CanvasTexture;
   bumpMap: THREE.CanvasTexture;
 } {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d');
+  const mapKey = `verticalFlutedMap_${baseHex}_${shadowHex}_${highlightHex}`;
+  const bumpKey = 'verticalFlutedBump';
+  let canvas = PROCEDURAL_CANVAS_CACHE.get(mapKey);
+  let bumpCanvas = PROCEDURAL_CANVAS_CACHE.get(bumpKey);
 
-  const bumpCanvas = document.createElement('canvas');
-  bumpCanvas.width = 512;
-  bumpCanvas.height = 512;
-  const bCtx = bumpCanvas.getContext('2d');
+  if (!canvas || !bumpCanvas) {
+    canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
 
-  if (ctx && bCtx) {
-    ctx.fillStyle = baseHex;
-    ctx.fillRect(0, 0, 512, 512);
-    bCtx.fillStyle = '#D0D0D0';
-    bCtx.fillRect(0, 0, 512, 512);
-
-    const fluteWidth = 16;
-    for (let x = 0; x < 512; x += fluteWidth) {
-      ctx.fillStyle = shadowHex;
-      ctx.fillRect(x, 0, 5, 512);
-      ctx.fillStyle = highlightHex;
-      ctx.fillRect(x + 5, 0, 4, 512);
-
-      bCtx.fillStyle = '#252525';
-      bCtx.fillRect(x, 0, 6, 512);
+    if (!bumpCanvas) {
+      bumpCanvas = document.createElement('canvas');
+      bumpCanvas.width = 512;
+      bumpCanvas.height = 512;
     }
+    const bCtx = bumpCanvas.getContext('2d');
+
+    if (ctx && bCtx) {
+      ctx.fillStyle = baseHex;
+      ctx.fillRect(0, 0, 512, 512);
+      bCtx.fillStyle = '#D0D0D0';
+      bCtx.fillRect(0, 0, 512, 512);
+
+      const fluteWidth = 16;
+      for (let x = 0; x < 512; x += fluteWidth) {
+        ctx.fillStyle = shadowHex;
+        ctx.fillRect(x, 0, 5, 512);
+        ctx.fillStyle = highlightHex;
+        ctx.fillRect(x + 5, 0, 4, 512);
+
+        bCtx.fillStyle = '#252525';
+        bCtx.fillRect(x, 0, 6, 512);
+      }
+    }
+    PROCEDURAL_CANVAS_CACHE.set(mapKey, canvas);
+    PROCEDURAL_CANVAS_CACHE.set(bumpKey, bumpCanvas);
   }
 
   return {
@@ -476,45 +514,52 @@ function createDarkStackedSlateTexture(maxAnisotropy: number = 16): {
   map: THREE.CanvasTexture;
   bumpMap: THREE.CanvasTexture;
 } {
-  const canvas = document.createElement('canvas');
-  canvas.width = 1024;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d');
+  let canvas = PROCEDURAL_CANVAS_CACHE.get('darkStackedSlateMap');
+  let bumpCanvas = PROCEDURAL_CANVAS_CACHE.get('darkStackedSlateBump');
 
-  const bumpCanvas = document.createElement('canvas');
-  bumpCanvas.width = 1024;
-  bumpCanvas.height = 512;
-  const bCtx = bumpCanvas.getContext('2d');
+  if (!canvas || !bumpCanvas) {
+    canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
 
-  if (ctx && bCtx) {
-    ctx.fillStyle = '#2B2A28';
-    ctx.fillRect(0, 0, 1024, 512);
-    bCtx.fillStyle = '#808080';
-    bCtx.fillRect(0, 0, 1024, 512);
+    bumpCanvas = document.createElement('canvas');
+    bumpCanvas.width = 1024;
+    bumpCanvas.height = 512;
+    const bCtx = bumpCanvas.getContext('2d');
 
-    const rowHeight = 20;
-    for (let y = 0; y < 512; y += rowHeight) {
-      let x = 0;
-      while (x < 1024) {
-        const w = 55 + Math.floor(Math.random() * 95);
-        const shade = 38 + Math.floor(Math.random() * 34);
-        const warmOffset = Math.floor(Math.random() * 8);
-        ctx.fillStyle = `rgb(${shade + warmOffset}, ${shade}, ${shade - 3})`;
-        ctx.fillRect(x + 1, y + 1, w - 2, rowHeight - 3);
+    if (ctx && bCtx) {
+      ctx.fillStyle = '#2B2A28';
+      ctx.fillRect(0, 0, 1024, 512);
+      bCtx.fillStyle = '#808080';
+      bCtx.fillRect(0, 0, 1024, 512);
 
-        const bVal = 75 + Math.floor(Math.random() * 165);
-        bCtx.fillStyle = `rgb(${bVal}, ${bVal}, ${bVal})`;
-        bCtx.fillRect(x + 2, y + 2, w - 4, rowHeight - 5);
+      const rowHeight = 20;
+      for (let y = 0; y < 512; y += rowHeight) {
+        let x = 0;
+        while (x < 1024) {
+          const w = 55 + Math.floor(Math.random() * 95);
+          const shade = 38 + Math.floor(Math.random() * 34);
+          const warmOffset = Math.floor(Math.random() * 8);
+          ctx.fillStyle = `rgb(${shade + warmOffset}, ${shade}, ${shade - 3})`;
+          ctx.fillRect(x + 1, y + 1, w - 2, rowHeight - 3);
 
-        ctx.fillStyle = '#141311';
-        ctx.fillRect(x, y + rowHeight - 3, w, 3);
-        ctx.fillRect(x + w - 2, y, 2, rowHeight);
+          const bVal = 75 + Math.floor(Math.random() * 165);
+          bCtx.fillStyle = `rgb(${bVal}, ${bVal}, ${bVal})`;
+          bCtx.fillRect(x + 2, y + 2, w - 4, rowHeight - 5);
 
-        bCtx.fillStyle = '#101010';
-        bCtx.fillRect(x, y + rowHeight - 3, w, 3);
-        x += w;
+          ctx.fillStyle = '#141311';
+          ctx.fillRect(x, y + rowHeight - 3, w, 3);
+          ctx.fillRect(x + w - 2, y, 2, rowHeight);
+
+          bCtx.fillStyle = '#101010';
+          bCtx.fillRect(x, y + rowHeight - 3, w, 3);
+          x += w;
+        }
       }
     }
+    PROCEDURAL_CANVAS_CACHE.set('darkStackedSlateMap', canvas);
+    PROCEDURAL_CANVAS_CACHE.set('darkStackedSlateBump', bumpCanvas);
   }
 
   return {
@@ -530,39 +575,46 @@ function createWoodSoffitTexture(maxAnisotropy: number = 16): {
   map: THREE.CanvasTexture;
   bumpMap: THREE.CanvasTexture;
 } {
-  const canvas = document.createElement('canvas');
-  canvas.width = 1024;
-  canvas.height = 1024;
-  const ctx = canvas.getContext('2d');
+  let canvas = PROCEDURAL_CANVAS_CACHE.get('woodSoffitMap');
+  let bumpCanvas = PROCEDURAL_CANVAS_CACHE.get('woodSoffitBump');
 
-  const bumpCanvas = document.createElement('canvas');
-  bumpCanvas.width = 1024;
-  bumpCanvas.height = 1024;
-  const bCtx = bumpCanvas.getContext('2d');
+  if (!canvas || !bumpCanvas) {
+    canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
 
-  if (ctx && bCtx) {
-    ctx.fillStyle = '#8A5630';
-    ctx.fillRect(0, 0, 1024, 1024);
-    bCtx.fillStyle = '#C8C8C8';
-    bCtx.fillRect(0, 0, 1024, 1024);
+    bumpCanvas = document.createElement('canvas');
+    bumpCanvas.width = 1024;
+    bumpCanvas.height = 1024;
+    const bCtx = bumpCanvas.getContext('2d');
 
-    const plankWidth = 28;
-    for (let x = 0; x < 1024; x += plankWidth) {
-      const toneShift = (Math.sin(x * 0.19) * 11) | 0;
-      ctx.fillStyle = `rgb(${140 + toneShift}, ${88 + (toneShift >> 1)}, ${48 + (toneShift >> 2)})`;
-      ctx.fillRect(x + 1, 0, plankWidth - 3, 1024);
+    if (ctx && bCtx) {
+      ctx.fillStyle = '#8A5630';
+      ctx.fillRect(0, 0, 1024, 1024);
+      bCtx.fillStyle = '#C8C8C8';
+      bCtx.fillRect(0, 0, 1024, 1024);
 
-      for (let v = 0; v < 20; v++) {
-        const vx = x + 3 + Math.random() * (plankWidth - 6);
-        ctx.fillStyle = v % 2 === 0 ? 'rgba(58, 30, 12, 0.15)' : 'rgba(182, 126, 78, 0.12)';
-        ctx.fillRect(vx, 0, 1.5, 1024);
+      const plankWidth = 28;
+      for (let x = 0; x < 1024; x += plankWidth) {
+        const toneShift = (Math.sin(x * 0.19) * 11) | 0;
+        ctx.fillStyle = `rgb(${140 + toneShift}, ${88 + (toneShift >> 1)}, ${48 + (toneShift >> 2)})`;
+        ctx.fillRect(x + 1, 0, plankWidth - 3, 1024);
+
+        for (let v = 0; v < 20; v++) {
+          const vx = x + 3 + Math.random() * (plankWidth - 6);
+          ctx.fillStyle = v % 2 === 0 ? 'rgba(58, 30, 12, 0.15)' : 'rgba(182, 126, 78, 0.12)';
+          ctx.fillRect(vx, 0, 1.5, 1024);
+        }
+
+        ctx.fillStyle = '#261407';
+        ctx.fillRect(x, 0, 3, 1024);
+        bCtx.fillStyle = '#202020';
+        bCtx.fillRect(x, 0, 3, 1024);
       }
-
-      ctx.fillStyle = '#261407';
-      ctx.fillRect(x, 0, 3, 1024);
-      bCtx.fillStyle = '#202020';
-      bCtx.fillRect(x, 0, 3, 1024);
     }
+    PROCEDURAL_CANVAS_CACHE.set('woodSoffitMap', canvas);
+    PROCEDURAL_CANVAS_CACHE.set('woodSoffitBump', bumpCanvas);
   }
 
   return {
@@ -575,11 +627,7 @@ function createWoodSoffitTexture(maxAnisotropy: number = 16): {
  * 6. Textura de Terracota / Madera Rojiza (Brise-Soleil & Portón de Acceso)
  */
 function createTerracottaLouverTexture(maxAnisotropy: number = 16): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
+  const canvas = getOrCreateProceduralCanvas('terracottaLouver', 512, 512, (ctx) => {
     ctx.fillStyle = '#A64D2D';
     ctx.fillRect(0, 0, 512, 512);
     for (let i = 0; i < 650; i++) {
@@ -587,7 +635,7 @@ function createTerracottaLouverTexture(maxAnisotropy: number = 16): THREE.Canvas
       ctx.fillStyle = i % 2 === 0 ? 'rgba(130, 48, 22, 0.18)' : 'rgba(196, 102, 66, 0.15)';
       ctx.fillRect(0, y, 512, 2 + Math.random() * 8);
     }
-  }
+  });
   return configureCrispTexture(new THREE.CanvasTexture(canvas), 2, 2, maxAnisotropy, true);
 }
 
@@ -600,22 +648,15 @@ function createGlassSpecularReflectionTexture(
   isBalconySlidingGlass: boolean,
   maxAnisotropy: number = 16
 ): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 512;
-  canvas.height = 512;
-  const ctx = canvas.getContext('2d');
-
-  if (ctx) {
-    // Base de cristal reflectivo claro de ultra-lujo (bajo contenido de hierro / low-iron crystal)
+  const key = isBalconySlidingGlass ? 'glassSpecular_balcony' : 'glassSpecular_window';
+  const canvas = getOrCreateProceduralCanvas(key, 512, 512, (ctx) => {
     const baseGrad = ctx.createLinearGradient(0, 0, 512, 512);
     if (isBalconySlidingGlass) {
-      // Cristal reflectivo claro con sutil matiz zafiro-plata para hojas corredizas de balcón
       baseGrad.addColorStop(0.0, '#4E94C4');
       baseGrad.addColorStop(0.32, '#86C6EC');
       baseGrad.addColorStop(0.62, '#5DA4D4');
       baseGrad.addColorStop(1.0, '#3D7EA8');
     } else {
-      // Cristal reflectivo claro luminoso para todas las ventanas del edificio
       baseGrad.addColorStop(0.0, '#5AA6D4');
       baseGrad.addColorStop(0.32, '#9AD4F5');
       baseGrad.addColorStop(0.58, '#6CB6E2');
@@ -624,7 +665,6 @@ function createGlassSpecularReflectionTexture(
     ctx.fillStyle = baseGrad;
     ctx.fillRect(0, 0, 512, 512);
 
-    // Reflejo horizontal suave de horizonte arquitectónico y cielo de Altamira
     const horizonGrad = ctx.createLinearGradient(0, 0, 0, 512);
     horizonGrad.addColorStop(0.0, 'rgba(242, 253, 255, 0.46)');
     horizonGrad.addColorStop(0.46, 'rgba(186, 232, 255, 0.18)');
@@ -633,7 +673,6 @@ function createGlassSpecularReflectionTexture(
     ctx.fillStyle = horizonGrad;
     ctx.fillRect(0, 0, 512, 512);
 
-    // Bandas diagonales nítidas de brillo especular sobre el cristal
     ctx.save();
     ctx.translate(256, 256);
     ctx.rotate(-Math.PI / 4.2);
@@ -655,7 +694,6 @@ function createGlassSpecularReflectionTexture(
     });
     ctx.restore();
 
-    // Sello perimetral de doble acristalamiento (IGU spacer) con bisel cristalino
     ctx.strokeStyle = 'rgba(24, 58, 84, 0.52)';
     ctx.lineWidth = 10;
     ctx.strokeRect(5, 5, 502, 502);
@@ -663,7 +701,7 @@ function createGlassSpecularReflectionTexture(
     ctx.strokeStyle = 'rgba(235, 250, 255, 0.42)';
     ctx.lineWidth = 3;
     ctx.strokeRect(11, 11, 490, 490);
-  }
+  });
 
   return configureCrispTexture(new THREE.CanvasTexture(canvas), 1, 1, maxAnisotropy, true);
 }
@@ -672,11 +710,7 @@ function createGlassSpecularReflectionTexture(
  * 8. Textura de Profundidad Óptica Interior para Ventanas (Sombra de Dintel + Cortina Traslúcida)
  */
 function createWindowInteriorDepthTexture(maxAnisotropy: number = 16): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 256;
-  const ctx = canvas.getContext('2d');
-  if (ctx) {
+  const canvas = getOrCreateProceduralCanvas('windowInteriorDepth', 256, 256, (ctx) => {
     const grad = ctx.createLinearGradient(0, 0, 0, 256);
     grad.addColorStop(0.0, '#101C28');
     grad.addColorStop(0.28, '#1E3246');
@@ -685,7 +719,6 @@ function createWindowInteriorDepthTexture(maxAnisotropy: number = 16): THREE.Can
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 256, 256);
 
-    // Pliegues verticales de visillo/cortina arquitectónica en un costado
     for (let x = 144; x < 246; x += 14) {
       const fGrad = ctx.createLinearGradient(x, 0, x + 14, 0);
       fGrad.addColorStop(0, 'rgba(215, 232, 245, 0.08)');
@@ -694,7 +727,7 @@ function createWindowInteriorDepthTexture(maxAnisotropy: number = 16): THREE.Can
       ctx.fillStyle = fGrad;
       ctx.fillRect(x, 10, 14, 236);
     }
-  }
+  });
   return configureCrispTexture(new THREE.CanvasTexture(canvas), 1, 1, maxAnisotropy, true);
 }
 
@@ -996,9 +1029,8 @@ function renderCaracasHdriCanvas(mode: SolarTimeMode): HTMLCanvasElement {
 }
 
 function getCaracasShaderEnvironmentTexture(mode: SolarTimeMode): THREE.CanvasTexture {
-  const existing = CARACAS_HDRI_SHADER_TEXTURES[mode];
-  if (existing) return existing;
-
+  // Se reutiliza el HTMLCanvasElement en caché pero se instancia un nuevo THREE.CanvasTexture
+  // para que el .dispose() al cerrar el modal nunca invalide las texturas en reaperturas.
   const canvas = renderCaracasHdriCanvas(mode);
   const texture = new THREE.CanvasTexture(canvas);
   texture.mapping = THREE.EquirectangularReflectionMapping;
@@ -1009,8 +1041,6 @@ function getCaracasShaderEnvironmentTexture(mode: SolarTimeMode): THREE.CanvasTe
   texture.minFilter = THREE.LinearFilter;
   texture.magFilter = THREE.LinearFilter;
   texture.needsUpdate = true;
-
-  CARACAS_HDRI_SHADER_TEXTURES[mode] = texture;
   return texture;
 }
 
@@ -1188,11 +1218,16 @@ function applyReflectiveClearGlassShader(
       }
 
       vec3 sampleCaracasDynamicHdri( vec2 uv ) {
-        vec3 colMorning = texture2D( uCaracasEnvMorning, uv ).rgb;
-        vec3 colGolden = texture2D( uCaracasEnvGolden, uv ).rgb;
-        vec3 colNight = texture2D( uCaracasEnvNight, uv ).rgb;
-        vec3 dayToGolden = mix( colMorning, colGolden, clamp( uGoldenHourMix, 0.0, 1.0 ) );
-        return mix( dayToGolden, colNight, clamp( uNightMix, 0.0, 1.0 ) );
+        vec3 col = texture2D( uCaracasEnvMorning, uv ).rgb;
+        if ( uGoldenHourMix > 0.005 ) {
+          vec3 colGolden = texture2D( uCaracasEnvGolden, uv ).rgb;
+          col = mix( col, colGolden, clamp( uGoldenHourMix, 0.0, 1.0 ) );
+        }
+        if ( uNightMix > 0.005 ) {
+          vec3 colNight = texture2D( uCaracasEnvNight, uv ).rgb;
+          col = mix( col, colNight, clamp( uNightMix, 0.0, 1.0 ) );
+        }
+        return col;
       }
       ` +
       shader.fragmentShader.replace(
@@ -1232,31 +1267,22 @@ function applyReflectiveClearGlassShader(
           uGoldenHourMix * 0.72
         );
 
-        // 3. MUESTREO DINÁMICO DEL MAPA DE ENTORNO HDRI DE CARACAS (Transición continua Mañana <-> Hora Dorada <-> Noche)
+        // 3. MUESTREO DINÁMICO DEL MAPA DE ENTORNO HDRI DE CARACAS (Optimizado para GPU)
         vec3 reflectDirOuter = reflect( -glassV, glassN );
         vec3 innerPaneNormal = normalize( glassN + vec3( -waveY, waveX, waveX ) * 0.020 );
 
-        // 3A. Refracción física Snell (IOR = 1.52) con dispersión cromática RGB a través del espesor del cristal
-        vec3 refractRayR = refract( -glassV, glassN, 1.0 / 1.512 );
+        // 3A. Refracción física Snell (IOR = 1.52) con dispersión cromática analítica
         vec3 refractRayG = refract( -glassV, glassN, 1.0 / 1.522 );
-        vec3 refractRayB = refract( -glassV, glassN, 1.0 / 1.534 );
         vec3 reflectDirInner = reflect( refractRayG, innerPaneNormal );
 
-        // Desviación angular de salida por espesor de cámara termoacústica y bisel perimetral
         float edgePrismFactor = smoothstep( 0.14, 0.0, min( min( vGlassUv.x, 1.0 - vGlassUv.x ), min( vGlassUv.y, 1.0 - vGlassUv.y ) ) );
         vec3 thicknessOffset = innerPaneNormal * ( uGlassThickness * ( 1.0 - glassNdotV + edgePrismFactor * 0.85 ) );
 
-        vec2 refractUvR = dirToCaracasEquirectUv( refractRayR + thicknessOffset * 0.92 );
-        vec2 refractUvG = dirToCaracasEquirectUv( refractRayG + thicknessOffset * 1.00 );
-        vec2 refractUvB = dirToCaracasEquirectUv( refractRayB + thicknessOffset * 1.08 );
+        vec2 refractUvG = dirToCaracasEquirectUv( refractRayG + thicknessOffset );
+        vec3 baseRefractSample = sampleCaracasDynamicHdri( refractUvG );
+        vec3 hdriRefractedEnv = baseRefractSample * vec3( 1.0 + edgePrismFactor * 0.04, 1.0, 1.0 + edgePrismFactor * 0.06 );
 
-        vec3 hdriRefractedEnv = vec3(
-          sampleCaracasDynamicHdri( refractUvR ).r,
-          sampleCaracasDynamicHdri( refractUvG ).g,
-          sampleCaracasDynamicHdri( refractUvB ).b
-        );
-
-        // 3B. Reflejo HDRI de Alta Resolución de los Cielos de Caracas, El Ávila y Altamira (Hoja Exterior + Hoja Interior IGU)
+        // 3B. Reflejo HDRI de Alta Resolución de los Cielos de Caracas, El Ávila y Altamira
         vec2 reflectUvOuter = dirToCaracasEquirectUv( reflectDirOuter );
         vec2 reflectUvInner = dirToCaracasEquirectUv( reflectDirInner );
         vec3 hdriOuterReflection = sampleCaracasDynamicHdri( reflectUvOuter );
@@ -5757,59 +5783,48 @@ export function buildCompleteBuildingScene(
   lightsGroup.add(sunsetGrazingLight.target);
   lightsGroup.add(sunsetGrazingLight);
 
-  const warmFacadeGlow = new THREE.PointLight(0xFFA845, 0.4, 36);
-  warmFacadeGlow.position.set(-2, 11, 12);
+  const warmFacadeGlow = new THREE.PointLight(0xFFA845, 0.0, 38, 1.4);
+  warmFacadeGlow.position.set(-1.5, 12.0, 11.0);
   lightsGroup.add(warmFacadeGlow);
 
-  // ==========================================================================
-  // ILUMINACIÓN ARTIFICIAL NOCTURNA Y CREPUSCULAR PARA BALCONES Y ÁREAS DE PISCINAS
-  // ==========================================================================
-  // 1. Fuentes puntuales cálidas (2700K) bajo cada uno de los balcones profundos en curva "S" y en los dos niveles del Penthouse
-  const balconyNightLightPositions = [
-    { x: -5.8, y: 6.8, z: 8.4 },   // Balcón Dúplex PB/P1 (Plafón bajo P2)
-    { x: -1.2, y: 6.8, z: 7.8 },   // Inflexión en "S" Nivel P1
-    { x: -5.8, y: 10.7, z: 8.5 },  // Balcón Nivel P2 (Plafón bajo P3)
-    { x: -1.2, y: 10.7, z: 7.9 },  // Inflexión en "S" Nivel P2
-    { x: -5.8, y: 14.6, z: 8.6 },  // Balcón Nivel P3 (Plafón bajo Penthouse)
-    { x: -5.8, y: 18.2, z: 8.6 },  // Terraza Penthouse Norte Piso 1
-    { x: -5.8, y: 22.1, z: 8.2 },  // Penthouse Norte Piso 2 (Bajo Cubierta en V)
-    { x: 5.2, y: 21.8, z: 6.8 },   // Penthouse Sur Piso 2 (Bajo Cubierta en V)
-  ];
-  const balconyNightLights: THREE.PointLight[] = balconyNightLightPositions.map((pos) => {
-    const light = new THREE.PointLight(0xFFB454, 0.15, 16, 1.5);
-    light.position.set(pos.x, pos.y, pos.z);
-    lightsGroup.add(light);
-    return light;
-  });
-
-  // 2. Luminarias subacuáticas turquesa y cálidas de solárium para las 2 piscinas de Planta Baja
-  const poolNorthUnderwaterLight = new THREE.PointLight(0x18D8F0, 0.35, 18, 1.4);
-  poolNorthUnderwaterLight.position.set(-5.85, 0.85, 10.85);
-  lightsGroup.add(poolNorthUnderwaterLight);
-
-  const poolSouthUnderwaterLight = new THREE.PointLight(0x18D8F0, 0.35, 18, 1.4);
-  poolSouthUnderwaterLight.position.set(5.15, 0.85, 9.65);
-  lightsGroup.add(poolSouthUnderwaterLight);
-
-  const poolSolariumWarmNorth = new THREE.PointLight(0xFFB85C, 0.15, 14, 1.5);
-  poolSolariumWarmNorth.position.set(-10.2, 1.35, 10.85);
-  lightsGroup.add(poolSolariumWarmNorth);
-
-  const poolSolariumWarmSouth = new THREE.PointLight(0xFFB85C, 0.15, 14, 1.5);
-  poolSolariumWarmSouth.position.set(9.2, 1.35, 9.65);
-  lightsGroup.add(poolSolariumWarmSouth);
-
-  const artificialLights: THREE.PointLight[] = [
-    warmFacadeGlow,
-    ...balconyNightLights,
-    poolNorthUnderwaterLight,
-    poolSouthUnderwaterLight,
-    poolSolariumWarmNorth,
-    poolSolariumWarmSouth,
-  ];
+  // Luminaria consolidada para el espejo de agua de las piscinas de Planta Baja
+  // Se mantienen únicamente 2 PointLights con visible=true permanente para evitar
+  // recompilaciones de shaders WebGL (NUM_POINT_LIGHTS constante) y desbordamientos en móviles.
+  const poolUnderwaterLight = new THREE.PointLight(0x18D8F0, 0.0, 26, 1.4);
+  poolUnderwaterLight.position.set(0.0, 1.2, 10.2);
+  lightsGroup.add(poolUnderwaterLight);
 
   let targetSolarMode: SolarTimeMode = 'morning';
   const prevSunPos = new THREE.Vector3().copy(sunLight.position);
+
+  // Constantes pre-alojadas fuera del bucle para Cero Garbage Collection (GC) por frame
+  const sunPosMorning = new THREE.Vector3(34, 48, 38);
+  const sunPosGolden = new THREE.Vector3(-48, 16.5, 34);
+  const sunPosNight = new THREE.Vector3(18, 42, -28);
+
+  const fillPosMorning = new THREE.Vector3(-32, 24, 28);
+  const fillPosGolden = new THREE.Vector3(36, 26, 24);
+  const fillPosNight = new THREE.Vector3(-28, 22, 24);
+
+  const colSunMorning = new THREE.Color(0xFFFDF8);
+  const colSunGolden = new THREE.Color(0xFF9238);
+  const colSunNight = new THREE.Color(0x5B78B2);
+  const colSunsetGrazing = new THREE.Color(0xFF6E24);
+
+  const colAmbMorning = new THREE.Color(0xFFFBF2);
+  const colAmbGolden = new THREE.Color(0xF6CCA2);
+  const colAmbNight = new THREE.Color(0x1E283B);
+
+  const colHemiSkyMorning = new THREE.Color(0xD8E8F8);
+  const colHemiGndMorning = new THREE.Color(0x8C7B65);
+  const colHemiSkyGolden = new THREE.Color(0xFF9E52);
+  const colHemiGndGolden = new THREE.Color(0x4E3222);
+  const colHemiSkyNight = new THREE.Color(0x1C2B48);
+  const colHemiGndNight = new THREE.Color(0x14100C);
+
+  const colFillMorning = new THREE.Color(0xD8E4F0);
+  const colFillGolden = new THREE.Color(0x788CC4);
+  const colFillNight = new THREE.Color(0x3A5078);
 
   const updateLightingMode = (mode: SolarTimeMode, immediate: boolean = false) => {
     targetSolarMode = mode;
@@ -5825,99 +5840,69 @@ export function buildCompleteBuildingScene(
     const t = Math.max(0.01, Math.min(1.0, deltaFactor));
 
     if (mode === 'morning') {
-      const targetPos = new THREE.Vector3(34, 48, 38);
-      sunLight.position.lerp(targetPos, t);
-      sunLight.color.lerp(new THREE.Color(0xFFFDF8), t);
+      sunLight.position.lerp(sunPosMorning, t);
+      sunLight.color.lerp(colSunMorning, t);
       sunLight.intensity = THREE.MathUtils.lerp(sunLight.intensity, 2.85, t);
       sunLight.shadow.radius = THREE.MathUtils.lerp(sunLight.shadow.radius, 1.8, t);
 
       sunsetGrazingLight.intensity = THREE.MathUtils.lerp(sunsetGrazingLight.intensity, 0.0, t);
 
-      ambientLight.color.lerp(new THREE.Color(0xFFFBF2), t);
+      ambientLight.color.lerp(colAmbMorning, t);
       ambientLight.intensity = THREE.MathUtils.lerp(ambientLight.intensity, 1.35, t);
 
-      hemiLight.color.lerp(new THREE.Color(0xD8E8F8), t);
-      hemiLight.groundColor.lerp(new THREE.Color(0x8C7B65), t);
+      hemiLight.color.lerp(colHemiSkyMorning, t);
+      hemiLight.groundColor.lerp(colHemiGndMorning, t);
       hemiLight.intensity = THREE.MathUtils.lerp(hemiLight.intensity, 1.15, t);
 
-      fillLight.position.lerp(new THREE.Vector3(-32, 24, 28), t);
-      fillLight.color.lerp(new THREE.Color(0xD8E4F0), t);
+      fillLight.position.lerp(fillPosMorning, t);
+      fillLight.color.lerp(colFillMorning, t);
       fillLight.intensity = THREE.MathUtils.lerp(fillLight.intensity, 1.18, t);
 
-      warmFacadeGlow.intensity = THREE.MathUtils.lerp(warmFacadeGlow.intensity, 0.35, t);
-      balconyNightLights.forEach((l) => {
-        l.intensity = THREE.MathUtils.lerp(l.intensity, 0.12, t);
-      });
-      poolNorthUnderwaterLight.intensity = THREE.MathUtils.lerp(poolNorthUnderwaterLight.intensity, 0.30, t);
-      poolSouthUnderwaterLight.intensity = THREE.MathUtils.lerp(poolSouthUnderwaterLight.intensity, 0.30, t);
-      poolSolariumWarmNorth.intensity = THREE.MathUtils.lerp(poolSolariumWarmNorth.intensity, 0.10, t);
-      poolSolariumWarmSouth.intensity = THREE.MathUtils.lerp(poolSolariumWarmSouth.intensity, 0.10, t);
+      warmFacadeGlow.intensity = THREE.MathUtils.lerp(warmFacadeGlow.intensity, 0.0, t);
+      poolUnderwaterLight.intensity = THREE.MathUtils.lerp(poolUnderwaterLight.intensity, 0.0, t);
     } else if (mode === 'golden') {
-      // Atardecer en Caracas (Hora Dorada ~5:45 PM): Sol rasante desde el Oeste-Suroeste proyectando sombras largas y dramáticas
-      const targetPos = new THREE.Vector3(-48, 16.5, 34);
-      sunLight.position.lerp(targetPos, t);
-      sunLight.color.lerp(new THREE.Color(0xFF9238), t);
+      sunLight.position.lerp(sunPosGolden, t);
+      sunLight.color.lerp(colSunGolden, t);
       sunLight.intensity = THREE.MathUtils.lerp(sunLight.intensity, 3.45, t);
       sunLight.shadow.radius = THREE.MathUtils.lerp(sunLight.shadow.radius, 3.2, t);
 
-      sunsetGrazingLight.color.lerp(new THREE.Color(0xFF6E24), t);
+      sunsetGrazingLight.color.lerp(colSunsetGrazing, t);
       sunsetGrazingLight.intensity = THREE.MathUtils.lerp(sunsetGrazingLight.intensity, 1.38, t);
 
-      ambientLight.color.lerp(new THREE.Color(0xF6CCA2), t);
+      ambientLight.color.lerp(colAmbGolden, t);
       ambientLight.intensity = THREE.MathUtils.lerp(ambientLight.intensity, 0.98, t);
 
-      hemiLight.color.lerp(new THREE.Color(0xFF9E52), t);
-      hemiLight.groundColor.lerp(new THREE.Color(0x4E3222), t);
+      hemiLight.color.lerp(colHemiSkyGolden, t);
+      hemiLight.groundColor.lerp(colHemiGndGolden, t);
       hemiLight.intensity = THREE.MathUtils.lerp(hemiLight.intensity, 1.08, t);
 
-      fillLight.position.lerp(new THREE.Vector3(36, 26, 24), t);
-      fillLight.color.lerp(new THREE.Color(0x788CC4), t);
+      fillLight.position.lerp(fillPosGolden, t);
+      fillLight.color.lerp(colFillGolden, t);
       fillLight.intensity = THREE.MathUtils.lerp(fillLight.intensity, 0.92, t);
 
-      warmFacadeGlow.intensity = THREE.MathUtils.lerp(warmFacadeGlow.intensity, 2.35, t);
-      balconyNightLights.forEach((l) => {
-        l.intensity = THREE.MathUtils.lerp(l.intensity, 1.65, t);
-      });
-      poolNorthUnderwaterLight.intensity = THREE.MathUtils.lerp(poolNorthUnderwaterLight.intensity, 1.95, t);
-      poolSouthUnderwaterLight.intensity = THREE.MathUtils.lerp(poolSouthUnderwaterLight.intensity, 1.95, t);
-      poolSolariumWarmNorth.intensity = THREE.MathUtils.lerp(poolSolariumWarmNorth.intensity, 1.35, t);
-      poolSolariumWarmSouth.intensity = THREE.MathUtils.lerp(poolSolariumWarmSouth.intensity, 1.35, t);
+      warmFacadeGlow.intensity = THREE.MathUtils.lerp(warmFacadeGlow.intensity, 2.85, t);
+      poolUnderwaterLight.intensity = THREE.MathUtils.lerp(poolUnderwaterLight.intensity, 2.25, t);
     } else {
-      const targetPos = new THREE.Vector3(18, 42, -28);
-      sunLight.position.lerp(targetPos, t);
-      sunLight.color.lerp(new THREE.Color(0x5B78B2), t);
+      sunLight.position.lerp(sunPosNight, t);
+      sunLight.color.lerp(colSunNight, t);
       sunLight.intensity = THREE.MathUtils.lerp(sunLight.intensity, 0.55, t);
       sunLight.shadow.radius = THREE.MathUtils.lerp(sunLight.shadow.radius, 2.6, t);
 
       sunsetGrazingLight.intensity = THREE.MathUtils.lerp(sunsetGrazingLight.intensity, 0.0, t);
 
-      ambientLight.color.lerp(new THREE.Color(0x1E283B), t);
+      ambientLight.color.lerp(colAmbNight, t);
       ambientLight.intensity = THREE.MathUtils.lerp(ambientLight.intensity, 0.62, t);
 
-      hemiLight.color.lerp(new THREE.Color(0x1C2B48), t);
-      hemiLight.groundColor.lerp(new THREE.Color(0x14100C), t);
+      hemiLight.color.lerp(colHemiSkyNight, t);
+      hemiLight.groundColor.lerp(colHemiGndNight, t);
       hemiLight.intensity = THREE.MathUtils.lerp(hemiLight.intensity, 0.55, t);
 
-      fillLight.position.lerp(new THREE.Vector3(-28, 22, 24), t);
-      fillLight.color.lerp(new THREE.Color(0x3A5078), t);
+      fillLight.position.lerp(fillPosNight, t);
+      fillLight.color.lerp(colFillNight, t);
       fillLight.intensity = THREE.MathUtils.lerp(fillLight.intensity, 0.45, t);
 
-      warmFacadeGlow.intensity = THREE.MathUtils.lerp(warmFacadeGlow.intensity, 4.2, t);
-      balconyNightLights.forEach((l) => {
-        l.intensity = THREE.MathUtils.lerp(l.intensity, 3.1, t);
-      });
-      poolNorthUnderwaterLight.intensity = THREE.MathUtils.lerp(poolNorthUnderwaterLight.intensity, 4.4, t);
-      poolSouthUnderwaterLight.intensity = THREE.MathUtils.lerp(poolSouthUnderwaterLight.intensity, 4.4, t);
-      poolSolariumWarmNorth.intensity = THREE.MathUtils.lerp(poolSolariumWarmNorth.intensity, 2.6, t);
-      poolSolariumWarmSouth.intensity = THREE.MathUtils.lerp(poolSolariumWarmSouth.intensity, 2.6, t);
-    }
-
-    // De día las 13 luces artificiales apenas aportan (intensidad 0.1–0.35) pero cada
-    // PointLight encarece el shader de todos los materiales iluminados. Se apagan cuando
-    // el modo es diurno y ya se desvanecieron; el modal precompila ambas variantes.
-    const artificialLightsOn = mode !== 'morning' || warmFacadeGlow.intensity > 0.5;
-    if (warmFacadeGlow.visible !== artificialLightsOn) {
-      artificialLights.forEach((l) => (l.visible = artificialLightsOn));
+      warmFacadeGlow.intensity = THREE.MathUtils.lerp(warmFacadeGlow.intensity, 5.2, t);
+      poolUnderwaterLight.intensity = THREE.MathUtils.lerp(poolUnderwaterLight.intensity, 4.8, t);
     }
 
     const sunMovedDistSq = prevSunPos.distanceToSquared(sunLight.position);

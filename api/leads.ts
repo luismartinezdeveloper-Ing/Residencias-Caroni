@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { processLeadSubmission } from '../server/leads/processLead';
+import { processLeadSubmission } from '../server/services/leadPersistenceService';
 import { getClientIp, handleCors } from '../server/security/http';
 import { rateLimit } from '../server/security/rateLimit';
 

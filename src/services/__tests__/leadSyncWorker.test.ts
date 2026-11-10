@@ -107,4 +107,44 @@ describe('leadSyncWorker - Reintentos Autónomos y Recuperación', () => {
     workerHandle.stop();
     vi.useRealTimers();
   });
+
+  it('IT-05: debe prevenir ejecuciones concurrentes mediante el mutex isSyncInProgress', async () => {
+    let resolveSlowFetch!: (value: any) => void;
+    const slowFetchPromise = new Promise((resolve) => {
+      resolveSlowFetch = resolve;
+    });
+
+    const fetchMock = vi.fn().mockReturnValue(slowFetchPromise);
+    vi.stubGlobal('fetch', fetchMock);
+
+    // Iniciar primer ciclo (queda bloqueado esperando slowFetchPromise)
+    const firstCyclePromise = syncPendingLeads(mockRepo);
+
+    // Intentar ejecutar un segundo ciclo concurrente mientras el primero sigue activo
+    const secondCycleResult = await syncPendingLeads(mockRepo);
+    expect(secondCycleResult.attempted).toBe(0);
+
+    // Desbloquear el primer ciclo
+    resolveSlowFetch({ ok: true, status: 200 });
+    const firstCycleResult = await firstCyclePromise;
+    expect(firstCycleResult.attempted).toBe(1);
+    expect(firstCycleResult.gsheetsSuccess).toBe(1);
+  });
+
+  it('no debe incrementar intentos DLQ ni poner en cuarentena si no hay webhooks configurados', async () => {
+    delete process.env.GOOGLE_SHEETS_WEBHOOK_URL;
+    delete process.env.CRM_WEBHOOK_URL;
+
+    const markQuarantineMock = vi.fn();
+    mockRepo.markQuarantine = markQuarantineMock;
+
+    for (let i = 0; i < 8; i++) {
+      const res = await syncPendingLeads(mockRepo);
+      expect(res.attempted).toBe(0);
+      expect(res.dlqRescue).toBe(0);
+    }
+
+    expect(markQuarantineMock).not.toHaveBeenCalled();
+    expect(mockRepo.markSynced).not.toHaveBeenCalled();
+  });
 });

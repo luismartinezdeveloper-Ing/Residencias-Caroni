@@ -3,9 +3,13 @@ import { SignJWT } from 'jose';
 import { sanitizeInput } from '../services/aiClient';
 import { getJwtSecret, isValidAccessCode, normalizeAccessCode } from '../security/auth';
 import { getClientIp } from '../security/http';
-import { rateLimit } from '../security/rateLimit';
+import { rateLimit, resetMemoryRateLimits } from '../security/rateLimit';
 
 export const authRouter = Router();
+
+export function _resetVerifyRateLimitForTesting(): void {
+  resetMemoryRateLimits();
+}
 
 authRouter.post('/api/verify-code', async (req, res) => {
   try {

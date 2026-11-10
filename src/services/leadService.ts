@@ -1,3 +1,5 @@
+import { notifyServiceRecoveryMode } from '../hooks/useServiceRecoveryMonitor';
+
 export interface LeadRecord {
   id: string;
   fullName: string;
@@ -161,11 +163,15 @@ export async function submitLeadToGoogleSheets(lead: Omit<LeadRecord, 'id' | 'ti
   };
 
   // 1. Store locally immediately
-  const existing = getStoredLeads();
-  existing.unshift(newLead);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
-  localStorage.setItem(ACTIVE_LEAD_KEY, JSON.stringify(newLead));
-  localStorage.setItem('caroni_accredited', 'true');
+  try {
+    const existing = getStoredLeads();
+    existing.unshift(newLead);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+    localStorage.setItem(ACTIVE_LEAD_KEY, JSON.stringify(newLead));
+    localStorage.setItem('caroni_accredited', 'true');
+  } catch {
+    // Safe fallback if storage is restricted
+  }
 
   // 2. Dispatch to Backend API
   let synced = false;
@@ -174,14 +180,24 @@ export async function submitLeadToGoogleSheets(lead: Omit<LeadRecord, 'id' | 'ti
     synced = res.success;
     newLead.syncedToBackend = true;
     newLead.accessToken = res.accessToken;
-    localStorage.setItem(ACTIVE_LEAD_KEY, JSON.stringify(newLead));
+    notifyServiceRecoveryMode(false, null);
+    try {
+      localStorage.setItem(ACTIVE_LEAD_KEY, JSON.stringify(newLead));
+    } catch {
+      // ignore
+    }
   } catch (networkErr) {
     if (networkErr instanceof LeadRejectedError) {
       console.warn('[OUTBOX] El backend rechazó el lead; no se encola para reintento.');
-      localStorage.removeItem('caroni_accredited');
+      try {
+        localStorage.removeItem('caroni_accredited');
+      } catch {
+        // ignore
+      }
       return { success: false, lead: newLead, synced: false };
     }
     console.warn('[OUTBOX] Conexión no disponible o servidor ocupado. Encolando en Outbox local:', networkErr);
+    notifyServiceRecoveryMode(true, 'service_error');
     // Queue for subsequent background sync
     const outbox = getOutboxLeads();
     outbox.push(newLead);

@@ -43,7 +43,6 @@ chatRouter.post('/api/chat', async (req, res) => {
             contents: contents,
             config: {
               systemInstruction,
-              temperature: 0.7,
             },
           });
           if (streamResponse) break;
@@ -75,7 +74,7 @@ chatRouter.post('/api/chat', async (req, res) => {
     } else {
       // Local domain concierge stream based on authentic project knowledge
       console.log('Using authentic local domain fallback for /api/chat');
-      const lastUserMsg = (history?.[history.length - 1]?.content || '');
+      const lastUserMsg = history?.[history.length - 1]?.content || '';
       const fallbackReply = getDomainFallbackReply(lastUserMsg, context);
 
       const words = fallbackReply.split(' ');

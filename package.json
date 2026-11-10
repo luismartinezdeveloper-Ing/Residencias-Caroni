@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vitest run && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
-    "build:client": "vitest run && vite build",
-    "build:vercel": "vitest run && vite build",
+    "build": "NODE_ENV=test vitest run && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build:client": "NODE_ENV=test vitest run && vite build",
+    "build:vercel": "NODE_ENV=test vitest run && vite build",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true }); try { fs.unlinkSync('server.js'); } catch {}\"",

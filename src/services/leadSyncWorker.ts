@@ -16,9 +16,11 @@ export interface SyncCycleResult {
 
 // Mapa en memoria para contar intentos por Lead y evitar loops infinitos (DLQ Tracker)
 const dlqAttemptsTracker = new Map<string, number>();
+let isSyncInProgress = false;
 
 export function _resetDlqTrackerForTesting(): void {
   dlqAttemptsTracker.clear();
+  isSyncInProgress = false;
 }
 
 /**
@@ -32,6 +34,25 @@ export async function syncPendingLeads(repo: ILeadRepository): Promise<SyncCycle
     dlqRescue: 0,
   };
 
+  if (isSyncInProgress) {
+    console.warn('[LEAD-SYNC-RECOVERY] Ciclo omitido: sincronización previa aún en curso.');
+    return result;
+  }
+
+  const gsheetsWebhook = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
+  const crmWebhook = process.env.CRM_WEBHOOK_URL;
+  const rescueWebhook = process.env.EMERGENCY_RESCUE_WEBHOOK_URL;
+
+  const hasActiveGSheets = Boolean(gsheetsWebhook && !gsheetsWebhook.includes('placeholder'));
+  const hasActiveCrm = Boolean(crmWebhook && !crmWebhook.includes('placeholder'));
+
+  // Si no hay ningún webhook externo configurado, mantener en cola local sin penalizar en DLQ
+  if (!hasActiveGSheets && !hasActiveCrm) {
+    return result;
+  }
+
+  isSyncInProgress = true;
+
   try {
     const unsyncedLeads = await repo.getUnsyncedLeads();
     if (unsyncedLeads.length === 0) {
@@ -39,9 +60,6 @@ export async function syncPendingLeads(repo: ILeadRepository): Promise<SyncCycle
     }
 
     result.attempted = unsyncedLeads.length;
-    const gsheetsWebhook = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
-    const crmWebhook = process.env.CRM_WEBHOOK_URL;
-    const rescueWebhook = process.env.EMERGENCY_RESCUE_WEBHOOK_URL;
 
     for (const lead of unsyncedLeads) {
       const attempts = (dlqAttemptsTracker.get(lead.id) || 0) + 1;
@@ -156,6 +174,8 @@ export async function syncPendingLeads(repo: ILeadRepository): Promise<SyncCycle
     }
   } catch (error) {
     console.error('[LEAD-SYNC-RECOVERY] Error crítico en ciclo de sincronización:', error);
+  } finally {
+    isSyncInProgress = false;
   }
 
   return result;

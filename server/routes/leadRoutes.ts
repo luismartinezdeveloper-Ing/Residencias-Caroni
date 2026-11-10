@@ -20,6 +20,10 @@ setInterval(() => {
   }
 }, 180000).unref();
 
+export function _resetLeadsRateLimitForTesting(): void {
+  leadsRateLimitMap.clear();
+}
+
 function isLeadRateLimited(ip: string): boolean {
   const now = Date.now();
   const entry = leadsRateLimitMap.get(ip);
@@ -129,12 +133,12 @@ export function createLeadRouter(leadRepository: LeadRepository): Router {
         syncedGSheets: false,
         syncedCrm: false,
       });
+
       console.log(`[LEAD CAPTURED] ${leadEntry.id} interesado en: ${leadEntry.unitInterest}`);
 
       // Dispatch to external Google Sheets Webhook server-side (with 4s atomic timeout)
       const gsheetsWebhook = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
       let gsheetsSynced = false;
-
       if (gsheetsWebhook && !gsheetsWebhook.includes('placeholder')) {
         try {
           const gsheetsRes = await fetch(gsheetsWebhook, {

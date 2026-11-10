@@ -1,6 +1,6 @@
 {
-  "summary":  "Plan de implementación para integrar una Maqueta Cartográfica Urbana 3D de Altamira (Transversal 8, 2da y 3ra Avenida, manzanas vecinas en bajo relieve, arbolado de Chacao e iluminación vial cálida) junto con una Cordillera Volumétrica 3D del Parque Nacional El Ávila (Waraira Repano) con curvas de nivel topográficas y bruma atmosférica sincronizada con los modos Día, Hora Dorada y Noche.",
-  "updatedAt":  "2026-10-30T19:15:01.739847701Z",
-  "requestFeedback":  true,
-  "userFacing":  true
+  "summary": "Plan integral de auditoría, corrección de errores y recuperación automática silenciosa con respaldo local para Residencias Caroní (escritorio y dispositivos móviles).",
+  "updatedAt": "2026-11-02T23:34:45.797270684Z",
+  "requestFeedback": true,
+  "userFacing": true
 }

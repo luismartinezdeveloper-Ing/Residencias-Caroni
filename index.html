@@ -3,7 +3,70 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
+    <script>
+      (function () {
+        function ensureWritableFetch() {
+          try {
+            var desc = Object.getOwnPropertyDescriptor(window, 'fetch');
+            if (desc && desc.get && !desc.set && desc.configurable !== false) {
+              var getter = desc.get;
+              var customFetch = null;
+              Object.defineProperty(window, 'fetch', {
+                configurable: true,
+                enumerable: true,
+                get: function () {
+                  return customFetch || getter.call(window);
+                },
+                set: function (fn) {
+                  if (typeof fn === 'function') {
+                    customFetch = fn;
+                  }
+                }
+              });
+            }
+          } catch (_) {}
+        }
+        ensureWritableFetch();
+
+        window.addEventListener(
+          'error',
+          function (event) {
+            var msg = String((event && event.message) || '');
+            var file = String((event && event.filename) || '');
+            if (
+              file.indexOf('chrome-extension://') === 0 ||
+              file.indexOf('moz-extension://') === 0 ||
+              msg.indexOf('Cannot set property fetch of #<Window>') !== -1
+            ) {
+              ensureWritableFetch();
+              event.stopImmediatePropagation();
+              event.preventDefault();
+              return false;
+            }
+          },
+          true
+        );
+
+        window.addEventListener(
+          'unhandledrejection',
+          function (event) {
+            var reason = event && event.reason;
+            var msg = String((reason && (reason.message || reason.stack)) || reason || '');
+            if (
+              msg.indexOf('chrome-extension://') !== -1 ||
+              msg.indexOf('Cannot set property fetch of #<Window>') !== -1 ||
+              msg.indexOf('WebSocket closed without opened') !== -1
+            ) {
+              ensureWritableFetch();
+              event.stopImmediatePropagation();
+              event.preventDefault();
+            }
+          },
+          true
+        );
+      })();
+    </script>
+
     <!-- PWA & Mobile Configuration -->
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />

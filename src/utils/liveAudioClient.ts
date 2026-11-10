@@ -16,6 +16,7 @@ export class LiveAudioClient {
   private outputAudioCtx: AudioContext | null = null;
   private mediaStream: MediaStream | null = null;
   private audioWorkletNode: AudioWorkletNode | null = null;
+  private scriptProcessorNode: ScriptProcessorNode | null = null;
   private userAnalyser: AnalyserNode | null = null;
   private aiAnalyser: AnalyserNode | null = null;
   private activeSources: AudioBufferSourceNode[] = [];
@@ -24,6 +25,9 @@ export class LiveAudioClient {
   private isRunning: boolean = false;
   private callbacks: LiveAudioCallbacks = {};
   private animationFrameId: number | null = null;
+  private reconnectAttempts: number = 0;
+  private lastUnitContext: string = '';
+  private lastVoiceName: string = 'Aoede';
 
   constructor(callbacks: LiveAudioCallbacks = {}) {
     this.callbacks = callbacks;
@@ -36,6 +40,8 @@ export class LiveAudioClient {
   public async connect(unitContext: string, voiceName: string = 'Aoede') {
     this.disconnect();
     this.isRunning = true;
+    this.lastUnitContext = unitContext;
+    this.lastVoiceName = voiceName;
     this.callbacks.onStatusChange?.('connecting');
 
     try {
@@ -79,78 +85,24 @@ export class LiveAudioClient {
       this.aiAnalyser.connect(this.outputAudioCtx.destination);
 
       // 3. Connect WebSocket
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${window.location.host}/api/live`;
-      this.ws = new WebSocket(wsUrl);
-
-      this.ws.onopen = () => {
-        // Send initial setup payload
-        this.ws?.send(
-          JSON.stringify({
-            type: 'setup',
-            context: unitContext,
-            voiceName: voiceName,
-          })
-        );
-      };
-
-      this.ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-
-          if (msg.type === 'ready') {
-            this.callbacks.onStatusChange?.('connected');
-            this.startMicRecording();
-            this.startAudioVisualizerLoop();
-          } else if (msg.type === 'audio' && msg.audio) {
-            this.callbacks.onStatusChange?.('speaking');
-            this.playAudioChunk(msg.audio);
-          } else if (msg.type === 'outputTranscription' && msg.text) {
-            this.callbacks.onModelTranscription?.(msg.text);
-          } else if (msg.type === 'inputTranscription' && msg.text) {
-            this.callbacks.onUserTranscription?.(msg.text);
-          } else if (msg.type === 'interrupted') {
-            this.stopAllPlayback();
-            this.callbacks.onStatusChange?.('listening');
-          } else if (msg.type === 'turnComplete') {
-            this.callbacks.onStatusChange?.('listening');
-          } else if (msg.type === 'error') {
-            this.callbacks.onError?.(msg.error);
-            this.callbacks.onStatusChange?.('error');
-          } else if (msg.type === 'sessionClosed') {
-            this.callbacks.onStatusChange?.('disconnected');
-          }
-        } catch (e) {
-          console.error('Error handling WS message:', e);
-        }
-      };
-
-      this.ws.onerror = (err) => {
-        console.error('Live WS Error:', err);
-        this.callbacks.onError?.('Error de conexión WebSocket');
-        this.callbacks.onStatusChange?.('error');
-      };
-
-      this.ws.onclose = () => {
-        if (this.isRunning) {
-          this.callbacks.onStatusChange?.('disconnected');
-        }
-      };
+      this.openWebSocketConnection(unitContext, voiceName);
     } catch (err: any) {
-      console.error('Failed to start Live Audio Client:', err);
       let errorMsg = 'No se pudo inicializar el micrófono o la conexión.';
-      
-      const isNotAllowed = err?.name === 'NotAllowedError' || err?.name === 'PermissionDeniedError' || err?.message?.includes('Permission');
-      const isSecurityError = err?.name === 'SecurityError' || (typeof window !== 'undefined' && window.isSecureContext === false);
+      const isNotAllowed =
+        err?.name === 'NotAllowedError' ||
+        err?.name === 'PermissionDeniedError' ||
+        err?.message?.includes('Permission');
+      const isSecurityError =
+        err?.name === 'SecurityError' ||
+        (typeof window !== 'undefined' && window.isSecureContext === false);
 
       if (isNotAllowed) {
         const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
         const isAndroid = typeof navigator !== 'undefined' && /Android/.test(navigator.userAgent);
-
         if (isIOS) {
           errorMsg = 'Permiso de micrófono denegado. En Safari: toca "aA" junto a la URL > Configuración de sitio web > Micrófono > Permitir.';
         } else if (isAndroid) {
-          errorMsg = 'Permiso de micrófono denegado. En Chrome: toca el candado 🔒 junto a la URL > Permisos > Micrófono > Permitir.';
+          errorMsg = 'Permiso de micrófono denegado. En Chrome: toca el candado junto a la URL > Permisos > Micrófono > Permitir.';
         } else {
           errorMsg = 'Permiso de micrófono denegado. Por favor, habilita el micrófono en los permisos de tu navegador.';
         }
@@ -164,12 +116,111 @@ export class LiveAudioClient {
     }
   }
 
+  private openWebSocketConnection(unitContext: string, voiceName: string) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/api/live`;
+    this.ws = new WebSocket(wsUrl);
+
+    this.ws.onopen = () => {
+      this.reconnectAttempts = 0;
+      this.ws?.send(
+        JSON.stringify({
+          type: 'setup',
+          context: unitContext,
+          voiceName: voiceName,
+        })
+      );
+    };
+
+    this.ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+
+        if (msg.type === 'ready') {
+          this.callbacks.onStatusChange?.('connected');
+          this.startMicRecording();
+          this.startAudioVisualizerLoop();
+        } else if (msg.type === 'audio' && msg.audio) {
+          this.callbacks.onStatusChange?.('speaking');
+          this.playAudioChunk(msg.audio);
+        } else if (msg.type === 'outputTranscription' && msg.text) {
+          this.callbacks.onModelTranscription?.(msg.text);
+        } else if (msg.type === 'inputTranscription' && msg.text) {
+          this.callbacks.onUserTranscription?.(msg.text);
+        } else if (msg.type === 'interrupted') {
+          this.stopAllPlayback();
+          this.callbacks.onStatusChange?.('listening');
+        } else if (msg.type === 'turnComplete') {
+          this.callbacks.onStatusChange?.('listening');
+        } else if (msg.type === 'error') {
+          this.callbacks.onStatusChange?.('disconnected');
+        } else if (msg.type === 'sessionClosed') {
+          this.callbacks.onStatusChange?.('disconnected');
+        }
+      } catch (e) {
+        console.warn('Error handling WS message:', e);
+      }
+    };
+
+    this.ws.onerror = () => {
+      if (this.isRunning && this.reconnectAttempts < 2) {
+        this.reconnectAttempts++;
+        setTimeout(() => {
+          if (this.isRunning) {
+            this.openWebSocketConnection(this.lastUnitContext, this.lastVoiceName);
+          }
+        }, 600 * this.reconnectAttempts);
+      } else {
+        this.callbacks.onStatusChange?.('disconnected');
+      }
+    };
+
+    this.ws.onclose = () => {
+      if (this.isRunning && this.reconnectAttempts < 2) {
+        this.reconnectAttempts++;
+        setTimeout(() => {
+          if (this.isRunning) {
+            this.openWebSocketConnection(this.lastUnitContext, this.lastVoiceName);
+          }
+        }, 600 * this.reconnectAttempts);
+      } else if (this.isRunning) {
+        this.callbacks.onStatusChange?.('disconnected');
+      }
+    };
+  }
+
   private async startMicRecording() {
     if (!this.inputAudioCtx || !this.mediaStream || !this.ws) return;
 
     const source = this.inputAudioCtx.createMediaStreamSource(this.mediaStream);
     this.userAnalyser = this.inputAudioCtx.createAnalyser();
     this.userAnalyser.fftSize = 64;
+
+    const sampleRate = this.inputAudioCtx.sampleRate;
+    let buffer: number[] = [];
+
+    const flushAndSendSamples = (channelData: Float32Array) => {
+      if (this.isMuted || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+
+      for (let i = 0; i < channelData.length; i++) {
+        buffer.push(channelData[i]);
+      }
+
+      if (buffer.length >= 2048) {
+        const inputData = new Float32Array(buffer);
+        buffer = [];
+
+        const pcm16 = this.downsampleTo16k(inputData, sampleRate);
+        const base64Audio = this.arrayBufferToBase64(pcm16.buffer);
+
+        this.ws.send(
+          JSON.stringify({
+            type: 'audio',
+            audio: base64Audio,
+          })
+        );
+      }
+    };
 
     const workletCode = `
       class PCMProcessor extends AudioWorkletProcessor {
@@ -189,6 +240,9 @@ export class LiveAudioClient {
     const url = URL.createObjectURL(blob);
 
     try {
+      if (!this.inputAudioCtx.audioWorklet) {
+        throw new Error('AudioWorklet not supported in this context');
+      }
       await this.inputAudioCtx.audioWorklet.addModule(url);
       URL.revokeObjectURL(url);
       this.audioWorkletNode = new AudioWorkletNode(this.inputAudioCtx, 'pcm-processor');
@@ -197,34 +251,25 @@ export class LiveAudioClient {
       this.userAnalyser.connect(this.audioWorkletNode);
       this.audioWorkletNode.connect(this.inputAudioCtx.destination);
 
-      let buffer: number[] = [];
-      const sampleRate = this.inputAudioCtx.sampleRate;
-
       this.audioWorkletNode.port.onmessage = (e) => {
-        if (this.isMuted || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-
-        const channelData = e.data as Float32Array;
-        for (let i = 0; i < channelData.length; i++) {
-          buffer.push(channelData[i]);
-        }
-
-        if (buffer.length >= 2048) {
-          const inputData = new Float32Array(buffer);
-          buffer = [];
-
-          const pcm16 = this.downsampleTo16k(inputData, sampleRate);
-          const base64Audio = this.arrayBufferToBase64(pcm16.buffer);
-
-          this.ws.send(
-            JSON.stringify({
-              type: 'audio',
-              audio: base64Audio,
-            })
-          );
-        }
+        flushAndSendSamples(e.data as Float32Array);
       };
-    } catch (err) {
-      console.error('Failed to load AudioWorklet:', err);
+    } catch {
+      URL.revokeObjectURL(url);
+      // Silent automatic fallback to ScriptProcessorNode for iOS Safari / Android WebViews
+      try {
+        const processor = this.inputAudioCtx.createScriptProcessor(2048, 1, 1);
+        this.scriptProcessorNode = processor;
+        source.connect(this.userAnalyser);
+        this.userAnalyser.connect(processor);
+        processor.connect(this.inputAudioCtx.destination);
+        processor.onaudioprocess = (event) => {
+          const inputChannel = event.inputBuffer.getChannelData(0);
+          flushAndSendSamples(new Float32Array(inputChannel));
+        };
+      } catch (fallbackErr) {
+        console.warn('Audio capture fallback unavailable:', fallbackErr);
+      }
     }
   }
 
@@ -393,6 +438,12 @@ export class LiveAudioClient {
     if (this.audioWorkletNode) {
       this.audioWorkletNode.disconnect();
       this.audioWorkletNode = null;
+    }
+
+    if (this.scriptProcessorNode) {
+      this.scriptProcessorNode.onaudioprocess = null;
+      this.scriptProcessorNode.disconnect();
+      this.scriptProcessorNode = null;
     }
 
     if (this.mediaStream) {

@@ -11,6 +11,8 @@ import { createLeadRouter } from "./server/routes/leadRoutes";
 import { chatRouter } from "./server/routes/chatRoutes";
 import { createHealthRouter } from "./server/routes/healthRoutes";
 import { ttsRouter } from "./server/routes/ttsRoutes";
+import { videoUpscaleRouter } from "./server/routes/videoUpscaleRoutes";
+import { triggerServerSuperResolution } from "./server/services/videoUpscaleService";
 import { setupLiveVoiceWebSocket } from "./server/websocket/liveVoiceHandler";
 
 dotenv.config();
@@ -18,8 +20,8 @@ dotenv.config();
 async function startServer() {
   const app = express();
   const server = http.createServer(app);
-  // Dynamic port for Cloud Run, Railway, Render or fallback to 3000
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  // Fixed port 3000 required by development environment & container reverse proxy
+  const PORT = 3000;
 
   // Trust proxy for secure HTTPS detection in Cloud Run / Reverse Proxies
   app.set('trust proxy', 1);
@@ -31,13 +33,12 @@ async function startServer() {
       'microphone=(self), xr-spatial-tracking=(self), gyroscope=(self), accelerometer=(self), magnetometer=(self)'
     );
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader(
       'Content-Security-Policy',
-      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self' ws: wss: https:;"
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: data: https:; connect-src 'self' ws: wss: https:; frame-ancestors 'self' https://*.google.com https://*.run.app;"
     );
-    
+
     if (process.env.NODE_ENV === 'production' || req.secure || req.headers['x-forwarded-proto'] === 'https') {
       res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
     }
@@ -53,7 +54,16 @@ async function startServer() {
     process.exit(1);
   }
 
-  app.use(express.json());
+  app.use(express.json({ limit: '64kb' }));
+  app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (err instanceof SyntaxError && 'status' in err && err.status === 400 && 'body' in err) {
+      return res.status(400).json({ error: 'Formato JSON inválido en la solicitud.' });
+    }
+    if (err?.type === 'entity.too.large') {
+      return res.status(413).json({ error: 'El tamaño de la solicitud excede el límite permitido (64KB).' });
+    }
+    return next(err);
+  });
 
   // Static serving for high-performance video streaming with HTTP 206 partial ranges
   app.use('/videos', (req, res, next) => {
@@ -70,10 +80,12 @@ async function startServer() {
   const syncWorker = startLeadSyncWorker(leadRepository, 60000);
 
   // Modular API routes
+  app.use(createHealthRouter(leadRepository));
   app.use(authRouter);
   app.use(createLeadRouter(leadRepository));
   app.use(chatRouter);
   app.use(ttsRouter);
+  app.use(videoUpscaleRouter);
 
   // Gemini Multimodal Live API WebSocket Server
   const liveVoice = setupLiveVoiceWebSocket(server);
@@ -81,7 +93,7 @@ async function startServer() {
   // Vite middleware for development vs static serve for production
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: false },
       appType: "spa",
     });
     app.use(vite.middlewares);
@@ -95,6 +107,8 @@ async function startServer() {
 
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    // Pre-calibrar Super-Resolution 4K con IA en segundo plano sin bloquear el arranque
+    triggerServerSuperResolution({ encodeFull4kClip: false }).catch(() => {});
   });
 
   const gracefulShutdown = () => {

@@ -1,5 +1,5 @@
 /* Residencias Caroní - Service Worker for Offline Consultation */
-const CACHE_NAME = 'caroni-pwa-v6';
+const CACHE_NAME = 'caroni-pwa-v7';
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
@@ -7,15 +7,16 @@ const PRECACHE_ASSETS = [
   '/icon.svg',
 ];
 
-// In local development, bypass caching entirely and purge all caches
-const isLocalhost =
+// In local or AI Studio dev preview environment, bypass caching entirely and purge stale caches
+const isDevHost =
   self.location.hostname === 'localhost' ||
   self.location.hostname === '127.0.0.1' ||
-  self.location.hostname === '[::1]';
+  self.location.hostname === '[::1]' ||
+  self.location.hostname.startsWith('ais-dev-');
 
 // Install Event: Pre-cache app shell core assets
 self.addEventListener('install', (event) => {
-  if (isLocalhost) {
+  if (isDevHost) {
     self.skipWaiting();
     return;
   }
@@ -42,7 +43,7 @@ self.addEventListener('activate', (event) => {
       .then((cacheNames) => {
         return Promise.all(
           cacheNames
-            .filter((name) => isLocalhost || name !== CACHE_NAME)
+            .filter((name) => isDevHost || name !== CACHE_NAME)
             .map((name) => caches.delete(name))
         );
       })
@@ -54,8 +55,8 @@ self.addEventListener('activate', (event) => {
 
 // Fetch Event: Cache Strategy Router
 self.addEventListener('fetch', (event) => {
-  // Always bypass in local dev
-  if (isLocalhost) {
+  // Always bypass in local or dev preview environment
+  if (isDevHost) {
     return;
   }
 
@@ -67,8 +68,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Ignore browser extension schemes or live WebSockets
-  if (!url.protocol.startsWith('http')) {
+  // 2. Ignore browser extension schemes, Vite dev internals, or live WebSockets
+  if (
+    !url.protocol.startsWith('http') ||
+    url.pathname.startsWith('/src/') ||
+    url.pathname.startsWith('/@') ||
+    url.pathname.startsWith('/node_modules/')
+  ) {
     return;
   }
 
@@ -156,8 +162,8 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         })
         .catch(() => {
-          // Network failed, return cached response if available
-          return cachedResponse;
+          // Network failed, return cached response if available or valid 503 Response
+          return cachedResponse || new Response('Offline resource unavailable', { status: 503 });
         });
 
       return cachedResponse || fetchPromise;

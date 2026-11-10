@@ -77,108 +77,113 @@ function sampleAvilaElevation(x: number, z: number): number {
   return Math.max(0.0, rawHeight);
 }
 
+let cachedAltamiraMapCanvas: HTMLCanvasElement | null = null;
+
 /**
- * Genera la textura cartográfica 2K de la Maqueta Urbana de Altamira
+ * Genera la textura cartográfica de la Maqueta Urbana de Altamira con caché de lienzo 2D
  * (Transversal 8, 2da y 3ra Avenida, retícula topográfica, cotas en bronce y drenaje visual).
  */
 function createAltamiraCartographicMapTexture(maxAnisotropy: number): THREE.CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 2048;
-  canvas.height = 2048;
-  const ctx = canvas.getContext('2d');
+  if (!cachedAltamiraMapCanvas) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 2048;
+    canvas.height = 2048;
+    const ctx = canvas.getContext('2d');
 
-  if (ctx) {
-    const cx = 1024;
-    const cy = 1024;
+    if (ctx) {
+      const cx = 1024;
+      const cy = 1024;
 
-    // 1. Fondo base de maqueta arquitectónica en basalto antracita cálido
-    const bgGrad = ctx.createRadialGradient(cx, cy, 80, cx, cy, 1020);
-    bgGrad.addColorStop(0.0, '#221E19');
-    bgGrad.addColorStop(0.55, '#1B1814');
-    bgGrad.addColorStop(0.85, '#15120F');
-    bgGrad.addColorStop(1.0, '#0E0C0A');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, 2048, 2048);
+      // 1. Fondo base de maqueta arquitectónica en basalto antracita cálido
+      const bgGrad = ctx.createRadialGradient(cx, cy, 80, cx, cy, 1020);
+      bgGrad.addColorStop(0.0, '#221E19');
+      bgGrad.addColorStop(0.55, '#1B1814');
+      bgGrad.addColorStop(0.85, '#15120F');
+      bgGrad.addColorStop(1.0, '#0E0C0A');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, 2048, 2048);
 
-    // 2. Retícula cartográfica fina de ingeniería (UTM Caracas / Chacao)
-    ctx.strokeStyle = 'rgba(201, 168, 106, 0.08)';
-    ctx.lineWidth = 1;
-    const gridStep = 32;
-    for (let i = 0; i <= 2048; i += gridStep) {
-      ctx.beginPath();
-      ctx.moveTo(i, 0);
-      ctx.lineTo(i, 2048);
-      ctx.stroke();
+      // 2. Retícula cartográfica fina de ingeniería (UTM Caracas / Chacao)
+      ctx.strokeStyle = 'rgba(201, 168, 106, 0.08)';
+      ctx.lineWidth = 1;
+      const gridStep = 32;
+      for (let i = 0; i <= 2048; i += gridStep) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, 2048);
+        ctx.stroke();
 
-      ctx.beginPath();
-      ctx.moveTo(0, i);
-      ctx.lineTo(2048, i);
-      ctx.stroke();
-    }
-
-    // Retícula principal cada 128px con cruces topográficas
-    ctx.strokeStyle = 'rgba(201, 168, 106, 0.16)';
-    ctx.lineWidth = 1.5;
-    for (let i = 0; i <= 2048; i += 128) {
-      ctx.beginPath();
-      ctx.moveTo(i, 0);
-      ctx.lineTo(i, 2048);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(0, i);
-      ctx.lineTo(2048, i);
-      ctx.stroke();
-    }
-
-    // 3. Curvas de nivel topográficas suaves del piedemonte de Altamira (pendiente Norte -> Sur)
-    ctx.strokeStyle = 'rgba(201, 168, 106, 0.14)';
-    ctx.lineWidth = 1.4;
-    for (let c = 0; c < 18; c++) {
-      const baseY = 120 + c * 105;
-      ctx.beginPath();
-      for (let x = 0; x <= 2048; x += 24) {
-        const wave =
-          Math.sin(x * 0.0045 + c * 0.5) * 28 +
-          Math.cos(x * 0.011 - c * 0.3) * 14;
-        const y = baseY + wave;
-        if (x === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(2048, i);
+        ctx.stroke();
       }
-      ctx.stroke();
-    }
 
-    // 4. Anillos concéntricos de compás solar y graduación acimutal
-    const rings = [340, 560, 780, 940, 990];
-    rings.forEach((r, idx) => {
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.strokeStyle =
-        idx === rings.length - 1
-          ? 'rgba(201, 168, 106, 0.42)'
-          : 'rgba(201, 168, 106, 0.18)';
-      ctx.lineWidth = idx === rings.length - 1 ? 3 : 1.5;
-      ctx.stroke();
-    });
+      // Retícula principal cada 128px con cruces topográficas
+      ctx.strokeStyle = 'rgba(201, 168, 106, 0.16)';
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i <= 2048; i += 128) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, 2048);
+        ctx.stroke();
 
-    // Marcas de grados en el anillo perimetral exterior
-    for (let deg = 0; deg < 360; deg += 3) {
-      const rad = (deg * Math.PI) / 180;
-      const isMajor = deg % 15 === 0;
-      const rInner = isMajor ? 945 : 968;
-      const rOuter = 988;
-      ctx.beginPath();
-      ctx.moveTo(cx + Math.cos(rad) * rInner, cy + Math.sin(rad) * rInner);
-      ctx.lineTo(cx + Math.cos(rad) * rOuter, cy + Math.sin(rad) * rOuter);
-      ctx.strokeStyle = isMajor
-        ? 'rgba(201, 168, 106, 0.48)'
-        : 'rgba(201, 168, 106, 0.20)';
-      ctx.lineWidth = isMajor ? 2.2 : 1.0;
-      ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(2048, i);
+        ctx.stroke();
+      }
+
+      // 3. Curvas de nivel topográficas suaves del piedemonte de Altamira (pendiente Norte -> Sur)
+      ctx.strokeStyle = 'rgba(201, 168, 106, 0.14)';
+      ctx.lineWidth = 1.4;
+      for (let c = 0; c < 18; c++) {
+        const baseY = 120 + c * 105;
+        ctx.beginPath();
+        for (let x = 0; x <= 2048; x += 24) {
+          const wave =
+            Math.sin(x * 0.0045 + c * 0.5) * 28 +
+            Math.cos(x * 0.011 - c * 0.3) * 14;
+          const y = baseY + wave;
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+
+      // 4. Anillos concéntricos de compás solar y graduación acimutal
+      const rings = [340, 560, 780, 940, 990];
+      rings.forEach((r, idx) => {
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.strokeStyle =
+          idx === rings.length - 1
+            ? 'rgba(201, 168, 106, 0.42)'
+            : 'rgba(201, 168, 106, 0.18)';
+        ctx.lineWidth = idx === rings.length - 1 ? 3 : 1.5;
+        ctx.stroke();
+      });
+
+      // Marcas de grados en el anillo perimetral exterior
+      for (let deg = 0; deg < 360; deg += 3) {
+        const rad = (deg * Math.PI) / 180;
+        const isMajor = deg % 15 === 0;
+        const rInner = isMajor ? 945 : 968;
+        const rOuter = 988;
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(rad) * rInner, cy + Math.sin(rad) * rInner);
+        ctx.lineTo(cx + Math.cos(rad) * rOuter, cy + Math.sin(rad) * rOuter);
+        ctx.strokeStyle = isMajor
+          ? 'rgba(201, 168, 106, 0.48)'
+          : 'rgba(201, 168, 106, 0.20)';
+        ctx.lineWidth = isMajor ? 2.2 : 1.0;
+        ctx.stroke();
+      }
     }
+    cachedAltamiraMapCanvas = canvas;
   }
 
-  const texture = new THREE.CanvasTexture(canvas);
+  const texture = new THREE.CanvasTexture(cachedAltamiraMapCanvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = maxAnisotropy;
   texture.needsUpdate = true;
@@ -1234,6 +1239,26 @@ export function createAltamiraUrbanMapAndAvilaBackdrop(
   const bgGolden = new THREE.Color('#1A140F');
   const bgNight = new THREE.Color('#0A0A0E');
 
+  const avilaBaseColGolden = new THREE.Color(0x733718);
+  const avilaBaseColNight = new THREE.Color(0x142030);
+  const avilaBaseColMorning = new THREE.Color(0x265A2C);
+
+  const avilaPeakColGolden = new THREE.Color(0x9C542E);
+  const avilaPeakColNight = new THREE.Color(0x1D2D42);
+  const avilaPeakColMorning = new THREE.Color(0x3B6B38);
+
+  const avilaFogColGolden = new THREE.Color(0xB86B3D);
+  const avilaFogColNight = new THREE.Color(0x0F1826);
+  const avilaFogColMorning = new THREE.Color(0x8BA3BA);
+
+  const massingColNight = new THREE.Color(0x181B24);
+  const massingColGolden = new THREE.Color(0x32251C);
+  const massingColMorning = new THREE.Color(0x2B2620);
+
+  const tableTintNight = new THREE.Color(0x9AA6B8);
+  const tableTintGolden = new THREE.Color(0xF6D2AE);
+  const tableTintMorning = new THREE.Color(0xFFFFFF);
+
   const updateContextSolarMode = (
     mode: SolarTimeMode,
     deltaFactor: number = 0.08,
@@ -1253,29 +1278,14 @@ export function createAltamiraUrbanMapAndAvilaBackdrop(
       avilaShaderUniforms.uCameraPos.value.copy(cameraPosition);
     }
 
-    // 1. Color, bruma y propiedades del ShaderMaterial del Ávila según el modo solar
+    // 1. Color, bruma y propiedades del ShaderMaterial del Ávila según el modo solar (Cero GC en bucle)
     if (!isAvilaDebugActive) {
       const targetBaseCol =
-        mode === 'golden'
-          ? new THREE.Color(0x733718) // Cobre / terracota cálido de atardecer caraqueño
-          : mode === 'night'
-          ? new THREE.Color(0x142030) // Azul alpino medianoche
-          : new THREE.Color(0x265A2C); // Verde selva nublada exuberante diurno
-
+        mode === 'golden' ? avilaBaseColGolden : mode === 'night' ? avilaBaseColNight : avilaBaseColMorning;
       const targetPeakCol =
-        mode === 'golden'
-          ? new THREE.Color(0x9C542E) // Crestas ambarinas al atardecer
-          : mode === 'night'
-          ? new THREE.Color(0x1D2D42)
-          : new THREE.Color(0x3B6B38);
-
+        mode === 'golden' ? avilaPeakColGolden : mode === 'night' ? avilaPeakColNight : avilaPeakColMorning;
       const targetFogCol =
-        mode === 'golden'
-          ? new THREE.Color(0xB86B3D) // Bruma dorada/cobre de atardecer
-          : mode === 'night'
-          ? new THREE.Color(0x0F1826) // Bruma nocturna azul medianoche
-          : new THREE.Color(0x8BA3BA); // Bruma azulina añil matutina de Caracas
-
+        mode === 'golden' ? avilaFogColGolden : mode === 'night' ? avilaFogColNight : avilaFogColMorning;
       const targetSunDir =
         mode === 'golden' ? sunDirGolden : mode === 'night' ? sunDirNight : sunDirMorning;
       const targetSunCol =
@@ -1307,7 +1317,6 @@ export function createAltamiraUrbanMapAndAvilaBackdrop(
       mode === 'night' ? 2.8 : mode === 'golden' ? 1.8 : 0.4,
       t
     );
-    // Destello de faro rotativo en la noche y atardecer
     const beaconPulse = Math.pow(Math.sin(nowSeconds * 3.5), 8.0);
     humboldtBeaconMat.color.setHex(mode === 'night' || mode === 'golden' ? (beaconPulse > 0.35 ? 0xFFFFAA : 0xFFA030) : 0xE6D0A0);
 
@@ -1325,19 +1334,11 @@ export function createAltamiraUrbanMapAndAvilaBackdrop(
     neighborWindowMat.emissiveIntensity = THREE.MathUtils.lerp(neighborWindowMat.emissiveIntensity, targetNeighborWinGlow, t);
 
     const targetMassingColor =
-      mode === 'night'
-        ? new THREE.Color(0x181B24)
-        : mode === 'golden'
-        ? new THREE.Color(0x32251C)
-        : new THREE.Color(0x2B2620);
+      mode === 'night' ? massingColNight : mode === 'golden' ? massingColGolden : massingColMorning;
     massingMat.color.lerp(targetMassingColor, t);
 
     const targetTableTint =
-      mode === 'night'
-        ? new THREE.Color(0x9AA6B8)
-        : mode === 'golden'
-        ? new THREE.Color(0xF6D2AE)
-        : new THREE.Color(0xFFFFFF);
+      mode === 'night' ? tableTintNight : mode === 'golden' ? tableTintGolden : tableTintMorning;
     tableMaterial.color.lerp(targetTableTint, t);
   };
 
@@ -1353,58 +1354,48 @@ export function createAltamiraUrbanMapAndAvilaBackdrop(
     if (avilaTerrainMesh.material instanceof THREE.Material) {
       avilaTerrainMesh.material.needsUpdate = true;
     }
-
-    if (typeof console !== 'undefined' && console.info) {
-      console.info(`[Ávila 3D Diagnostic] Modo Depuración: ${enabled ? 'ACTIVO (MeshBasicMaterial Rojo)' : 'DESACTIVADO (ShaderMaterial con Bruma)'}`, {
-        active: enabled,
-        material: enabled ? 'THREE.MeshBasicMaterial' : 'THREE.ShaderMaterial (Depth-based Atmospheric Mist)',
-        colorHex: enabled ? '#FF0000' : '#' + avilaShaderUniforms.uTerrainBaseColor.value.getHexString(),
-        meshVisible: avilaTerrainMesh.visible,
-        groupVisible: avilaGroup.visible,
-        rootVisible: rootGroup.visible,
-        boundingBox: {
-          min: avilaTerrainGeo.boundingBox ? { ...avilaTerrainGeo.boundingBox.min } : null,
-          max: avilaTerrainGeo.boundingBox ? { ...avilaTerrainGeo.boundingBox.max } : null,
-        },
-        vertexCount: vertexCount,
-      });
-    }
   };
 
   /**
-   * Calcula con exactitud la distancia euclidiana máxima desde una posición dada
-   * (por ejemplo, la cámara de Three.js) hasta el punto más alejado de la geometría tridimensional
-   * del Parque Nacional El Ávila (coordenadas de mundo).
+   * Calcula en O(1) (8 vértices del BoundingBox en lugar de 19.521 vértices por frame)
+   * la distancia euclidiana máxima desde la cámara hasta el extremo más lejano de El Ávila.
    */
   const getAvilaFurthestPointDistance = (cameraPosition: THREE.Vector3): number => {
+    const bbox = avilaTerrainGeo.boundingBox;
+    if (!bbox) return 400;
+
     avilaTerrainMesh.updateMatrixWorld(true);
     const m = avilaTerrainMesh.matrixWorld.elements;
-    const pos = avilaTerrainGeo.attributes.position;
-    if (!pos || pos.count === 0) return 400;
+    const min = bbox.min;
+    const max = bbox.max;
 
-    let maxDistSq = 0;
     const cx = cameraPosition.x;
     const cy = cameraPosition.y;
     const cz = cameraPosition.z;
 
-    const count = pos.count;
-    for (let i = 0; i < count; i++) {
-      const vx = pos.getX(i);
-      const vy = pos.getY(i);
-      const vz = pos.getZ(i);
+    let maxDistSq = 0;
+    const xs = [min.x, max.x];
+    const ys = [min.y, max.y];
+    const zs = [min.z, max.z];
 
-      // Conversión de coordenadas de objeto a coordenadas de mundo
-      const wx = m[0] * vx + m[4] * vy + m[8] * vz + m[12];
-      const wy = m[1] * vx + m[5] * vy + m[9] * vz + m[13];
-      const wz = m[2] * vx + m[6] * vy + m[10] * vz + m[14];
+    for (let xi = 0; xi < 2; xi++) {
+      const vx = xs[xi];
+      for (let yi = 0; yi < 2; yi++) {
+        const vy = ys[yi];
+        for (let zi = 0; zi < 2; zi++) {
+          const vz = zs[zi];
+          const wx = m[0] * vx + m[4] * vy + m[8] * vz + m[12];
+          const wy = m[1] * vx + m[5] * vy + m[9] * vz + m[13];
+          const wz = m[2] * vx + m[6] * vy + m[10] * vz + m[14];
 
-      const dx = wx - cx;
-      const dy = wy - cy;
-      const dz = wz - cz;
-      const dSq = dx * dx + dy * dy + dz * dz;
-
-      if (dSq > maxDistSq) {
-        maxDistSq = dSq;
+          const dx = wx - cx;
+          const dy = wy - cy;
+          const dz = wz - cz;
+          const dSq = dx * dx + dy * dy + dz * dz;
+          if (dSq > maxDistSq) {
+            maxDistSq = dSq;
+          }
+        }
       }
     }
 
