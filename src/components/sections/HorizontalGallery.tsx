@@ -1,5 +1,6 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { GALLERY_ITEMS, GalleryItem } from '../../data/galleryData';
+import { SlideDesignSheet } from './DesignSheet';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent } from 'motion/react';
 
 type GalleryCategoryId = 'exteriores' | 'pb-norte' | 'pb-sur' | 'penthouse';
@@ -449,43 +450,7 @@ export const HorizontalGallery = () => {
                     {(() => {
                       const meta = findSpecsForImage(slide.image);
                       if (!meta) return null;
-                      return (
-                        <div className="pt-4 border-t border-[#1B1813]/10 flex flex-col space-y-2.5">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10.5px] font-mono text-[#5A554A]">
-                            {meta.cota && (
-                              <div className="flex items-center space-x-1.5">
-                                <span className="text-[#8C7452] font-semibold">COTA:</span>
-                                <span className="truncate">{meta.cota.replace(/^COTA\s*(ACCESO|CIMA|NIVEL[^:]*|JARDÍN)?\s*:\s*/i, '')}</span>
-                              </div>
-                            )}
-                            {meta.orientation && (
-                              <div className="flex items-center space-x-1.5">
-                                <span className="text-[#8C7452] font-semibold">ORIENTACIÓN:</span>
-                                <span className="truncate">{meta.orientation}</span>
-                              </div>
-                            )}
-                            {meta.material && (
-                              <div className="sm:col-span-2 flex items-center space-x-1.5">
-                                <span className="text-[#8C7452] font-semibold">MATERIAL:</span>
-                                <span className="text-[#1B1813] font-medium truncate">{meta.material}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          {meta.specs && meta.specs.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                              {meta.specs.slice(0, 3).map((spec, i) => (
-                                <span
-                                  key={i}
-                                  className="px-2 py-0.5 rounded bg-[#FAF9F6] border border-[#1B1813]/10 text-[10px] font-mono text-[#5A554A]"
-                                >
-                                  <strong className="text-[#8C7452] font-medium">{spec.label}:</strong> {spec.value}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
+                      return <SlideDesignSheet item={meta} />;
                     })()}
                   </div>
 
