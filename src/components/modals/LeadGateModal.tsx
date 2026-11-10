@@ -351,7 +351,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
                 <div className="flex flex-col sm:flex-row gap-2 pt-2">
                   <button
                     type="submit"
-                    className="flex-1 bg-[#8C7452] text-[#14120E] hover:bg-[#FAF9F6] transition-all font-meta font-bold text-xs py-3 px-6 rounded-full flex items-center justify-center space-x-2 cursor-pointer shadow-lg active:scale-98"
+                    className="btn-apple btn-apple-bronze flex-1 font-meta font-bold text-xs py-3 px-6"
                   >
                     <Unlock className="w-4 h-4" />
                     <span>Validar Código y Desbloquear</span>
@@ -360,7 +360,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
                     <button
                       type="button"
                       onClick={handleQuickDemo}
-                      className="bg-[#1C1813] border border-[#FAF9F6]/20 text-[#A6A092] hover:text-[#EFEBE0] hover:border-[#8C7452] text-[10.5px] font-meta py-3 px-4 rounded-full transition-colors cursor-pointer"
+                      className="btn-apple btn-apple-glass-dark text-[10.5px] font-meta py-3 px-4"
                       title="Solo visible en entorno de desarrollo"
                     >
                       [DEV] Pase Demo Rápido
@@ -509,7 +509,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-[#8C7452] hover:bg-[#A38760] text-[#14120E] font-meta font-bold text-xs sm:text-[13px] py-3.5 px-6 rounded-full flex items-center justify-center space-x-2 transition-all shadow-[0_4px_20px_rgba(140,116,82,0.35)] cursor-pointer active:scale-98 disabled:opacity-50"
+                    className="btn-apple btn-apple-bronze w-full font-meta font-bold text-xs sm:text-[13px] py-3.5 px-6"
                   >
                     {isSubmitting ? (
                       <>

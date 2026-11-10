@@ -146,7 +146,7 @@ export const ConfidentialityModal: React.FC = () => {
                 <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
                   <button
                     type="submit"
-                    className="flex-1 bg-[#1B1813] text-[#EFEBE0] hover:bg-[#8C7452] transition-colors py-2.5 px-4 font-meta text-[11px] uppercase tracking-widest flex items-center justify-center space-x-2 cursor-pointer shadow-xs rounded-full"
+                    className="btn-apple btn-apple-ink flex-1 py-2.5 px-4 font-meta text-[11px] uppercase tracking-widest"
                   >
                     <span>Ver Información y Precios Privados</span>
                     <span>→</span>

@@ -114,7 +114,7 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
                 <button
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
-                  className={`relative font-meta text-[10px] sm:text-[11px] px-3.5 py-1.5 transition-colors flex items-center cursor-pointer rounded-full tracking-wider ${isActive
+                  className={`relative font-meta text-[10px] sm:text-[11px] px-3.5 py-1.5 transition-all duration-200 flex items-center cursor-pointer rounded-full tracking-wider active:scale-95 ${isActive
                       ? 'text-[#1B1813] font-semibold'
                       : 'text-[#8C8678] hover:text-[#1B1813]'
                     }`}
@@ -155,7 +155,7 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
                 <button
                   key={item.id}
                   onClick={() => onNavigate(item.id)}
-                  className={`relative font-meta text-[10px] px-3 py-1.5 whitespace-nowrap transition-all duration-200 shrink-0 flex items-center space-x-1 rounded-full cursor-pointer min-h-[32px] tracking-wider ${isActive
+                  className={`relative font-meta text-[10px] px-3 py-1.5 whitespace-nowrap transition-all duration-200 shrink-0 flex items-center space-x-1 rounded-full cursor-pointer min-h-[32px] tracking-wider active:scale-95 ${isActive
                       ? 'bg-[#1B1813] text-[#FAF9F6] font-semibold shadow-xs'
                       : 'bg-[#FAF8F5] text-[#8C8678] border border-[#C9C4B5]/50 hover:text-[#1B1813] hover:border-[#1B1813]/30'
                     }`}

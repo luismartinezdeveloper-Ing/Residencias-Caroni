@@ -83,7 +83,7 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
               <div className="space-y-3">
                 <button
                   onClick={onOpenAdvisoryModal}
-                  className="w-full bg-[#8C7452] hover:bg-[#A38965] text-[#1B1813] hover:text-[#1B1813] font-meta text-[11px] uppercase tracking-widest py-3.5 px-5 rounded-full font-bold transition-all flex items-center justify-center space-x-2 cursor-pointer shadow-lg hover:shadow-xl"
+                  className="btn-apple btn-apple-bronze w-full font-meta text-[11px] uppercase tracking-widest py-3.5 px-5 font-bold"
                 >
                   <Calendar className="w-4 h-4" />
                   <span>Agendar Cita Privada</span>
@@ -94,7 +94,7 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
                   href="https://wa.me/?text=Hola%2C%20quisiera%20solicitar%20informaci%C3%B3n%20privada%20y%20disponibilidad%20sobre%20Residencias%20Caron%C3%AD%20en%20Altamira."
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full bg-white/5 hover:bg-white/10 text-[#FAF9F6] border border-white/10 hover:border-[#8C7452]/50 font-meta text-[10.5px] uppercase tracking-wider py-3 px-4 rounded-full transition-all flex items-center justify-center space-x-2 cursor-pointer"
+                  className="btn-apple btn-apple-glass-dark w-full font-meta text-[10.5px] uppercase tracking-wider py-3 px-4"
                 >
                   <MessageSquare className="w-4 h-4 text-[#8C7452]" />
                   <span>Contacto Directo vía WhatsApp</span>

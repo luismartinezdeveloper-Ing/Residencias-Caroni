@@ -1292,7 +1292,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
                 <button
                   onClick={onClose}
-                  className="font-meta text-[10px] sm:text-[10px] px-3.5 sm:px-4 py-2 sm:py-1.5 border border-[#C9A86A]/40 bg-[#C9A86A]/10 hover:bg-[#C9A86A] hover:text-[#0A0908] text-[#FAF8F5] transition-all flex items-center space-x-1.5 shrink-0 cursor-pointer shadow-xs rounded-full min-h-[44px] sm:min-h-[28px]"
+                  className="btn-apple btn-apple-glass-dark font-meta text-[10px] px-3.5 sm:px-4 py-2 sm:py-1.5 gap-1.5 shrink-0 min-h-[44px] sm:min-h-[28px]"
                   title="Cerrar Maqueta 3D"
                   aria-label="Cerrar Maqueta 3D"
                 >
