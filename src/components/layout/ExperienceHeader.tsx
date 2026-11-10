@@ -107,7 +107,7 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
           </div>
 
           {/* Menú Cápsula Unificado: Secciones + Maqueta 3D integrada con el mismo estilo */}
-          <nav className="hidden md:flex items-center gap-1 bg-[#FAF8F5]/90 p-1 border border-[#C9C4B5]/70 shrink-0 rounded-full shadow-xs">
+          <nav className="hidden lg:flex items-center gap-1 bg-[#FAF8F5]/90 p-1 border border-[#C9C4B5]/70 shrink-0 rounded-full shadow-xs">
             {navItems.map((item) => {
               const isActive = activeSection === item.id;
               return (
@@ -147,7 +147,7 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
         </div>
 
         {/* 3. Sub-Barra de Navegación Móvil */}
-        <div className="md:hidden border-t border-[#C9C4B5]/40 bg-[#FAF9F6]/95 backdrop-blur-md px-2.5 py-1.5 overflow-hidden">
+        <div className="lg:hidden border-t border-[#C9C4B5]/40 bg-[#FAF9F6]/95 backdrop-blur-md px-2.5 py-1.5 overflow-hidden">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1 px-0.5 scroll-smooth">
             {navItems.map((item) => {
               const isActive = activeSection === item.id;
