@@ -3,7 +3,6 @@ import { motion } from 'motion/react';
 import { ExperienceHeader, NavSection } from './components/layout/ExperienceHeader';
 import { CinematicScrollNarrative } from './components/sections/CinematicScrollNarrative';
 import { HorizontalGallery } from './components/sections/HorizontalGallery';
-import { DesignSection } from './components/sections/DesignSheet';
 import { InteractiveElevationViewer } from './components/sections/InteractiveElevationViewer';
 import { PrivateAdvisoryCTA } from './components/sections/PrivateAdvisoryCTA';
 import { ConfidentialityModal } from './components/modals/ConfidentialityModal';
@@ -168,16 +167,6 @@ function MainAppContent() {
 
         {/* 02. PERSPECTIVAS Y MATERIALIDAD (Galería Editorial Horizontal con Renders de Autor) */}
         <HorizontalGallery />
-
-        {/* 02b. FICHA DE DISEÑO (orientación, materiales, estructura y protección solar) */}
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-60px' }}
-          variants={sectionVariants}
-        >
-          <DesignSection />
-        </motion.div>
 
         {/* 03. FACHADAS & COTAS (Interactive Elevation) */}
         <motion.div
