@@ -1,6 +1,4 @@
 import React, { useRef, useState, useMemo } from 'react';
-import { GALLERY_ITEMS, GalleryItem } from '../../data/galleryData';
-import { SlideDesignSheet } from './DesignSheet';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent } from 'motion/react';
 
 type GalleryCategoryId = 'exteriores' | 'pb-norte' | 'pb-sur' | 'penthouse';
@@ -321,16 +319,6 @@ const AppleCircularLoupeImage: React.FC<AppleCircularLoupeImageProps> = ({
 };
 
 
-// Helper function to connect rich architectural specs from GALLERY_ITEMS
-function findSpecsForImage(imageSrc: string): GalleryItem | undefined {
-  const normalized = imageSrc.replace(/^\//, '');
-  return GALLERY_ITEMS.find((item) => {
-    if (!item.image) return false;
-    const itemNorm = item.image.replace(/^\//, '');
-    return itemNorm.includes(normalized) || normalized.includes(itemNorm);
-  });
-}
-
 export const HorizontalGallery = () => {
   const targetRef = useRef<HTMLDivElement>(null);
   const [selectedCategory, setSelectedCategory] = useState<GalleryCategoryId>('exteriores');
@@ -454,13 +442,6 @@ export const HorizontalGallery = () => {
                     <p className="font-serif text-sm sm:text-base md:text-lg text-[#5A554A] leading-relaxed max-w-lg font-light">
                       {slide.subtitle}
                     </p>
-
-                    {/* Ficha Técnica Arquitectónica de Autor (Añil Arquitectura) */}
-                    {(() => {
-                      const meta = findSpecsForImage(slide.image);
-                      if (!meta) return null;
-                      return <SlideDesignSheet item={meta} />;
-                    })()}
                   </div>
 
                   {/* Columna de Imagen con Lupa Circular Clásica Estilo Apple */}
