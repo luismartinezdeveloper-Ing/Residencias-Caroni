@@ -370,15 +370,15 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                                   handleSelectCategory(cat.id);
                                   setIsMobileRailOpen(false);
                                 }}
-                                className={`w-full text-left px-3 py-2 rounded-xl text-[11px] font-mono tracking-wider transition-all duration-200 uppercase flex items-center justify-between cursor-pointer ${isCatActive
-                                    ? 'bg-[#1B1813] text-[#FAF9F6] shadow-sm font-semibold'
-                                    : 'text-[#5A554A] hover:text-[#1B1813] hover:bg-black/[0.03]'
+                                className={`w-full text-left px-4 py-2 rounded-full text-[11px] font-mono tracking-wider transition-all duration-200 uppercase flex items-center justify-between cursor-pointer active:scale-[0.98] ${isCatActive
+                                    ? 'bg-[#1B1813]/90 text-[#FAF9F6] shadow-[0_2px_8px_rgba(27,24,19,0.2),inset_0_1px_0.5px_rgba(255,255,255,0.25)] border border-white/20 backdrop-blur-md font-semibold'
+                                    : 'text-[#5A554A] hover:text-[#1B1813] hover:bg-white/60 hover:shadow-[0_2px_6px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.8)] border border-transparent hover:border-white/50'
                                   }`}
                           >
                     <div className="flex items-center space-x-2">
                       <span
                         className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                          isCatActive ? 'bg-[#C9A86A]' : 'bg-[#1B1813]/25'
+                          isCatActive ? 'bg-[#C9A86A] shadow-[0_0_6px_#C9A86A]' : 'bg-[#1B1813]/25'
                         }`}
                       />
                       <span>{cat.label}</span>
@@ -393,7 +393,7 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                           animate={{ height: 'auto', opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
                           transition={{ duration: 0.22 }}
-                          className="overflow-hidden pl-3 pr-1 py-1 space-y-1 border-l-2 border-[#8C7452]/30 ml-2.5 my-1"
+                          className="overflow-hidden pl-3 pr-0 py-1 space-y-1 my-1"
                         >
                           {cat.variants.map((variant, idx) => {
                             const isVarActive = activeVariantIndex === idx;
@@ -405,13 +405,13 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                                   setActiveVariantIndex(idx);
                                   setIsMobileRailOpen(false);
                                 }}
-                                className={`w-full text-left px-2.5 py-2 rounded-lg text-[11px] font-mono tracking-wider uppercase transition-all duration-150 flex items-center justify-between cursor-pointer ${isVarActive
-                                    ? 'bg-[#8C7452]/15 text-[#1B1813] font-bold border-l-2 border-[#8C7452] shadow-2xs'
-                                    : 'text-[#5A554A] hover:text-[#1B1813] hover:bg-black/[0.03]'
+                                className={`w-full text-left px-3.5 py-2 rounded-full text-[11px] font-mono tracking-wider uppercase transition-all duration-200 flex items-center justify-between cursor-pointer active:scale-[0.98] ${isVarActive
+                                    ? 'bg-gradient-to-r from-[#8C7452] to-[#A08255] text-white shadow-[0_2px_8px_rgba(140,116,82,0.35),inset_0_1px_0.5px_rgba(255,255,255,0.3)] border border-white/30 font-medium'
+                                    : 'text-[#5A554A] hover:text-[#1B1813] hover:bg-white/60 hover:shadow-[0_2px_6px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,0.8)] border border-transparent hover:border-white/50'
                                   }`}
                               >
-                                <div className="flex items-center space-x-1.5 truncate">
-                                  <span className={isVarActive ? 'text-[#8C7452]' : 'text-[#1B1813]/25'}>▪</span>
+                                <div className="flex items-center space-x-2 truncate">
+                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isVarActive ? 'bg-white shadow-[0_0_4px_#ffffff]' : 'bg-[#1B1813]/25'}`} />
                                   <span className="truncate">{variant.pillTitle}</span>
                                 </div>
                               </button>
