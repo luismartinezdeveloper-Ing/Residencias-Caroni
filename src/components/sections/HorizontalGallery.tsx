@@ -388,7 +388,7 @@ export const HorizontalGallery = () => {
         {/* Identificador Superior Izquierdo Minimalista */}
         <div className="absolute top-6 left-6 sm:left-12 z-20 hidden md:flex items-center space-x-3 pointer-events-none">
           <div className="w-2 h-2 rounded-full bg-[#8C7452] shadow-[0_0_8px_rgba(140,116,82,0.35)]" />
-          <span className="font-mono text-[10px] sm:text-[10px] text-[#8C7452] tracking-[0.25em] uppercase font-semibold">
+          <span className="font-mono text-[10px] sm:text-[10px] text-[#75603F] tracking-[0.25em] uppercase font-semibold">
             PERSPECTIVAS & MATERIALIDAD
           </span>
           <span className="text-[#1B1813]/20 text-xs font-mono">·</span>
@@ -429,7 +429,7 @@ export const HorizontalGallery = () => {
                   {/* Columna Editorial (Apple Glass Minimalist Claro) */}
                   <div className="w-full lg:w-5/12 flex flex-col space-y-4 sm:space-y-6 lg:pr-4">
                     <div className="flex items-center space-x-2.5">
-                      <span className="px-3 py-1 rounded-full bg-[#1B1813]/[0.04] backdrop-blur-md border border-[#1B1813]/10 text-[10px] sm:text-[10px] font-mono tracking-[0.22em] text-[#8C7452] uppercase font-semibold">
+                      <span className="px-3 py-1 rounded-full bg-[#1B1813]/[0.04] backdrop-blur-md border border-[#1B1813]/10 text-[10px] sm:text-[10px] font-mono tracking-[0.22em] text-[#75603F] uppercase font-semibold">
                         {CATEGORIES.find((c) => c.id === slide.categoryId)?.badge || 'RESIDENCIAS'}
                       </span>
                       <span className="text-[#1B1813]/25 text-xs font-mono">·</span>

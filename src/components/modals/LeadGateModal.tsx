@@ -283,7 +283,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
                 animate={{ opacity: 1, scale: 1 }}
                 className="py-10 text-center space-y-4"
               >
-                <div className="w-16 h-16 rounded-full bg-[#8C7452]/20 border border-[#8C7452] text-[#8C7452] flex items-center justify-center mx-auto animate-bounce">
+                <div className="w-16 h-16 rounded-full bg-[#8C7452]/20 border border-[#8C7452] text-[#8C7452] flex items-center justify-center mx-auto">
                   <CheckCircle2 className="w-8 h-8" />
                 </div>
                 <h4 className="font-display text-2xl text-[#EFEBE0]">
@@ -343,7 +343,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
                 </div>
 
                 {errorMsg && (
-                  <p className="text-xs text-[#E57373] bg-[#E57373]/10 border-l-2 border-[#E57373] p-2.5 rounded-r">
+                  <p role="alert" className="text-xs text-[#E57373] bg-[#E57373]/10 border border-[#E57373]/40 p-2.5 rounded">
                     {errorMsg}
                   </p>
                 )}
@@ -499,7 +499,7 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
 
                 {/* Error Box */}
                 {errorMsg && (
-                  <p className="text-xs text-[#E57373] bg-[#E57373]/10 border-l-2 border-[#E57373] p-2.5 rounded-r">
+                  <p role="alert" className="text-xs text-[#E57373] bg-[#E57373]/10 border border-[#E57373]/40 p-2.5 rounded">
                     {errorMsg}
                   </p>
                 )}

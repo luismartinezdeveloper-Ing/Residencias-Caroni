@@ -137,7 +137,7 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
             {/* Botón Maqueta 3D integrado al mismo estilo de la cápsula */}
             <button
               onClick={onOpen3DModal}
-              className="font-meta text-[10px] sm:text-[11px] px-3.5 py-1.5 transition-all flex items-center space-x-1.5 cursor-pointer rounded-full text-[#8C7452] hover:text-[#1B1813] hover:bg-[#8C7452]/10 font-semibold tracking-wider active:scale-95"
+              className="font-meta text-[10px] sm:text-[11px] px-3.5 py-1.5 transition-all flex items-center space-x-1.5 cursor-pointer rounded-full text-[#75603F] hover:text-[#1B1813] hover:bg-[#8C7452]/10 font-semibold tracking-wider active:scale-95"
               title="Abrir Maqueta 3D Interactiva"
             >
               <Sparkles className="w-3 h-3 text-[#8C7452]" />
@@ -168,7 +168,7 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
             {/* Maqueta 3D en versión móvil */}
             <button
               onClick={onOpen3DModal}
-              className="relative font-meta text-[10px] px-3 py-1.5 whitespace-nowrap transition-all duration-200 shrink-0 flex items-center space-x-1 rounded-full cursor-pointer min-h-[32px] bg-[#FAF8F5] text-[#8C7452] border border-[#8C7452]/40 hover:text-[#1B1813] font-semibold tracking-wider"
+              className="relative font-meta text-[10px] px-3 py-1.5 whitespace-nowrap transition-all duration-200 shrink-0 flex items-center space-x-1 rounded-full cursor-pointer min-h-[32px] bg-[#FAF8F5] text-[#75603F] border border-[#8C7452]/40 hover:text-[#1B1813] font-semibold tracking-wider"
             >
               <Sparkles className="w-2.5 h-2.5 text-[#8C7452]" />
               <span>MAQUETA 3D</span>
