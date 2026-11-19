@@ -1,4 +1,5 @@
 import React from 'react';
+import { captureHandledException } from '../../services/errorMonitoring';
 
 interface SilentErrorBoundaryProps {
   children: React.ReactNode;
@@ -18,12 +19,6 @@ interface SilentErrorBoundaryState {
  */
 export class SilentErrorBoundary extends React.Component<SilentErrorBoundaryProps, SilentErrorBoundaryState> {
   private retryTimer: number | null = null;
-  declare props: Readonly<SilentErrorBoundaryProps>;
-  declare setState: (
-    updater:
-      | Partial<SilentErrorBoundaryState>
-      | ((prevState: Readonly<SilentErrorBoundaryState>) => Partial<SilentErrorBoundaryState>)
-  ) => void;
   public state: SilentErrorBoundaryState = {
     hasError: false,
     retryCount: 0,
@@ -35,6 +30,12 @@ export class SilentErrorBoundary extends React.Component<SilentErrorBoundaryProp
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.warn('[SilentSelfHealing] Recuperando componente de forma transparente:', error.message, errorInfo.componentStack);
+
+    captureHandledException(error, {
+      boundary: 'SilentErrorBoundary',
+      componentStack: errorInfo?.componentStack || undefined,
+      tags: { retryCount: String(this.state.retryCount) },
+    });
 
     if (this.state.retryCount < 2 && typeof window !== 'undefined') {
       this.retryTimer = window.setTimeout(() => {

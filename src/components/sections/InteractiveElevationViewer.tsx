@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useIntl } from 'react-intl';
 import { UnitData } from '../../types/brand';
+import { OptimizedPicture } from '../ui/OptimizedPicture';
 
 /**
  * Explorador Monográfico de Planos & Estratigrafía 2K — Rail Flotante Apple Glass
@@ -192,6 +194,7 @@ const ARCHITECTURAL_CATEGORIES: ArchitecturalCategory[] = [
 ];
 
 export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProps> = () => {
+  const intl = useIntl();
   const [activeCategory, setActiveCategory] = useState<ViewCategoryId>('elevacion');
   const [activeVariantIndex, setActiveVariantIndex] = useState<number>(0);
   const [isMobileRailOpen, setIsMobileRailOpen] = useState<boolean>(false);
@@ -199,12 +202,48 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
   const [loupeImageCoords, setLoupeImageCoords] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [isHoveringImage, setIsHoveringImage] = useState<boolean>(false);
+  const [isSectionNearViewport, setIsSectionNearViewport] = useState<boolean>(
+    () => typeof IntersectionObserver === 'undefined'
+  );
 
+  const sectionRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
+  useEffect(() => {
+    if (isSectionNearViewport || typeof IntersectionObserver === 'undefined') return;
+    const target = sectionRef.current;
+    if (!target) {
+      setIsSectionNearViewport(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting || entry.intersectionRatio > 0) {
+            setIsSectionNearViewport(true);
+            observer.disconnect();
+            break;
+          }
+        }
+      },
+      { rootMargin: '350px 0px', threshold: 0.01 }
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [isSectionNearViewport]);
+
   const currentCategoryConfig = ARCHITECTURAL_CATEGORIES.find((c) => c.id === activeCategory)!;
   const currentVariant = currentCategoryConfig.variants[activeVariantIndex] || currentCategoryConfig.variants[0];
+  const currentTag = intl.formatMessage({
+    id: `elevation.var.${currentVariant.id}.tag`,
+    defaultMessage: currentVariant.tag,
+  });
+  const currentSubtitle = intl.formatMessage({
+    id: `elevation.var.${currentVariant.id}.sub`,
+    defaultMessage: currentVariant.subtitle,
+  });
 
   const handleSelectCategory = (categoryId: ViewCategoryId) => {
     setActiveCategory(categoryId);
@@ -275,6 +314,7 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
 
   return (
     <section
+      ref={sectionRef}
       id="elevacion"
       className="relative w-full h-[calc(100vh-4.5rem)] min-h-[580px] max-h-[960px] bg-[#FAF9F6] border-t border-[#1B1813]/10 flex items-center justify-center p-2 sm:p-4 lg:p-6 select-none scroll-mt-20 overflow-hidden"
     >
@@ -303,16 +343,24 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                 transition={{ duration: 0.35, ease: 'easeOut' }}
                 className="relative w-full h-full flex items-center justify-center"
               >
-                <img
-                  ref={imgRef}
-                  src={currentVariant.image}
-                  alt={currentVariant.tag}
-                  onMouseMove={handleImageMouseMove}
-                  onMouseEnter={handleImageMouseEnter}
-                  onMouseLeave={handleImageMouseLeave}
-                  className="max-w-full max-h-full object-contain pointer-events-auto select-none drop-shadow-xl cursor-crosshair"
-                  loading="eager"
-                />
+                {isSectionNearViewport ? (
+                  <OptimizedPicture
+                    imgRef={imgRef}
+                    src={currentVariant.image}
+                    alt={currentTag}
+                    priority
+                    disableWrapper
+                    onMouseMove={handleImageMouseMove}
+                    onMouseEnter={handleImageMouseEnter}
+                    onMouseLeave={handleImageMouseLeave}
+                    className="max-w-full max-h-full object-contain pointer-events-auto select-none drop-shadow-xl cursor-crosshair"
+                  />
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    className="w-full h-full rounded-2xl bg-gradient-to-br from-[#EFEBE0] via-[#E5DFD0] to-[#EFEBE0] animate-pulse"
+                  />
+                )}
               </motion.div>
             </AnimatePresence>
 
@@ -320,7 +368,7 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
             <button
               onClick={handlePrevVariant}
               className="absolute left-4 lg:left-[325px] top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/70 hover:bg-white backdrop-blur-2xl border border-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.08)] text-[#1B1813] flex items-center justify-center text-lg hover:scale-105 active:scale-95 transition-all cursor-pointer z-20 opacity-70 group-hover:opacity-100"
-              title="Lámina anterior (← Flecha Izquierda)"
+              title={intl.formatMessage({ id: 'elevation.prevTitle' })}
             >
               ‹
             </button>
@@ -328,7 +376,7 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
             <button
               onClick={handleNextVariant}
               className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-white/70 hover:bg-white backdrop-blur-2xl border border-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.08)] text-[#1B1813] flex items-center justify-center text-lg hover:scale-105 active:scale-95 transition-all cursor-pointer z-20 opacity-70 group-hover:opacity-100"
-              title="Siguiente lámina (→ Flecha Derecha)"
+              title={intl.formatMessage({ id: 'elevation.nextTitle' })}
             >
               ›
             </button>
@@ -341,7 +389,11 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                   className="px-3.5 py-2 rounded-full bg-white/80 backdrop-blur-2xl border border-white/90 shadow-md text-[#1B1813] font-mono text-[11px] tracking-wider uppercase font-semibold flex items-center space-x-1.5 cursor-pointer"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-[#8C7452]" />
-                  <span>{isMobileRailOpen ? '✕ CERRAR MENÚ' : '☰ PLANOS & VISTAS'}</span>
+                  <span>
+                    {isMobileRailOpen
+                      ? intl.formatMessage({ id: 'elevation.mobileClose' })
+                      : intl.formatMessage({ id: 'elevation.mobileOpen' })}
+                  </span>
                 </button>
               </div>
 
@@ -353,7 +405,7 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                 {/* Header del Rail */}
                 <div className="border-b border-[#1B1813]/10 pb-2.5">
                   <div className="font-display text-sm text-[#1B1813] font-semibold tracking-tight">
-                    Estratigrafía & Láminas Técnicas
+                    {intl.formatMessage({ id: 'elevation.title' })}
                   </div>
                 </div>
 
@@ -363,7 +415,7 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                         const isCatActive = activeCategory === cat.id;
 
                         return (
-                                  < div key={cat.id} className="space-y-1">
+                                  <div key={cat.id} className="space-y-1">
                               {/* Botón de Categoría */}
                               <button
                                 onClick={() => {
@@ -381,7 +433,12 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                           isCatActive ? 'bg-[#C9A86A] shadow-[0_0_6px_#C9A86A]' : 'bg-[#1B1813]/25'
                         }`}
                       />
-                      <span>{cat.label}</span>
+                      <span>
+                        {intl.formatMessage({
+                          id: `elevation.cat.${cat.id}`,
+                          defaultMessage: cat.label,
+                        })}
+                      </span>
                     </div>
                   </button>
 
@@ -412,7 +469,12 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                               >
                                 <div className="flex items-center space-x-2 truncate">
                                   <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isVarActive ? 'bg-white shadow-[0_0_4px_#ffffff]' : 'bg-[#1B1813]/25'}`} />
-                                  <span className="truncate">{variant.pillTitle}</span>
+                                  <span className="truncate">
+                                    {intl.formatMessage({
+                                      id: `elevation.var.${variant.id}.pill`,
+                                      defaultMessage: variant.pillTitle,
+                                    })}
+                                  </span>
                                 </div>
                               </button>
                             );
@@ -430,10 +492,10 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                 {/* Ficha Resumida de la Lámina */}
                 <div className="bg-white/50 backdrop-blur-md rounded-xl p-2.5 border border-white/80 shadow-2xs space-y-1">
                   <div className="font-display text-[13px] text-[#1B1813] font-semibold leading-tight">
-                    {currentVariant.tag}
+                    {currentTag}
                   </div>
                   <div className="font-serif text-xs text-[#5A554A] font-light leading-snug line-clamp-3 italic">
-                    «{currentVariant.subtitle}»
+                    «{currentSubtitle}»
                   </div>
                 </div>
               </div>
@@ -454,9 +516,11 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
                   border: '2.5px solid rgba(255, 255, 255, 0.95)',
                 }}
               >
-                <img
+                <OptimizedPicture
                   src={currentVariant.image}
-                  alt="Aumento de plano"
+                  alt={intl.formatMessage({ id: 'elevation.zoomAlt' })}
+                  priority
+                  disableWrapper
                   className="absolute pointer-events-none max-w-none select-none"
                   style={{
                     width: `${imageDimensions.width * ZOOM_FACTOR}px`,
@@ -482,7 +546,7 @@ export const InteractiveElevationViewer: React.FC<InteractiveElevationViewerProp
 
                 {/* Micro-Píldora Flotante Superior */}
                 <div className="absolute top-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-[#1B1813]/85 backdrop-blur-md border border-white/25 text-[10px] font-mono tracking-widest text-[#FAF9F6] uppercase whitespace-nowrap shadow-md">
-                  2.5× DETALLE
+                  {intl.formatMessage({ id: 'elevation.loupeBadge' })}
                 </div>
               </div>
             )}

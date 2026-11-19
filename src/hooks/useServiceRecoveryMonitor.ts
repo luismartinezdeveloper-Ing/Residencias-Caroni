@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { captureTelemetryMessage } from '../services/errorMonitoring';
 
 export type RecoveryReason = 'latency' | 'service_error' | null;
 
@@ -133,6 +134,7 @@ export function useServiceRecoveryMonitor(): ServiceRecoveryState {
     getStoredLatencyHistory()
   );
   const [isDismissed, setIsDismissed] = useState<boolean>(false);
+  const hasReportedDegradationRef = useRef<boolean>(false);
 
   const registerSampleAndEvaluate = useCallback(
     (ms: number, status: 'ok' | 'high_latency' | 'error') => {
@@ -171,6 +173,13 @@ export function useServiceRecoveryMonitor(): ServiceRecoveryState {
         setReason('service_error');
         setLatencyMs(elapsed);
         setIsInRecoveryMode(true);
+        if (!hasReportedDegradationRef.current) {
+          hasReportedDegradationRef.current = true;
+          captureTelemetryMessage('Backend /api/health returned error status', 'warning', {
+            status: response.status,
+            latencyMs: elapsed,
+          });
+        }
         return;
       }
 
@@ -180,6 +189,12 @@ export function useServiceRecoveryMonitor(): ServiceRecoveryState {
         setReason('service_error');
         setLatencyMs(elapsed);
         setIsInRecoveryMode(true);
+        if (!hasReportedDegradationRef.current) {
+          hasReportedDegradationRef.current = true;
+          captureTelemetryMessage('Backend /api/health reported degraded state', 'warning', {
+            latencyMs: elapsed,
+          });
+        }
         return;
       }
 
@@ -194,6 +209,7 @@ export function useServiceRecoveryMonitor(): ServiceRecoveryState {
         setLatencyMs(elapsed);
         setIsInRecoveryMode(true);
       } else {
+        hasReportedDegradationRef.current = false;
         setIsInRecoveryMode(false);
         setReason(null);
         setLatencyMs(elapsed);

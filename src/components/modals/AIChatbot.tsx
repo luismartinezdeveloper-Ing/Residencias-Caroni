@@ -7,12 +7,15 @@ import {
   MessageSquare,
   Minus,
   Maximize2,
+  WifiOff,
 } from 'lucide-react';
 import { UnitData } from '../../types/brand';
 import { useResponsiveChat } from '../../hooks/useResponsiveChat';
 import { SSEStreamParser } from '../../utils/sseParser';
 import { useModalA11y } from '../../hooks/useModalA11y';
 import { getDomainFallbackReply } from '../../utils/aiDomainFallback';
+import { useLocale } from '../../i18n/I18nProvider';
+import { trackConversionEvent } from '../../services/analyticsService';
 
 interface AIChatbotProps {
   isOpen: boolean;
@@ -28,7 +31,11 @@ interface Message {
 
 export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedUnit }) => {
   const { isMobile } = useResponsiveChat();
+  const { locale } = useLocale();
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isOffline, setIsOffline] = useState<boolean>(
+    () => typeof navigator !== 'undefined' && navigator.onLine === false
+  );
 
   // Panel expandido: en escritorio es una ventana flotante (no modal) y en teléfono ocupa toda la
   // pantalla (modal). Escape lo cierra; el foco se atrapa y el scroll se bloquea solo en teléfono.
@@ -45,6 +52,19 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatAbortControllerRef = useRef<AbortController | null>(null);
+
+  // Monitor PWA network connectivity for immediate offline catalog fallback
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Handle modal lifecycle
   useEffect(() => {
@@ -66,11 +86,13 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
           id: 'welcome',
           role: 'assistant',
           content:
-            '¡Bienvenido a Residencias Caroní! Soy su Asesor. Estoy a su disposición para brindarle información sobre las 8 residencias de autor, cotas técnicas, acabados de alta gama, simulación financiera o coordinar una visita privada. ¿En qué puedo orientarle hoy?',
+            locale === 'en'
+              ? 'Welcome to Residencias Caroní! I am your Private Advisor, ready to share specifications across our 8 authored residences, technical plans, finishes, financial scenarios, or private viewings. How may I assist you?'
+              : '¡Bienvenido a Residencias Caroní! Soy su Asesor. Estoy a su disposición para brindarle información sobre las 8 residencias de autor, cotas técnicas, acabados de alta gama, simulación financiera o coordinar una visita privada. ¿En qué puedo orientarle hoy?',
         },
       ]);
     }
-  }, [isOpen, messages.length]);
+  }, [isOpen, messages.length, locale]);
 
   // Auto-scroll chat messages
   useEffect(() => {
@@ -100,6 +122,24 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
     setIsLoadingText(true);
 
     const assistantMessageId = (Date.now() + 1).toString();
+    const browserOffline = isOffline || (typeof navigator !== 'undefined' && navigator.onLine === false);
+
+    trackConversionEvent('advisor_message_sent', {
+      offline: browserOffline,
+      locale,
+      unitId: selectedUnit?.id,
+    });
+
+    // Offline PWA Fallback inmediato basado en catálogo verificado (sin esperar timeout de red)
+    if (browserOffline) {
+      const offlineReply = getDomainFallbackReply(cleanText, selectedUnit?.name, locale);
+      setMessages((prev) => [
+        ...prev,
+        { id: assistantMessageId, role: 'assistant', content: offlineReply },
+      ]);
+      setIsLoadingText(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/chat', {
@@ -163,7 +203,7 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
       appendPayloads(finalPayloads);
 
       if (!receivedAnyText) {
-        const localReply = getDomainFallbackReply(cleanText, selectedUnit?.name);
+        const localReply = getDomainFallbackReply(cleanText, selectedUnit?.name, locale);
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === assistantMessageId ? { ...msg, content: localReply } : msg
@@ -174,7 +214,7 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
       if (err?.name === 'AbortError') {
         return;
       }
-      const localFallbackReply = getDomainFallbackReply(cleanText, selectedUnit?.name);
+      const localFallbackReply = getDomainFallbackReply(cleanText, selectedUnit?.name, locale);
       setMessages((prev) => {
         const exists = prev.some((m) => m.id === assistantMessageId);
         if (exists) {
@@ -298,13 +338,30 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <h2 className="font-display font-semibold text-sm sm:text-base tracking-tight text-[#1B1813] truncate">
-                      Asesor
+                      {locale === 'en' ? 'Advisor' : 'Asesor'}
                     </h2>
-                    {/* Pure minimal online indicator dot */}
-                    <span className="relative flex h-1.5 w-1.5 shrink-0" title="En línea">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
-                    </span>
+                    {isOffline ? (
+                      <span
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-600/30 text-[9px] font-meta uppercase tracking-wider text-amber-800"
+                        title={
+                          locale === 'en'
+                            ? 'PWA Offline Mode · Verified Local Catalog'
+                            : 'Modo Offline PWA · Catálogo Local Verificado'
+                        }
+                      >
+                        <WifiOff className="w-2.5 h-2.5" />
+                        <span>{locale === 'en' ? 'Offline Catalog' : 'Catálogo Offline'}</span>
+                      </span>
+                    ) : (
+                      /* Pure minimal online indicator dot */
+                      <span
+                        className="relative flex h-1.5 w-1.5 shrink-0"
+                        title={locale === 'en' ? 'Online' : 'En línea'}
+                      >
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                      </span>
+                    )}
                   </div>
                   <p className="font-meta text-[10px] text-[#8C8678] tracking-widest uppercase truncate">
                     Residencias Caroní · Altamira
@@ -376,7 +433,11 @@ export const AIChatbot: React.FC<AIChatbotProps> = ({ isOpen, onClose, selectedU
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Escriba su consulta sobre Residencias Caroní..."
+                  placeholder={
+                    locale === 'en'
+                      ? 'Ask about Residencias Caroní...'
+                      : 'Escriba su consulta sobre Residencias Caroní...'
+                  }
                   className="w-full bg-white/90 border border-black/[0.08] focus:border-[#8C7452] focus:ring-2 focus:ring-[#8C7452]/10 rounded-full pl-4 pr-12 py-2.5 text-xs sm:text-sm text-[#1B1813] placeholder-[#8C8678] outline-none transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]"
                   disabled={isLoadingText}
                 />

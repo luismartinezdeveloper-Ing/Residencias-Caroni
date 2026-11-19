@@ -1,16 +1,16 @@
 import React from 'react';
-import { motion } from 'motion/react';
-import { Calendar, Phone, Mail, MapPin, MessageSquare, ArrowRight, ShieldCheck, Clock } from 'lucide-react';
+import { useIntl } from 'react-intl';
+import { Calendar, Mail, MapPin, MessageSquare, ArrowRight, ShieldCheck, Clock } from 'lucide-react';
 import { BRAND_INFO } from '../../data/brandData';
-import { CaroniIsotype, CaroniSeal } from '../ui/ArchitecturalDrawings';
-import { useConfidentiality } from '../../context/ConfidentialityContext';
+import { CaroniIsotype } from '../ui/ArchitecturalDrawings';
+import { trackConversionEvent } from '../../services/analyticsService';
 
 interface PrivateAdvisoryCTAProps {
   onOpenAdvisoryModal: () => void;
 }
 
 export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAdvisoryModal }) => {
-  const { isAccredited } = useConfidentiality();
+  const intl = useIntl();
 
   return (
     <section id="contacto" className="w-full bg-[#1B1813] text-[#EFEBE0] py-16 sm:py-20 border-t border-[#8C7452]/40 relative overflow-hidden">
@@ -31,16 +31,20 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
             <div className="flex items-center space-x-3">
               <span className="w-2 h-2 rounded-full bg-[#8C7452] animate-pulse"></span>
               <span className="font-meta text-[10px] sm:text-[11px] tracking-[0.25em] text-[#8C7452] uppercase font-semibold">
-                ATENCIÓN INSTITUCIONAL & PRIVADA
+                {intl.formatMessage({ id: 'cta.eyebrow' })}
               </span>
             </div>
 
             <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-[#FAF9F6] font-normal leading-[1.15] tracking-tight">
-              Inicie su proceso de adquisición o agende una presentación privada.
+              {intl.formatMessage({ id: 'cta.heading' })}
             </h2>
 
             <p className="font-sans text-xs sm:text-sm text-[#C9C4B5] leading-relaxed max-w-2xl font-light">
-              La comercialización de las 8 residencias de <strong className="text-white font-medium">Residencias Caroní</strong> se gestiona de manera personalizada y directa por la dirección de <strong className="text-white font-medium">Añil Arquitectura</strong>. Le invitamos a coordinar una sesión privada para conocer la disponibilidad, planos y cronograma de entrega.
+              {intl.formatMessage({ id: 'cta.bodyPrefix' })}{' '}
+              <strong className="text-white font-medium">Residencias Caroní</strong>{' '}
+              {intl.formatMessage({ id: 'cta.bodyMiddle' })}{' '}
+              <strong className="text-white font-medium">Añil Arquitectura</strong>
+              {intl.formatMessage({ id: 'cta.bodySuffix' })}
             </p>
 
             {/* Quick Badges */}
@@ -48,19 +52,22 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
               <div className="bg-[#FAF9F6]/5 border border-[#FAF9F6]/10 p-3 rounded-xl flex items-center space-x-3">
                 <ShieldCheck className="w-4 h-4 text-[#8C7452] shrink-0" />
                 <span className="font-meta text-[10px] text-[#C9C4B5] tracking-wider uppercase">
-                  8 Residencias de Autor
+                  {intl.formatMessage({ id: 'cta.badge.units' })}
                 </span>
               </div>
               <div className="bg-[#FAF9F6]/5 border border-[#FAF9F6]/10 p-3 rounded-xl flex items-center space-x-3">
                 <MapPin className="w-4 h-4 text-[#8C7452] shrink-0" />
                 <span className="font-meta text-[10px] text-[#C9C4B5] tracking-wider uppercase">
-                  Altamira, Caracas
+                  {intl.formatMessage({ id: 'cta.badge.location' })}
                 </span>
               </div>
               <div className="bg-[#FAF9F6]/5 border border-[#FAF9F6]/10 p-3 rounded-xl flex items-center space-x-3">
                 <Clock className="w-4 h-4 text-[#8C7452] shrink-0" />
                 <span className="font-meta text-[10px] text-[#C9C4B5] tracking-wider uppercase">
-                  Entrega {BRAND_INFO.delivery}
+                  {intl.formatMessage(
+                    { id: 'cta.badge.delivery' },
+                    { delivery: BRAND_INFO.delivery }
+                  )}
                 </span>
               </div>
             </div>
@@ -71,9 +78,11 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
             <div className="bg-[#24201A] border border-[#8C7452]/40 rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl relative">
               <div className="flex items-center justify-between border-b border-[#FAF9F6]/10 pb-4">
                 <div className="space-y-0.5">
-                  <div className="font-display text-lg text-[#FAF9F6]">Dirección de Arquitectura</div>
+                  <div className="font-display text-lg text-[#FAF9F6]">
+                    {intl.formatMessage({ id: 'cta.card.title' })}
+                  </div>
                   <div className="font-meta text-[10px] text-[#8C8678] tracking-widest uppercase">
-                    Añil Arquitectura · Altamira
+                    {intl.formatMessage({ id: 'cta.card.subtitle' })}
                   </div>
                 </div>
                 <CaroniIsotype size={28} color="#8C7452" />
@@ -82,11 +91,14 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
               {/* Action Buttons */}
               <div className="space-y-3">
                 <button
-                  onClick={onOpenAdvisoryModal}
+                  onClick={() => {
+                    trackConversionEvent('cta_schedule_click', { section: 'contacto' });
+                    onOpenAdvisoryModal();
+                  }}
                   className="btn-apple btn-apple-bronze w-full font-meta text-[11px] uppercase tracking-widest py-3.5 px-5 font-bold"
                 >
                   <Calendar className="w-4 h-4" />
-                  <span>Agendar Cita Privada</span>
+                  <span>{intl.formatMessage({ id: 'cta.button.schedule' })}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
 
@@ -94,10 +106,11 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
                   href="https://wa.me/?text=Hola%2C%20quisiera%20solicitar%20informaci%C3%B3n%20privada%20y%20disponibilidad%20sobre%20Residencias%20Caron%C3%AD%20en%20Altamira."
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => trackConversionEvent('cta_whatsapp_click', { section: 'contacto' })}
                   className="btn-apple btn-apple-glass-dark w-full font-meta text-[10.5px] uppercase tracking-wider py-3 px-4"
                 >
                   <MessageSquare className="w-4 h-4 text-[#8C7452]" />
-                  <span>Contacto Directo vía WhatsApp</span>
+                  <span>{intl.formatMessage({ id: 'cta.button.whatsapp' })}</span>
                 </a>
               </div>
 
@@ -115,7 +128,7 @@ export const PrivateAdvisoryCTA: React.FC<PrivateAdvisoryCTAProps> = ({ onOpenAd
 
               <div className="text-center pt-2">
                 <span className="font-meta text-[10px] text-[#8C8678] tracking-[0.2em] uppercase">
-                  Atención confidencial de lunes a sábado previa cita
+                  {intl.formatMessage({ id: 'cta.hours' })}
                 </span>
               </div>
             </div>

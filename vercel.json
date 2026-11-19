@@ -21,7 +21,7 @@
       "destination": "/api/verify-code"
     },
     {
-      "source": "/((?!api/|videos/|imagen/|models/|renders/|assets/|favicon.ico|icon.svg|manifest.webmanifest).*)",
+      "source": "/((?!api/|videos/|imagen/|planos/|decoders/|models/|renders/|assets/|favicon.ico|icon.svg|manifest.webmanifest).*)",
       "destination": "/index.html"
     }
   ],

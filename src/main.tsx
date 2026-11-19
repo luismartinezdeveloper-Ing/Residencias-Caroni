@@ -5,6 +5,12 @@ import App from './App.tsx';
 import './index.css';
 import { registerServiceWorker } from './utils/registerServiceWorker';
 import { GlobalErrorBoundary } from './components/ui/GlobalErrorBoundary';
+import { initErrorMonitoring } from './services/errorMonitoring';
+import { initAnalytics } from './services/analyticsService';
+
+// Initialize Sentry error monitoring (no-op unless VITE_SENTRY_DSN is set)
+initErrorMonitoring();
+initAnalytics();
 
 // Register Service Worker for offline PWA consultation
 registerServiceWorker();

@@ -1,5 +1,7 @@
 import React, { useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform, useMotionValueEvent } from 'motion/react';
+import { useIntl } from 'react-intl';
+import { OptimizedPicture } from '../ui/OptimizedPicture';
 
 type GalleryCategoryId = 'exteriores' | 'pb-norte' | 'pb-sur' | 'penthouse';
 
@@ -174,12 +176,16 @@ const ALL_SLIDES: GallerySlide[] = [
 interface AppleCircularLoupeImageProps {
   src: string;
   alt: string;
+  zoomAlt: string;
+  loupeHint: string;
   priority?: boolean;
 }
 
 const AppleCircularLoupeImage: React.FC<AppleCircularLoupeImageProps> = ({
   src,
   alt,
+  zoomAlt,
+  loupeHint,
   priority = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -245,11 +251,13 @@ const AppleCircularLoupeImage: React.FC<AppleCircularLoupeImageProps> = ({
       onTouchEnd={handleTouchEnd}
       className="relative w-full h-[44vh] sm:h-[50vh] md:h-[66vh] rounded-2xl overflow-hidden border border-[#1B1813]/10 shadow-[0_15px_35px_rgba(27,24,19,0.08)] bg-[#EFEBE0] group cursor-crosshair select-none"
     >
-      {/* Imagen Arquitectónica Pura */}
-      <img
+      {/* Imagen Arquitectónica Optimizada (IntersectionObserver + AVIF/WebP) */}
+      <OptimizedPicture
         src={src}
         alt={alt}
-        loading={priority ? 'eager' : 'lazy'}
+        priority={priority}
+        rootMargin="300px 0px"
+        wrapperClassName="relative w-full h-full"
         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.01]"
       />
 
@@ -271,11 +279,13 @@ const AppleCircularLoupeImage: React.FC<AppleCircularLoupeImageProps> = ({
           border: '2.5px solid rgba(255, 255, 255, 0.95)',
         }}
       >
-        {/* Renderizado Aumentado a 2.5x con Enfoque 1:1 Exacto */}
-        {dimensions.width > 0 && (
-          <img
+        {/* Renderizado Aumentado a 2.5x montado bajo demanda al activar la lupa */}
+        {isHovering && dimensions.width > 0 && (
+          <OptimizedPicture
             src={src}
-            alt={`${alt} aumentado`}
+            alt={zoomAlt}
+            priority
+            disableWrapper
             className="absolute pointer-events-none max-w-none select-none"
             style={{
               width: `${dimensions.width * ZOOM_FACTOR}px`,
@@ -312,7 +322,7 @@ const AppleCircularLoupeImage: React.FC<AppleCircularLoupeImageProps> = ({
         className="pointer-events-none absolute bottom-3 right-3 z-20 hidden [@media(hover:hover)]:block px-3 py-1 rounded-full bg-white/80 backdrop-blur-xl border border-white/80 text-[10.5px] font-mono tracking-wider text-[#5A554A] shadow-[0_4px_16px_rgba(27,24,19,0.1)] transition-opacity duration-200"
         style={{ opacity: isHovering ? 0 : 1 }}
       >
-        Pasa el cursor para ampliar
+        {loupeHint}
       </div>
     </div>
   );
@@ -320,6 +330,7 @@ const AppleCircularLoupeImage: React.FC<AppleCircularLoupeImageProps> = ({
 
 
 export const HorizontalGallery = () => {
+  const intl = useIntl();
   const targetRef = useRef<HTMLDivElement>(null);
   const [selectedCategory, setSelectedCategory] = useState<GalleryCategoryId>('exteriores');
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
@@ -386,17 +397,17 @@ export const HorizontalGallery = () => {
         <div className="absolute top-6 left-6 sm:left-12 z-20 hidden md:flex items-center space-x-3 pointer-events-none">
           <div className="w-2 h-2 rounded-full bg-[#8C7452] shadow-[0_0_8px_rgba(140,116,82,0.35)]" />
           <span className="font-mono text-[10px] sm:text-[10px] text-[#75603F] tracking-[0.25em] uppercase font-semibold">
-            PERSPECTIVAS & MATERIALIDAD
+            {intl.formatMessage({ id: 'gallery.kickerLeft' })}
           </span>
           <span className="text-[#1B1813]/20 text-xs font-mono">·</span>
           <span className="font-meta text-[10px] sm:text-[10px] text-[#5A554A] tracking-[0.2em] uppercase">
-            RENDERS DE AUTOR
+            {intl.formatMessage({ id: 'gallery.kickerRight' })}
           </span>
         </div>
 
         {/* Indicador de Desplazamiento Superior Derecho */}
         <div className="absolute top-6 right-6 sm:right-12 z-20 hidden md:flex items-center space-x-2 text-[10px] font-mono text-[#5A554A] tracking-widest pointer-events-none">
-          <span className="hidden lg:inline">DESPLAZAMIENTO HORIZONTAL</span>
+          <span className="hidden lg:inline">{intl.formatMessage({ id: 'gallery.scrollHint' })}</span>
           <span className="text-[#8C7452]">→</span>
         </div>
 
@@ -417,44 +428,69 @@ export const HorizontalGallery = () => {
             style={{ x, width: `${currentSlides.length * 100}vw` }}
             className="flex"
           >
-            {currentSlides.map((slide, index) => (
-              <div
-                key={slide.id}
-                className="relative w-screen h-screen flex items-center justify-center px-4 sm:px-10 md:px-16 pt-10 sm:pt-12 pb-32 sm:pb-28"
-              >
-                <div className="w-full max-w-7xl flex flex-col lg:flex-row items-center gap-8 lg:gap-14 bg-white/80 backdrop-blur-2xl border border-[#1B1813]/10 rounded-3xl p-6 sm:p-10 shadow-[0_25px_60px_-15px_rgba(27,24,19,0.06)]">
-                  {/* Columna Editorial (Apple Glass Minimalist Claro) */}
-                  <div className="w-full lg:w-5/12 flex flex-col space-y-4 sm:space-y-6 lg:pr-4">
-                    <div className="flex items-center space-x-2.5">
-                      <span className="px-3 py-1 rounded-full bg-[#1B1813]/[0.04] backdrop-blur-md border border-[#1B1813]/10 text-[10px] sm:text-[10px] font-mono tracking-[0.22em] text-[#75603F] uppercase font-semibold">
-                        {CATEGORIES.find((c) => c.id === slide.categoryId)?.badge || 'RESIDENCIAS'}
-                      </span>
-                      <span className="text-[#1B1813]/25 text-xs font-mono">·</span>
-                      <span className="text-[10px] font-mono tracking-widest text-[#5A554A] uppercase font-medium">
-                        {slide.tag}
-                      </span>
+            {currentSlides.map((slide, index) => {
+              const translatedTitle = intl.formatMessage({
+                id: `gallery.slide.${slide.id}.title`,
+                defaultMessage: slide.title,
+              });
+              const translatedTag = intl.formatMessage({
+                id: `gallery.slide.${slide.id}.tag`,
+                defaultMessage: slide.tag,
+              });
+              const translatedSubtitle = intl.formatMessage({
+                id: `gallery.slide.${slide.id}.subtitle`,
+                defaultMessage: slide.subtitle,
+              });
+              const translatedBadge = intl.formatMessage({
+                id: `gallery.cat.${slide.categoryId}.badge`,
+                defaultMessage:
+                  CATEGORIES.find((c) => c.id === slide.categoryId)?.badge || 'RESIDENCIAS',
+              });
+
+              return (
+                <div
+                  key={slide.id}
+                  className="relative w-screen h-screen flex items-center justify-center px-4 sm:px-10 md:px-16 pt-10 sm:pt-12 pb-32 sm:pb-28"
+                >
+                  <div className="w-full max-w-7xl flex flex-col lg:flex-row items-center gap-8 lg:gap-14 bg-white/80 backdrop-blur-2xl border border-[#1B1813]/10 rounded-3xl p-6 sm:p-10 shadow-[0_25px_60px_-15px_rgba(27,24,19,0.06)]">
+                    {/* Columna Editorial (Apple Glass Minimalist Claro) */}
+                    <div className="w-full lg:w-5/12 flex flex-col space-y-4 sm:space-y-6 lg:pr-4">
+                      <div className="flex items-center space-x-2.5">
+                        <span className="px-3 py-1 rounded-full bg-[#1B1813]/[0.04] backdrop-blur-md border border-[#1B1813]/10 text-[10px] sm:text-[10px] font-mono tracking-[0.22em] text-[#75603F] uppercase font-semibold">
+                          {translatedBadge}
+                        </span>
+                        <span className="text-[#1B1813]/25 text-xs font-mono">·</span>
+                        <span className="text-[10px] font-mono tracking-widest text-[#5A554A] uppercase font-medium">
+                          {translatedTag}
+                        </span>
+                      </div>
+
+                      <h2 className="font-display text-3xl sm:text-4xl md:text-5xl text-[#1B1813] leading-[1.1] tracking-tight">
+                        {translatedTitle}
+                      </h2>
+
+                      <p className="font-serif text-sm sm:text-base md:text-lg text-[#5A554A] leading-relaxed max-w-lg font-light">
+                        {translatedSubtitle}
+                      </p>
                     </div>
 
-                    <h2 className="font-display text-3xl sm:text-4xl md:text-5xl text-[#1B1813] leading-[1.1] tracking-tight">
-                      {slide.title}
-                    </h2>
-
-                    <p className="font-serif text-sm sm:text-base md:text-lg text-[#5A554A] leading-relaxed max-w-lg font-light">
-                      {slide.subtitle}
-                    </p>
-                  </div>
-
-                  {/* Columna de Imagen con Lupa Circular Clásica Estilo Apple */}
-                  <div className="w-full lg:w-7/12">
-                    <AppleCircularLoupeImage
-                      src={slide.image}
-                      alt={slide.title}
-                      priority={index === 0}
-                    />
+                    {/* Columna de Imagen con Lupa Circular Clásica Estilo Apple */}
+                    <div className="w-full lg:w-7/12">
+                      <AppleCircularLoupeImage
+                        src={slide.image}
+                        alt={translatedTitle}
+                        zoomAlt={intl.formatMessage(
+                          { id: 'gallery.zoomAlt' },
+                          { title: translatedTitle }
+                        )}
+                        loupeHint={intl.formatMessage({ id: 'gallery.loupeHint' })}
+                        priority={index === 0}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </motion.div>
         </AnimatePresence>
 
@@ -479,7 +515,12 @@ export const HorizontalGallery = () => {
                       isCatActive ? 'bg-[#C9A86A] shadow-[0_0_6px_#C9A86A]' : 'bg-[#1B1813]/25'
                     }`}
                   />
-                  <span>{cat.label}</span>
+                  <span>
+                    {intl.formatMessage({
+                      id: `gallery.cat.${cat.id}.label`,
+                      defaultMessage: cat.label,
+                    })}
+                  </span>
                 </button>
               );
             })}
@@ -507,7 +548,12 @@ export const HorizontalGallery = () => {
                       isActive ? 'bg-white shadow-[0_0_4px_#ffffff]' : 'bg-[#1B1813]/25'
                     }`}
                   />
-                  <span>{slide.dockLabel}</span>
+                  <span>
+                    {intl.formatMessage({
+                      id: `gallery.slide.${slide.id}.dock`,
+                      defaultMessage: slide.dockLabel,
+                    })}
+                  </span>
                 </button>
               );
             })}
