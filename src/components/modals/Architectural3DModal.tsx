@@ -21,6 +21,7 @@ import {
   SolarTimeMode,
 } from './3d/ArchitecturalScene';
 import { createAltamiraUrbanMapAndAvilaBackdrop } from './3d/AltamiraContextMap';
+import { loadArchitecturalBuilding } from './3d/ArchitecturalModelLoader';
 import {
   createProgressive3DAssetPipeline,
   yieldToMainThread,
@@ -244,19 +245,36 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
         const isHovered = unitId === hoveredUnitId;
 
         meshes.forEach((mesh) => {
+          // CRITICAL: El modelo arquitectónico real GLB posee materiales PBR fotorrealistas
+          // (concreto visto obra limpia, teca noble, piedra laja negra, terracota, perfiles obsidiana).
+          // NUNCA sobreescribir sus colores con blanco ni alterar su paleta arquitectónica institucional.
+          if (mesh.userData.isRealModel) {
+            return;
+          }
+
           const mat = mesh.material as THREE.MeshStandardMaterial;
           if (!mat) return;
 
+          if (mesh.userData.origColor === undefined && mat.color) {
+            mesh.userData.origColor = mat.color.getHex();
+          }
+
           if (isSelected) {
-            mat.color.setHex(0xFFFFFF);
+            if (mesh.userData.origColor !== undefined) {
+              mat.color.setHex(mesh.userData.origColor);
+            }
             mat.emissive.setHex(0xC9A86A); // Warm gold architectural glow
-            mat.emissiveIntensity = solarTimeMode === 'night' ? 0.95 : 0.65;
+            mat.emissiveIntensity = solarTimeMode === 'night' ? 0.75 : 0.45;
           } else if (isHovered) {
-            mat.color.setHex(0xFFFFFF);
+            if (mesh.userData.origColor !== undefined) {
+              mat.color.setHex(mesh.userData.origColor);
+            }
             mat.emissive.setHex(0x8C7452);
-            mat.emissiveIntensity = 0.35;
+            mat.emissiveIntensity = 0.25;
           } else {
-            mat.color.setHex(solarTimeMode === 'night' ? 0xCBC4B6 : 0xFAF8F4);
+            if (mesh.userData.origColor !== undefined) {
+              mat.color.setHex(mesh.userData.origColor);
+            }
             mat.emissive.setHex(0x000000);
             mat.emissiveIntensity = 0;
           }
@@ -368,11 +386,11 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       renderer.setSize(width, height);
       renderer.setPixelRatio(optimalPixelRatio);
       renderer.shadowMap.enabled = !isSoftwareGl;
-      renderer.shadowMap.type = THREE.PCFShadowMap;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.shadowMap.autoUpdate = false;
       renderer.shadowMap.needsUpdate = !isSoftwareGl;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.15;
+      renderer.toneMappingExposure = 0.95;
       rendererRef.current = renderer;
 
       while (container.firstChild) {
@@ -413,7 +431,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       const cached = getOrCreateEnvMap(mode);
       if (cached) {
         scene.environment = cached;
-        scene.environmentIntensity = mode === 'morning' ? 1.35 : mode === 'golden' ? 1.55 : 0.95;
+        scene.environmentIntensity = mode === 'morning' ? 0.70 : mode === 'golden' ? 0.85 : 0.45;
       }
     };
     updateEnvMapRef.current = updateEnvMap;
@@ -502,7 +520,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
         lightsGroup,
         updateLightingMode,
         transitionStep,
-      } = buildCompleteBuildingScene(materials);
+      } = await loadArchitecturalBuilding(assetPipeline, materials);
 
       buildingRoot.renderOrder = 10;
       buildingRoot.traverse((child) => {
@@ -925,7 +943,7 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       let isExposureTransitioning = false;
       if (renderer) {
         const targetExposure =
-          solarModeRef.current === 'golden' ? 1.26 : solarModeRef.current === 'night' ? 1.08 : 1.15;
+          solarModeRef.current === 'golden' ? 1.05 : solarModeRef.current === 'night' ? 0.88 : 0.95;
         const exposureDelta = targetExposure - renderer.toneMappingExposure;
         renderer.toneMappingExposure += exposureDelta * 0.08;
         isExposureTransitioning = Math.abs(exposureDelta) > 0.002;

@@ -1427,27 +1427,27 @@ export function createArchitecturalMaterials(maxAnisotropy: number = 16): SceneM
   const windowInteriorTex = createWindowInteriorDepthTexture(maxAnisotropy);
 
   const boardFormedConcrete = new THREE.MeshStandardMaterial({
-    color: 0xD5D1C8,
+    color: 0x8C8880,
     map: concreteTex,
     bumpMap: concreteTex,
     bumpScale: 0.022,
-    roughness: 0.62,
+    roughness: 0.65,
     metalness: 0.04,
   });
 
   // Material especializado de Concreto Visto Encofrado en Tablas para las paredes ciegas del estacionamiento
   const parkingBoardConcrete = new THREE.MeshStandardMaterial({
-    color: 0xC8C3B8,
+    color: 0x78746C,
     map: parkingConcreteTex.map,
     bumpMap: parkingConcreteTex.bumpMap,
     bumpScale: 0.042,
-    roughness: 0.66,
+    roughness: 0.68,
     metalness: 0.05,
   });
 
   // Material especializado de Revestimiento de Piedra Laja / Basalto para el zócalo y contrafuertes del estacionamiento
   const parkingSplitStone = new THREE.MeshStandardMaterial({
-    color: 0x3D3A36,
+    color: 0x22201E,
     map: slateTex.map,
     bumpMap: slateTex.bumpMap,
     bumpScale: 0.065,
@@ -1456,7 +1456,7 @@ export function createArchitecturalMaterials(maxAnisotropy: number = 16): SceneM
   });
 
   const travertine = new THREE.MeshStandardMaterial({
-    color: 0xE2DFD7,
+    color: 0xB5B0A6,
     map: concreteTex,
     bumpMap: concreteTex,
     bumpScale: 0.014,
@@ -1465,7 +1465,7 @@ export function createArchitecturalMaterials(maxAnisotropy: number = 16): SceneM
   });
 
   const concreteSlab = new THREE.MeshStandardMaterial({
-    color: 0xCCC8C0,
+    color: 0x928E86,
     map: concreteTex,
     bumpMap: concreteTex,
     bumpScale: 0.016,
@@ -1474,16 +1474,16 @@ export function createArchitecturalMaterials(maxAnisotropy: number = 16): SceneM
   });
 
   const whiteGroovedCladding = new THREE.MeshStandardMaterial({
-    color: 0xF3F0E8,
+    color: 0xC4C0B6,
     map: groovedTex.map,
     bumpMap: groovedTex.bumpMap,
     bumpScale: 0.028,
-    roughness: 0.45,
+    roughness: 0.48,
     metalness: 0.02,
   });
 
   const flutedConcreteMat = new THREE.MeshStandardMaterial({
-    color: 0xECE8E0,
+    color: 0xAAA69D,
     map: lightFlutedTex.map,
     bumpMap: lightFlutedTex.bumpMap,
     bumpScale: 0.032,
@@ -1501,7 +1501,7 @@ export function createArchitecturalMaterials(maxAnisotropy: number = 16): SceneM
   });
 
   const darkSlateStone = new THREE.MeshStandardMaterial({
-    color: 0x353330,
+    color: 0x22201E,
     map: slateTex.map,
     bumpMap: slateTex.bumpMap,
     bumpScale: 0.052,
@@ -1510,8 +1510,8 @@ export function createArchitecturalMaterials(maxAnisotropy: number = 16): SceneM
   });
 
   const alabaster = new THREE.MeshStandardMaterial({
-    color: 0xFAF8F4,
-    roughness: 0.42,
+    color: 0xC8C4BB,
+    roughness: 0.45,
     metalness: 0.02,
   });
 
@@ -5746,14 +5746,14 @@ export function buildCompleteBuildingScene(
   // ==========================================================================
   const lightsGroup = new THREE.Group();
 
-  const ambientLight = new THREE.AmbientLight(0xFFFBF2, 1.35);
+  const ambientLight = new THREE.AmbientLight(0xFFFBF2, 0.45);
   lightsGroup.add(ambientLight);
 
-  const hemiLight = new THREE.HemisphereLight(0xD8E8F8, 0x8C7B65, 1.15);
+  const hemiLight = new THREE.HemisphereLight(0xD8E8F8, 0x8C7B65, 0.40);
   hemiLight.position.set(0, 45, 0);
   lightsGroup.add(hemiLight);
 
-  const sunLight = new THREE.DirectionalLight(0xFFFDF8, 2.85);
+  const sunLight = new THREE.DirectionalLight(0xFFFDF8, 1.45);
   sunLight.position.set(34, 48, 38);
   sunLight.target.position.set(0, 9.5, 0);
   lightsGroup.add(sunLight.target);
@@ -5772,7 +5772,7 @@ export function buildCompleteBuildingScene(
   sunLight.shadow.radius = 2.0;
   lightsGroup.add(sunLight);
 
-  const fillLight = new THREE.DirectionalLight(0xD8E4F0, 1.18);
+  const fillLight = new THREE.DirectionalLight(0xD8E4F0, 0.40);
   fillLight.position.set(-32, 24, 28);
   lightsGroup.add(fillLight);
 
@@ -5842,43 +5842,43 @@ export function buildCompleteBuildingScene(
     if (mode === 'morning') {
       sunLight.position.lerp(sunPosMorning, t);
       sunLight.color.lerp(colSunMorning, t);
-      sunLight.intensity = THREE.MathUtils.lerp(sunLight.intensity, 2.85, t);
+      sunLight.intensity = THREE.MathUtils.lerp(sunLight.intensity, 1.45, t);
       sunLight.shadow.radius = THREE.MathUtils.lerp(sunLight.shadow.radius, 1.8, t);
 
       sunsetGrazingLight.intensity = THREE.MathUtils.lerp(sunsetGrazingLight.intensity, 0.0, t);
 
       ambientLight.color.lerp(colAmbMorning, t);
-      ambientLight.intensity = THREE.MathUtils.lerp(ambientLight.intensity, 1.35, t);
+      ambientLight.intensity = THREE.MathUtils.lerp(ambientLight.intensity, 0.45, t);
 
       hemiLight.color.lerp(colHemiSkyMorning, t);
       hemiLight.groundColor.lerp(colHemiGndMorning, t);
-      hemiLight.intensity = THREE.MathUtils.lerp(hemiLight.intensity, 1.15, t);
+      hemiLight.intensity = THREE.MathUtils.lerp(hemiLight.intensity, 0.40, t);
 
       fillLight.position.lerp(fillPosMorning, t);
       fillLight.color.lerp(colFillMorning, t);
-      fillLight.intensity = THREE.MathUtils.lerp(fillLight.intensity, 1.18, t);
+      fillLight.intensity = THREE.MathUtils.lerp(fillLight.intensity, 0.40, t);
 
       warmFacadeGlow.intensity = THREE.MathUtils.lerp(warmFacadeGlow.intensity, 0.0, t);
       poolUnderwaterLight.intensity = THREE.MathUtils.lerp(poolUnderwaterLight.intensity, 0.0, t);
     } else if (mode === 'golden') {
       sunLight.position.lerp(sunPosGolden, t);
       sunLight.color.lerp(colSunGolden, t);
-      sunLight.intensity = THREE.MathUtils.lerp(sunLight.intensity, 3.45, t);
-      sunLight.shadow.radius = THREE.MathUtils.lerp(sunLight.shadow.radius, 3.2, t);
+      sunLight.intensity = THREE.MathUtils.lerp(sunLight.intensity, 1.65, t);
+      sunLight.shadow.radius = THREE.MathUtils.lerp(sunLight.shadow.radius, 2.6, t);
 
       sunsetGrazingLight.color.lerp(colSunsetGrazing, t);
-      sunsetGrazingLight.intensity = THREE.MathUtils.lerp(sunsetGrazingLight.intensity, 1.38, t);
+      sunsetGrazingLight.intensity = THREE.MathUtils.lerp(sunsetGrazingLight.intensity, 0.75, t);
 
       ambientLight.color.lerp(colAmbGolden, t);
-      ambientLight.intensity = THREE.MathUtils.lerp(ambientLight.intensity, 0.98, t);
+      ambientLight.intensity = THREE.MathUtils.lerp(ambientLight.intensity, 0.35, t);
 
       hemiLight.color.lerp(colHemiSkyGolden, t);
       hemiLight.groundColor.lerp(colHemiGndGolden, t);
-      hemiLight.intensity = THREE.MathUtils.lerp(hemiLight.intensity, 1.08, t);
+      hemiLight.intensity = THREE.MathUtils.lerp(hemiLight.intensity, 0.35, t);
 
       fillLight.position.lerp(fillPosGolden, t);
       fillLight.color.lerp(colFillGolden, t);
-      fillLight.intensity = THREE.MathUtils.lerp(fillLight.intensity, 0.92, t);
+      fillLight.intensity = THREE.MathUtils.lerp(fillLight.intensity, 0.35, t);
 
       warmFacadeGlow.intensity = THREE.MathUtils.lerp(warmFacadeGlow.intensity, 2.85, t);
       poolUnderwaterLight.intensity = THREE.MathUtils.lerp(poolUnderwaterLight.intensity, 2.25, t);

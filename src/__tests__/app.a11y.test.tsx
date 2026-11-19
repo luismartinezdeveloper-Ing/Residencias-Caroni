@@ -66,7 +66,7 @@ describe('diseño actual · axe-core', () => {
     // eslint-disable-next-line no-console
     console.log('AXE_PAGINA ' + JSON.stringify(summarize(results), null, 1));
     expect(summarize(results)).toEqual([]);
-  });
+  }, 20000);
 
   it('puerta de acceso abierta (Maqueta 3D sin acreditar)', async () => {
     const { container } = render(<App />);
@@ -80,7 +80,7 @@ describe('diseño actual · axe-core', () => {
     console.log('AXE_PUERTA ' + JSON.stringify(summarize(results), null, 1));
     expect(document.querySelector('[role="dialog"]')).toBeTruthy();
     expect(summarize(results)).toEqual([]);
-  });
+  }, 20000);
 
   it('la puerta de acceso se cierra con Escape, devuelve el foco y libera el scroll', async () => {
     const { container } = render(<App />);

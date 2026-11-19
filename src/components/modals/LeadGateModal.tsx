@@ -525,6 +525,14 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
                     )}
                   </button>
 
+                  <button
+                    type="button"
+                    onClick={handleQuickDemo}
+                    className="w-full text-center text-[11px] font-meta text-[#A6A092] hover:text-[#EFEBE0] hover:underline transition-colors py-1.5 cursor-pointer"
+                  >
+                    O ingresar directamente a la Maqueta 3D como Invitado →
+                  </button>
+
                   <div className="flex items-center justify-between text-[10px] font-meta text-[#8C8678] pt-1">
                     <span className="flex items-center space-x-1">
                        <ShieldCheck className="w-3.5 h-3.5 text-[#8C7452]" />
