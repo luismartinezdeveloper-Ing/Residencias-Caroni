@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import * as THREE from 'three';
+import * as THREE from './3d/three';
 import { Maximize2, Minimize2, Sun, Moon, Sparkles, Layers, Compass, RotateCw, ShieldCheck, MessageSquare, CheckCircle, Mic } from 'lucide-react';
 import { UnitData } from '../../types/brand';
 import { AIChatbot } from './AIChatbot';
@@ -11,6 +11,8 @@ import { CaroniIsotype, ArchitecturalElevation, FloorPlanSchema } from '../ui/Ar
 import { useConfidentiality } from '../../context/ConfidentialityContext';
 import { VoiceNavigationController, VoiceNavigationCommand, VoiceFeedback } from '../../utils/voiceNavigationController';
 import { VoiceControlHUD } from '../ui/VoiceControlHUD';
+import { trackConversionEvent } from '../../services/analyticsService';
+import { captureHandledException, captureTelemetryMessage } from '../../services/errorMonitoring';
 import {
   createArchitecturalMaterials,
   buildCompleteBuildingScene,
@@ -116,10 +118,24 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
     needsRenderRef.current = true;
   };
   const viewModeRef = useRef(viewMode);
+  const lastTrackedUnitIdRef = useRef<string>(selectedUnit.id);
   useEffect(() => {
     viewModeRef.current = viewMode;
     requestRender();
-  }, [viewMode]);
+    if (isOpen) {
+      trackConversionEvent('model_3d_view_mode', { mode: viewMode, unitId: selectedUnit.id });
+    }
+  }, [viewMode, isOpen, selectedUnit.id]);
+
+  useEffect(() => {
+    if (isOpen && selectedUnit?.id && lastTrackedUnitIdRef.current !== selectedUnit.id) {
+      lastTrackedUnitIdRef.current = selectedUnit.id;
+      trackConversionEvent('unit_selected', {
+        unitId: selectedUnit.id,
+        level: selectedUnit.level,
+      });
+    }
+  }, [isOpen, selectedUnit]);
   const hoveredUnitIdRef = useRef<string | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
@@ -400,6 +416,10 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
       setHasWebGLError(false);
     } catch (e) {
       console.warn('WebGLRenderer context creation failed, using vector fallback:', e);
+      captureHandledException(e, {
+        boundary: 'Architectural3DModal.WebGLRenderer',
+        tags: { fallback: 'vector' },
+      });
       setHasWebGLError(true);
       setIsSceneReady(true);
       return;
@@ -441,6 +461,9 @@ export const Architectural3DModal: React.FC<Architectural3DModalProps> = ({
 
     const handleContextLost = (event: Event) => {
       event.preventDefault();
+      captureTelemetryMessage('WebGL context lost in Architectural3DModal', 'warning', {
+        isMobile: !isDesktopDevice,
+      });
       setHasWebGLError(true);
       if (typeof window !== 'undefined') {
         if (contextRecoveryTimer) window.clearTimeout(contextRecoveryTimer);

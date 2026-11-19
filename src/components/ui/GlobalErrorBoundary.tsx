@@ -1,5 +1,6 @@
 import React from 'react';
 import { CaroniIsotype } from './ArchitecturalDrawings';
+import { captureHandledException } from '../../services/errorMonitoring';
 
 interface GlobalErrorBoundaryProps {
   children: React.ReactNode;
@@ -25,12 +26,6 @@ export class GlobalErrorBoundary extends React.Component<
   GlobalErrorBoundaryState
 > {
   private retryTimer: number | null = null;
-  declare props: Readonly<GlobalErrorBoundaryProps>;
-  declare setState: (
-    updater:
-      | Partial<GlobalErrorBoundaryState>
-      | ((prevState: Readonly<GlobalErrorBoundaryState>) => Partial<GlobalErrorBoundaryState>)
-  ) => void;
 
   public state: GlobalErrorBoundaryState = {
     hasError: false,
@@ -54,6 +49,12 @@ export class GlobalErrorBoundary extends React.Component<
       error?.message || error,
       errorInfo?.componentStack
     );
+
+    captureHandledException(error, {
+      boundary: 'GlobalErrorBoundary',
+      componentStack: errorInfo?.componentStack || undefined,
+      tags: { retryCount: String(this.state.retryCount) },
+    });
 
     if (this.state.retryCount < MAX_SILENT_RETRIES && typeof window !== 'undefined') {
       if (this.retryTimer !== null) {

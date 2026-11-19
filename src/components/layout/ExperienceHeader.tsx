@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
+import { useIntl } from 'react-intl';
 import { CaroniIsotype } from '../ui/ArchitecturalDrawings';
 import { UnitData } from '../../types/brand';
 import { Sparkles } from 'lucide-react';
+import { useLocale } from '../../i18n/I18nProvider';
+import { trackConversionEvent } from '../../services/analyticsService';
 
 /**
  * Residencias Caroní · Altamira, Caracas
@@ -28,6 +31,8 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
   onOpen3DModal,
   isVideoEnded = false,
 }) => {
+  const intl = useIntl();
+  const { locale, setLocale } = useLocale();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isHoveredTop, setIsHoveredTop] = useState(false);
 
@@ -46,10 +51,10 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
   const isHeaderVisible = isScrolled || isHoveredTop || isVideoEnded;
 
   const navItems = [
-    { id: 'obra' as NavSection, label: 'EL PROYECTO' },
-    { id: 'galeria' as NavSection, label: 'GALERÍA' },
-    { id: 'elevacion' as NavSection, label: 'PLANOS' },
-    { id: 'contacto' as NavSection, label: 'CONTACTO' },
+    { id: 'obra' as NavSection, label: intl.formatMessage({ id: 'header.nav.obra' }) },
+    { id: 'galeria' as NavSection, label: intl.formatMessage({ id: 'header.nav.galeria' }) },
+    { id: 'elevacion' as NavSection, label: intl.formatMessage({ id: 'header.nav.elevacion' }) },
+    { id: 'contacto' as NavSection, label: intl.formatMessage({ id: 'header.nav.contacto' }) },
   ];
 
   return (
@@ -84,7 +89,7 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
             }`}
         >
           <span className="font-display lowercase italic text-xs sm:text-[13px] text-[#1B1813]/75 tracking-[0.22em] sm:tracking-[0.28em] select-none text-center">
-            ocho residencias · una sola pieza
+            {intl.formatMessage({ id: 'header.tagline' })}
           </span>
         </div>
 
@@ -101,51 +106,91 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
                 Residencias Caroní
               </div>
               <div className="font-meta text-[10px] sm:text-[10px] text-[#8C8678] mt-0.5 tracking-[0.18em] sm:tracking-[0.22em] hidden sm:block">
-                AÑIL ARQUITECTURA · ALTAMIRA
+                {intl.formatMessage({ id: 'header.subtitle' })}
               </div>
             </div>
           </div>
 
-          {/* Menú Cápsula Unificado: Secciones + Maqueta 3D integrada con el mismo estilo */}
-          <nav className="hidden lg:flex items-center gap-1 bg-[#FAF8F5]/90 p-1 border border-[#C9C4B5]/70 shrink-0 rounded-full shadow-xs">
-            {navItems.map((item) => {
-              const isActive = activeSection === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => onNavigate(item.id)}
-                  className={`relative font-meta text-[10px] sm:text-[11px] px-3.5 py-1.5 transition-all duration-200 flex items-center cursor-pointer rounded-full tracking-wider active:scale-95 ${item.id === 'contacto'
-                      ? 'bg-[#1B1813] text-[#FAF9F6] font-semibold hover:bg-[#2d2820]'
-                      : isActive
-                        ? 'text-[#1B1813] font-semibold'
-                        : 'text-[#8C8678] hover:text-[#1B1813]'
-                    }`}
-                >
-                  <span>{item.label}</span>
-                  {isActive && (
-                    <motion.span
-                      layoutId="activeNavUnderlineDesktop"
-                      className="absolute bottom-0 left-2.5 right-2.5 h-[2px] bg-[#8C7452]"
-                      transition={{ type: 'spring', stiffness: 450, damping: 35 }}
-                    />
-                  )}
-                </button>
-              );
-            })}
-
-            {/* Separador fino de autor */}
-            <span className="w-[1px] h-3.5 bg-[#C9C4B5]/60 mx-1" />
-
-            {/* Botón Maqueta 3D integrado al mismo estilo de la cápsula */}
-            <button
-              onClick={onOpen3DModal}
-              className="font-meta text-[10px] sm:text-[11px] px-3.5 py-1.5 transition-all flex items-center space-x-1.5 cursor-pointer rounded-full text-[#75603F] hover:text-[#1B1813] hover:bg-[#8C7452]/10 font-semibold tracking-wider active:scale-95"
-              title="Abrir Maqueta 3D Interactiva"
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* Selector Sobrio de Idioma ES / EN */}
+            <div
+              role="group"
+              aria-label={intl.formatMessage({ id: 'header.lang.aria' })}
+              className="inline-flex items-center border border-[#C9C4B5]/70 bg-[#FAF8F5]/90 p-0.5 rounded-sm"
             >
-              <Sparkles className="w-3 h-3 text-[#8C7452]" />
-              <span>MAQUETA 3D</span>
-            </button>
-          </nav>
+              <button
+                type="button"
+                onClick={() => {
+                  setLocale('es');
+                  trackConversionEvent('locale_change', { locale: 'es' });
+                }}
+                aria-pressed={locale === 'es'}
+                className={`font-meta text-[10px] px-2 py-1 tracking-widest transition-colors cursor-pointer ${
+                  locale === 'es'
+                    ? 'bg-[#1B1813] text-[#FAF9F6] font-semibold'
+                    : 'text-[#5A554A] hover:text-[#1B1813]'
+                }`}
+              >
+                ES
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLocale('en');
+                  trackConversionEvent('locale_change', { locale: 'en' });
+                }}
+                aria-pressed={locale === 'en'}
+                className={`font-meta text-[10px] px-2 py-1 tracking-widest transition-colors cursor-pointer ${
+                  locale === 'en'
+                    ? 'bg-[#1B1813] text-[#FAF9F6] font-semibold'
+                    : 'text-[#5A554A] hover:text-[#1B1813]'
+                }`}
+              >
+                EN
+              </button>
+            </div>
+
+            {/* Menú Cápsula Unificado: Secciones + Maqueta 3D integrada con el mismo estilo */}
+            <nav className="hidden lg:flex items-center gap-1 bg-[#FAF8F5]/90 p-1 border border-[#C9C4B5]/70 shrink-0 rounded-full shadow-xs">
+              {navItems.map((item) => {
+                const isActive = activeSection === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onNavigate(item.id)}
+                    className={`relative font-meta text-[10px] sm:text-[11px] px-3.5 py-1.5 transition-all duration-200 flex items-center cursor-pointer rounded-full tracking-wider active:scale-95 ${item.id === 'contacto'
+                        ? 'bg-[#1B1813] text-[#FAF9F6] font-semibold hover:bg-[#2d2820]'
+                        : isActive
+                          ? 'text-[#1B1813] font-semibold'
+                          : 'text-[#8C8678] hover:text-[#1B1813]'
+                      }`}
+                  >
+                    <span>{item.label}</span>
+                    {isActive && (
+                      <motion.span
+                        layoutId="activeNavUnderlineDesktop"
+                        className="absolute bottom-0 left-2.5 right-2.5 h-[2px] bg-[#8C7452]"
+                        transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+
+              {/* Separador fino de autor */}
+              <span className="w-[1px] h-3.5 bg-[#C9C4B5]/60 mx-1" />
+
+              {/* Botón Maqueta 3D integrado al mismo estilo de la cápsula */}
+              <button
+                onClick={onOpen3DModal}
+                className="font-meta text-[10px] sm:text-[11px] px-3.5 py-1.5 transition-all flex items-center space-x-1.5 cursor-pointer rounded-full text-[#75603F] hover:text-[#1B1813] hover:bg-[#8C7452]/10 font-semibold tracking-wider active:scale-95"
+                title={intl.formatMessage({ id: 'header.nav.model3d.title' })}
+              >
+                <Sparkles className="w-3 h-3 text-[#8C7452]" />
+                <span>{intl.formatMessage({ id: 'header.nav.model3d' })}</span>
+              </button>
+            </nav>
+          </div>
         </div>
 
         {/* 3. Sub-Barra de Navegación Móvil */}
@@ -173,7 +218,7 @@ export const ExperienceHeader: React.FC<ExperienceHeaderProps> = ({
               className="relative font-meta text-[10px] px-3 py-1.5 whitespace-nowrap transition-all duration-200 shrink-0 flex items-center space-x-1 rounded-full cursor-pointer min-h-[32px] bg-[#FAF8F5] text-[#75603F] border border-[#8C7452]/40 hover:text-[#1B1813] font-semibold tracking-wider"
             >
               <Sparkles className="w-2.5 h-2.5 text-[#8C7452]" />
-              <span>MAQUETA 3D</span>
+              <span>{intl.formatMessage({ id: 'header.nav.model3d' })}</span>
             </button>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { CaroniIsotype } from '../ui/ArchitecturalDrawings';
 import { BRAND_INFO, UNITS_DATA } from '../../data/brandData';
 
 import { validateFullName, validateEmailAddress, validatePhoneNumber } from '../../utils/leadValidation';
+import { trackConversionEvent } from '../../services/analyticsService';
 
 interface LeadGateModalProps {
   isOpen: boolean;
@@ -129,6 +130,11 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
       }
 
       unlockWithLead(result.lead);
+      trackConversionEvent('lead_gate_submit', {
+        interestType,
+        preferredUnit,
+        source: sourceTrigger,
+      });
       setIsSuccess(true);
 
       // Smooth delay so the user feels the luxury unlock experience
@@ -155,6 +161,9 @@ export const LeadGateModal: React.FC<LeadGateModalProps> = ({
 
     const ok = await authenticate(fullName || 'Inversor Acreditado', vipCode.trim());
     if (ok) {
+      trackConversionEvent('vip_code_verified', {
+        source: sourceTrigger,
+      });
       setIsSuccess(true);
       setTimeout(() => {
         setIsSuccess(false);

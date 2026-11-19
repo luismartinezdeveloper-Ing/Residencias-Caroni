@@ -14,13 +14,17 @@ export default defineConfig(() => {
     build: {
       rollupOptions: {
         output: {
-          manualChunks: {
-            'react-vendor': ['react', 'react-dom'],
-            'three-vendor': ['three'],
-            'motion-vendor': ['motion', 'motion/react'],
-            'icons-vendor': ['lucide-react']
-          }
-        }
+          manualChunks(id) {
+            if (id.includes('node_modules/three/')) return 'three-vendor';
+            if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+              return 'react-vendor';
+            }
+            if (id.includes('node_modules/motion/') || id.includes('node_modules/framer-motion/')) {
+              return 'motion-vendor';
+            }
+            if (id.includes('node_modules/lucide-react/')) return 'icons-vendor';
+          },
+        },
       },
       chunkSizeWarningLimit: 750,
     },

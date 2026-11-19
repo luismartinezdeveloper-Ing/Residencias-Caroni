@@ -12,6 +12,7 @@ import { chatRouter } from "./server/routes/chatRoutes";
 import { createHealthRouter } from "./server/routes/healthRoutes";
 import { ttsRouter } from "./server/routes/ttsRoutes";
 import { videoUpscaleRouter } from "./server/routes/videoUpscaleRoutes";
+import { analyticsRouter } from "./server/routes/analyticsRoutes";
 import { triggerServerSuperResolution } from "./server/services/videoUpscaleService";
 import { setupLiveVoiceWebSocket } from "./server/websocket/liveVoiceHandler";
 
@@ -86,6 +87,7 @@ async function startServer() {
   app.use(chatRouter);
   app.use(ttsRouter);
   app.use(videoUpscaleRouter);
+  app.use(analyticsRouter);
 
   // Gemini Multimodal Live API WebSocket Server
   const liveVoice = setupLiveVoiceWebSocket(server);

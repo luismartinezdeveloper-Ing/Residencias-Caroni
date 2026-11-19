@@ -14,7 +14,6 @@ export const CaroniIsotype: React.FC<{
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      referrerPolicy="no-referrer"
     >
       {/* Pure clean architectural line art representing the single monolithic volume partitioned into geometric rhythm */}
       <path

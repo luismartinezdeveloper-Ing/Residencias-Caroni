@@ -56,7 +56,7 @@
  * ============================================================================
  */
 
-import * as THREE from 'three';
+import * as THREE from './three';
 
 export type SolarTimeMode = 'morning' | 'golden' | 'night';
 

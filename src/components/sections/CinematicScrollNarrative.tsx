@@ -1,5 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { useIntl } from 'react-intl';
 import { getMediaAssetUrl } from '../../config/mediaConfig';
+import { trackConversionEvent } from '../../services/analyticsService';
 import {
   Play,
   Pause,
@@ -17,7 +19,26 @@ import {
  */
 
 const MASTER_FILM_SRC = getMediaAssetUrl('/videos/residencias_caroni_master_film.mp4?v=residencias_caroni_hero_v8');
+const MOBILE_ADAPTIVE_FILM_SRC = getMediaAssetUrl('/videos/residencias_caroni_master_film_mobile.mp4?v=residencias_caroni_hero_v8');
 const MASTER_FILM_POSTER = getMediaAssetUrl('/videos/residencias_caroni_4k_poster.jpg?v=sr_4k_v1');
+
+interface NetworkInformationLike {
+  saveData?: boolean;
+  effectiveType?: string;
+  downlink?: number;
+}
+
+function shouldPreferLightweightStream(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const nav = navigator as Navigator & { connection?: NetworkInformationLike };
+  const conn = nav.connection;
+  if (conn) {
+    if (conn.saveData) return true;
+    if (conn.effectiveType && /^(slow-2g|2g|3g)$/i.test(conn.effectiveType)) return true;
+    if (typeof conn.downlink === 'number' && conn.downlink > 0 && conn.downlink < 2.5) return true;
+  }
+  return typeof window !== 'undefined' && window.innerWidth < 768;
+}
 
 interface ServerSrCalibration {
   casStrength: number;
@@ -41,12 +62,16 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
   onVideoEnded,
   onVideoPlay,
 }) => {
+  const intl = useIntl();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [isAudioActive, setIsAudioActive] = useState<boolean>(false);
   const [isUhdEnhanced, setIsUhdEnhanced] = useState<boolean>(true);
   const [isMobileDevice, setIsMobileDevice] = useState<boolean>(false);
-  const [activeVideoSrc, setActiveVideoSrc] = useState<string>(MASTER_FILM_SRC);
+  const [isLightweightStream, setIsLightweightStream] = useState<boolean>(() => shouldPreferLightweightStream());
+  const [activeVideoSrc, setActiveVideoSrc] = useState<string>(() =>
+    shouldPreferLightweightStream() ? MOBILE_ADAPTIVE_FILM_SRC : MASTER_FILM_SRC
+  );
   const [activePosterSrc, setActivePosterSrc] = useState<string>(MASTER_FILM_POSTER);
   const [srCalibration, setSrCalibration] = useState<ServerSrCalibration>({
     casStrength: 0.65,
@@ -73,6 +98,11 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
         ) || (typeof navigator.maxTouchPoints === 'number' && navigator.maxTouchPoints > 1);
       setIsMobileDevice(mobile);
     }
+
+    const preferEco = shouldPreferLightweightStream();
+    trackConversionEvent('video_adaptive_stream', {
+      tier: preferEco ? 'eco_540p' : 'hd_1080p',
+    });
   }, []);
 
   // Sincronización con el servicio de pre-procesamiento Super-Resolution 4K por IA en el servidor
@@ -97,7 +127,7 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
         if (data.posterUrl) {
           setActivePosterSrc(getMediaAssetUrl(data.posterUrl));
         }
-        if (data.is4kFileReady && data.videoUrl) {
+        if (!shouldPreferLightweightStream() && data.is4kFileReady && data.videoUrl) {
           setActiveVideoSrc(getMediaAssetUrl(data.videoUrl));
         }
       })
@@ -317,7 +347,7 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
   return (
     <section id="obra" className="relative w-full bg-[#070706] text-[#FAF8F5]">
       {/* Encabezado principal solo para lectores de pantalla y buscadores: no altera el diseño */}
-      <h1 className="sr-only">Residencias Caroní · Altamira, Caracas · Añil Arquitectura</h1>
+      <h1 className="sr-only">{intl.formatMessage({ id: 'hero.srOnlyTitle' })}</h1>
 
       {/* Filtro SVG de convolución óptica calibrado dinámicamente por el servicio IA Super-Resolution del servidor */}
       <svg className="sr-only pointer-events-none" width="0" height="0" aria-hidden="true">
@@ -337,7 +367,7 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
       {/* CERO ZOOM · CERO RECORTE · 100% NITIDEZ 4K IA SR · SIN INFORMACIÓN        */}
       {/* ========================================================================= */}
       <div className="relative w-full aspect-video bg-[#070706] overflow-hidden select-none">
-        {/* Master Film pre-procesado con Super-Resolution 4K (3840x2160 Poster + Calibración IA) */}
+        {/* Master Film adaptativo (540p faststart para redes lentas/móvil · 1080p/4K para fibra/escritorio) */}
         <video
           key={activeVideoSrc}
           ref={videoRef}
@@ -347,10 +377,16 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
           loop
           muted={!isAudioActive}
           playsInline
-          preload="auto"
+          preload={isLightweightStream ? 'metadata' : 'auto'}
           onEnded={handleVideoEnded}
           onPlay={handleVideoPlay}
           onPause={() => setIsPlaying(false)}
+          onError={() => {
+            if (activeVideoSrc !== MASTER_FILM_SRC) {
+              setIsLightweightStream(false);
+              setActiveVideoSrc(MASTER_FILM_SRC);
+            }
+          }}
           className={`w-full h-full object-cover object-center block transform-gpu transition-[filter] duration-500 ${videoOpticalClass}`}
         />
 
@@ -370,17 +406,17 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
             title={srCalibration.diagnosticReport}
             aria-label={
               isUhdEnhanced
-                ? 'Desactivar Super-Resolution 4K IA'
-                : 'Activar Super-Resolution 4K IA'
+                ? intl.formatMessage({ id: 'hero.sr.disableAria' })
+                : intl.formatMessage({ id: 'hero.sr.enableAria' })
             }
           >
             <Sparkles className={`w-3 h-3 ${isProcessingServer4k ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">
               {isProcessingServer4k
-                ? '4K IA: CALIBRANDO'
+                ? intl.formatMessage({ id: 'hero.sr.calibrating' })
                 : isUhdEnhanced
-                ? '4K IA SR: ON'
-                : '4K IA SR: OFF'}
+                ? intl.formatMessage({ id: 'hero.sr.on' })
+                : intl.formatMessage({ id: 'hero.sr.off' })}
             </span>
           </button>
 
@@ -392,18 +428,34 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
                 ? 'bg-[#C9A86A] text-[#070706] border-[#C9A86A] font-bold shadow-[#C9A86A]/20'
                 : 'bg-black/60 text-white/90 border-white/20 hover:text-white hover:bg-black/80 hover:border-white/40'
             }`}
-            title={isAudioActive ? 'Silenciar audio' : 'Activar audio del film'}
+            title={
+              isAudioActive
+                ? intl.formatMessage({ id: 'hero.audio.muteTitle' })
+                : intl.formatMessage({ id: 'hero.audio.unmuteTitle' })
+            }
           >
             {isAudioActive ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{isAudioActive ? 'AUDIO: ON' : 'AUDIO: OFF'}</span>
+            <span className="hidden sm:inline">
+              {isAudioActive
+                ? intl.formatMessage({ id: 'hero.audio.on' })
+                : intl.formatMessage({ id: 'hero.audio.off' })}
+            </span>
           </button>
 
           {/* Play/Pause Button */}
           <button
             onClick={togglePlay}
             className="bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/90 hover:text-white p-2 rounded-full border border-white/20 hover:border-white/40 transition-all cursor-pointer shadow-lg"
-            title={isPlaying ? 'Pausar video' : 'Reproducir video'}
-            aria-label={isPlaying ? 'Pausar video' : 'Reproducir video'}
+            title={
+              isPlaying
+                ? intl.formatMessage({ id: 'hero.pauseTitle' })
+                : intl.formatMessage({ id: 'hero.playTitle' })
+            }
+            aria-label={
+              isPlaying
+                ? intl.formatMessage({ id: 'hero.pauseTitle' })
+                : intl.formatMessage({ id: 'hero.playTitle' })
+            }
           >
             {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
           </button>
@@ -414,10 +466,10 @@ export const CinematicScrollNarrative: React.FC<CinematicScrollNarrativeProps> =
           <button
             onClick={handleScrollToNext}
             className="flex flex-col items-center space-y-1 text-white/70 hover:text-[#C9A86A] transition-colors cursor-pointer group py-2 px-4 backdrop-blur-[2px] rounded-full"
-            title="Desplazarse a la Galería de Perspectivas"
+            title={intl.formatMessage({ id: 'hero.exploreGallery.title' })}
           >
             <span className="font-meta text-[10px] tracking-[0.28em] uppercase font-semibold">
-              EXPLORAR GALERÍA
+              {intl.formatMessage({ id: 'hero.exploreGallery' })}
             </span>
             <ChevronDown className="w-4 h-4 text-[#C9A86A] animate-bounce" />
           </button>

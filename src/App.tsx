@@ -1,5 +1,6 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { motion } from 'motion/react';
+import { useIntl } from 'react-intl';
 import { ExperienceHeader, NavSection } from './components/layout/ExperienceHeader';
 import { CinematicScrollNarrative } from './components/sections/CinematicScrollNarrative';
 import { HorizontalGallery } from './components/sections/HorizontalGallery';
@@ -8,26 +9,32 @@ import { PrivateAdvisoryCTA } from './components/sections/PrivateAdvisoryCTA';
 import { ConfidentialityModal } from './components/modals/ConfidentialityModal';
 import { LeadGateModal } from './components/modals/LeadGateModal';
 import { ConfidentialityProvider, useConfidentiality } from './context/ConfidentialityContext';
+import { I18nProvider } from './i18n/I18nProvider';
 import { UnitData } from './types/brand';
-import { UNITS_DATA, BRAND_INFO } from './data/brandData';
+import { UNITS_DATA } from './data/brandData';
 import { CaroniIsotype } from './components/ui/ArchitecturalDrawings';
 import { OfflineNotification } from './components/ui/OfflineNotification';
 import { CinematicIntroLoader } from './components/ui/CinematicIntroLoader';
 import { SilentErrorBoundary } from './components/ui/SilentErrorBoundary';
 import { MaintenanceBanner } from './components/ui/MaintenanceBanner';
 import { useServiceRecoveryMonitor } from './hooks/useServiceRecoveryMonitor';
+import { trackConversionEvent } from './services/analyticsService';
 import { MessageSquare } from 'lucide-react';
 
-// Automated Heavy Code Splitting (Lazy-loaded Three.js 3D Model & Gemini Live Voice Assistant)
+// Automated Heavy Code Splitting (Lazy-loaded Three.js 3D Model, Gemini Live Voice Assistant & UI Docs Catalog)
 const Architectural3DModal = lazy(() =>
   import('./components/modals/Architectural3DModal').then((m) => ({ default: m.Architectural3DModal }))
 );
 const AIChatbot = lazy(() =>
   import('./components/modals/AIChatbot').then((m) => ({ default: m.AIChatbot }))
 );
+const ComponentCatalog = lazy(() =>
+  import('./components/docs/ComponentCatalog').then((m) => ({ default: m.ComponentCatalog }))
+);
 
 function MainAppContent() {
-  const { isAdvisorMode, openAuthModal, isAccredited } = useConfidentiality();
+  const intl = useIntl();
+  const { openAuthModal, isAccredited } = useConfidentiality();
   const { isInRecoveryMode, reason, latencyMs, dismissBanner, recheckNow } = useServiceRecoveryMonitor();
   const [activeSection, setActiveSection] = useState<NavSection>('obra');
   const [selectedUnit, setSelectedUnit] = useState<UnitData>(UNITS_DATA[0]);
@@ -36,10 +43,22 @@ function MainAppContent() {
   const [isVoiceAdvisorOpen, setIsVoiceAdvisorOpen] = useState<boolean>(false);
   const [modalInitialViewMode, setModalInitialViewMode] = useState<'assembled' | 'exploded' | 'floorplan'>('assembled');
   const [isVideoEnded, setIsVideoEnded] = useState<boolean>(false);
+  const lastTrackedSectionRef = useRef<NavSection>('obra');
+
+  useEffect(() => {
+    trackConversionEvent('page_view', {
+      locale: intl.locale,
+      path: typeof window !== 'undefined' ? window.location.pathname : '/',
+    });
+  }, [intl.locale]);
 
   // Smooth Scroll Anchor Navigation
   const handleNavigate = (section: NavSection) => {
     setActiveSection(section);
+    if (lastTrackedSectionRef.current !== section) {
+      lastTrackedSectionRef.current = section;
+      trackConversionEvent('section_view', { section, trigger: 'nav' });
+    }
     const elem = document.getElementById(section);
     if (elem) {
       const yOffset = -72; // Header offset
@@ -61,8 +80,10 @@ function MainAppContent() {
 
     setModalInitialViewMode(safeMode);
     if (isAccredited) {
+      trackConversionEvent('model_3d_open', { mode: safeMode, unitId: selectedUnit.id });
       setIs3DModalOpen(true);
     } else {
+      trackConversionEvent('lead_gate_open', { mode: safeMode, unitId: selectedUnit.id });
       setIsLeadGateOpen(true);
     }
   };
@@ -90,6 +111,10 @@ function MainAppContent() {
           const rect = element.getBoundingClientRect();
           if (rect.top <= triggerThreshold) {
             setActiveSection(sectionId);
+            if (lastTrackedSectionRef.current !== sectionId) {
+              lastTrackedSectionRef.current = sectionId;
+              trackConversionEvent('section_view', { section: sectionId, trigger: 'scroll' });
+            }
             break;
           }
         }
@@ -109,7 +134,7 @@ function MainAppContent() {
       y: 0,
       transition: {
         duration: 0.65,
-        ease: [0.16, 1, 0.3, 1],
+        ease: [0.16, 1, 0.3, 1] as const,
       },
     },
   };
@@ -142,7 +167,7 @@ function MainAppContent() {
           setIsLeadGateOpen(false);
           setIs3DModalOpen(true);
         }}
-        initialUnitInterest={selectedUnit.name}
+        sourceTrigger={selectedUnit.name}
       />
 
       {/* Top Floating Architectural Institutional Header */}
@@ -218,14 +243,20 @@ function MainAppContent() {
       {!isVoiceAdvisorOpen && (
         <div className="fixed bottom-5 right-5 z-40 flex items-center">
           <button
-            onClick={() => setIsVoiceAdvisorOpen(true)}
+            onClick={() => {
+              trackConversionEvent('advisor_open', { unitId: selectedUnit.id });
+              setIsVoiceAdvisorOpen(true);
+            }}
             className="group relative w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-white/85 backdrop-blur-2xl hover:bg-white text-[#1B1813] border border-white/80 shadow-[0_12px_36px_rgba(27,24,19,0.12),0_2px_6px_rgba(0,0,0,0.04)] flex items-center justify-center transition-all duration-300 hover:scale-108 active:scale-95 cursor-pointer select-none"
-            title="Asesor · Residencias Caroní"
-            aria-label="Abrir Asesor"
+            title={intl.formatMessage({ id: 'advisor.title' })}
+            aria-label={intl.formatMessage({ id: 'advisor.aria' })}
           >
             <MessageSquare className="w-5 h-5 text-[#8C7452] group-hover:scale-105 transition-transform" />
             {/* Apple-style ultra-micro pulsing indicator dot */}
-            <span className="absolute top-2 right-2 flex h-1.5 w-1.5 pointer-events-none" title="En línea">
+            <span
+              className="absolute top-2 right-2 flex h-1.5 w-1.5 pointer-events-none"
+              title={intl.formatMessage({ id: 'advisor.online' })}
+            >
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
             </span>
@@ -268,25 +299,25 @@ function MainAppContent() {
               onClick={() => handleNavigate('obra')} 
               className="text-[#C9C4B5] hover:text-[#8C7452] transition-colors cursor-pointer"
             >
-              Inicio
+              {intl.formatMessage({ id: 'footer.home' })}
             </button>
             <button 
               onClick={() => handleNavigate('galeria')} 
               className="text-[#C9C4B5] hover:text-[#8C7452] transition-colors cursor-pointer"
             >
-              Galería
+              {intl.formatMessage({ id: 'footer.gallery' })}
             </button>
             <button 
               onClick={() => handleNavigate('elevacion')} 
               className="text-[#C9C4B5] hover:text-[#8C7452] transition-colors cursor-pointer"
             >
-              Residencias
+              {intl.formatMessage({ id: 'footer.residences' })}
             </button>
             <button 
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
               className="text-[#8C7452] hover:text-[#EFEBE0] transition-colors cursor-pointer flex items-center space-x-1 ml-2"
             >
-              <span>Subir</span>
+              <span>{intl.formatMessage({ id: 'footer.top' })}</span>
               <span>↑</span>
             </button>
           </div>
@@ -297,9 +328,21 @@ function MainAppContent() {
 }
 
 export default function App() {
+  const isDocsView =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('docs') === 'ui';
+
   return (
-    <ConfidentialityProvider>
-      <MainAppContent />
-    </ConfidentialityProvider>
+    <I18nProvider>
+      <ConfidentialityProvider>
+        {isDocsView ? (
+          <Suspense fallback={null}>
+            <ComponentCatalog />
+          </Suspense>
+        ) : (
+          <MainAppContent />
+        )}
+      </ConfidentialityProvider>
+    </I18nProvider>
   );
 }
